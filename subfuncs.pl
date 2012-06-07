@@ -1,4 +1,4 @@
-sub return_nexus_string {
+sub convert_aln_to_nexus {
 	my $aln = shift;
 
 	my $nexblock = "";
@@ -8,9 +8,9 @@ sub return_nexus_string {
 	foreach my $seq ( $aln->each_seq()) {
 		my $len = $seq->length;
  		$nexblock .= "'" . $seq->display_name . "'\t";
- 		my $seq_seg = $seq->seq();
- 		$nexblock .= "$seq_seg\n";
- 		$nchar = length($seq_seg);
+ 		my $seq_str = $seq->seq();
+ 		$nexblock .= "$seq_str\n";
+ 		$nchar = length($seq_str);
  		$ntax++;
 	}
 	$result .= "#NEXUS\n\nBegin DATA;\nDimensions ntax=$ntax nchar=$nchar;\n";
