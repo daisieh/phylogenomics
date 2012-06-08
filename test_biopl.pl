@@ -1,7 +1,7 @@
 # first, bring in the SeqIO module
 
 use Bio::SeqIO;
-require "subfuncs.pl"
+require "subfuncs.pl";
 
 # Bring in the file and format, or die with a nice
 # usage statement if one or both arguments are missing.
