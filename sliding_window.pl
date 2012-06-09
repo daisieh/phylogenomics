@@ -26,14 +26,12 @@ my $seq_frag = Bio::Seq->new(-seq => $curr_aln->get_seq_by_pos(1)->seq(), -id =>
 open my $diffs_file, ">perc_diffs.txt";
 truncate $diffs_file, 0;
 
-print "..\n";
 while ($flag >= 0) {
 	my $gene_name = "$start_pos";
 	my $seq_feat = Bio::SeqFeature::Generic->new(-start => $start_pos, -end => $stop_pos, -strand => 1, -primary_tag => "gene");
 	$seq_feat->add_tag_value("gene", $gene_name);
 	$seq_frag->add_SeqFeature($seq_feat);
 	$flag = perc_diff_partition ($curr_aln, $start_pos, $stop_pos);
-print "..\n";
 	if ($flag >= 0) {
 		my $val = $flag;
 		print $diffs_file "$start_pos\t$val\n";

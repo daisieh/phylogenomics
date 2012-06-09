@@ -98,18 +98,26 @@ sub perc_diff_partition {
 
 sub make_aln_from_fasta_file {
 	my $fa_file = shift;
+	my $min_length = 0;
 
 	my $inseq = Bio::SeqIO->new(-file => "<$fa_file", -format => "fasta");
 	my $newaln = Bio::SimpleAlign->new();
 
 	my $seq;
 	eval {$seq = $inseq->next_seq;} or die "not fasta\n";
+	$min_length = $seq->length();
 	while ($seq ne "") {
  		my $outseq = Bio::LocatableSeq->new(-seq => $seq->seq(), -id => $seq->display_name);
  		$newaln->add_seq ($outseq);
+ 		if ($min_length > $seq->length() ) {
+ 			$min_length = $seq->length();
+ 		}
  		$seq = $inseq->next_seq;
 	}
-	return $newaln;
+
+	my $flush_aln = $newaln->slice(1,$min_length);
+
+	return $flush_aln;
 }
 
 sub test_ps { # create a new PostScript object
@@ -168,6 +176,7 @@ sub draw_circle_graph_from_file {
 		$line = readline $F;
 	}
 
+	my $window_size = @positions[1]-@positions[0];
 	my $circle_size = @positions[$total_elems-1];
 
 	my $p = new PostScript::Simple( colour => 1, eps => 0, units => "bp", xsize => PS_X_SIZE, ysize => PS_Y_SIZE );
@@ -185,7 +194,6 @@ sub draw_circle_graph_from_file {
 	for (my $i = 0; $i < $total_elems; $i++) {
 		my $angle = (@positions[$i]/$circle_size) * 360;
 		my $radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@differences[$i]/$max_diffs));
-		print "$angle, $radius\n";
 		my @new_coords = coords_on_circle($angle,$radius);
 		$this_x = @new_coords[0];
 		$this_y = @new_coords[1];
@@ -195,7 +203,9 @@ sub draw_circle_graph_from_file {
 	}
 	$p->line($last_x, $last_y, @coords[0], @coords[1]);
 	$p->setfont("Helvetica", 12);
+	$p->setcolour(black);
 	$p->text(10, 10, "Maximum percent difference ($max_diffs) is scaled to 1");
+	$p->text(10, 30, "Sliding window size of $window_size bp");
 
 	# write the output to a file
 	$p->output("file.ps");
