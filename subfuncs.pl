@@ -12,7 +12,17 @@ use constant PS_Y_SIZE => 1200; # Y size of the PostScript object
 # graphics default values
 #
 my $MAIN_RADIUS				= 387.5;
-my @colours = ([255,0,0],[0,255,0],[0,0,255],[200,200,0],[255,0,255],[0,255,255],[255,100,0],[255,0,100],[100,255,0],[100,0,255]);
+my @colours = (	[255,0,0],		# red
+				[0,255,0],		# green
+				[0,0,255],		# blue
+				[200,200,0],	# yellow-ish
+				[255,0,255],	# magenta
+				[0,255,255],	# cyan
+				[255,100,0],	# orange
+				[200,50,200],	# fuchsia
+				[70,150,0],		# dark green
+				[100,0,255]		# violet
+				);
 
 sub convert_aln_to_nexus {
 	my $aln = shift;
@@ -58,7 +68,7 @@ sub make_aln_from_fasta_file {
 	my $newaln = Bio::SimpleAlign->new();
 
 	my $seq;
-	eval {$seq = $inseq->next_seq;} or die "not fasta\n";
+	eval {$seq = $inseq->next_seq;} or die "file not in fasta format.\n";
 	$min_length = $seq->length();
 	while ($seq ne "") {
  		my $outseq = Bio::LocatableSeq->new(-seq => $seq->seq(), -id => $seq->display_name);
@@ -124,12 +134,14 @@ sub draw_circle_graph_from_file {
 	my $num_graphs = @labels-1;
 	print "$num_graphs\n";
 
+	# print legend
 	$p->setfont("Helvetica", 12);
 	if (@labels[1] =~ m/.*[:alpha:].*/) {
 		for (my $i = 1; $i <= $num_graphs; $i++) {
 			print "@labels[$i]\n";
 			$p->setcolour($colours[$i-1][0],$colours[$i-1][1],$colours[$i-1][2]);
-			$p->text(10,(30+(12*$i)), "@labels[$i]");
+			my $max_height = ($num_graphs * 15) + 60;
+			$p->text(10,($max_height - (15*$i)), "@labels[$i]");
 		}
 		$line = readline $F;
 	}
@@ -204,4 +216,6 @@ sub main_name_for_gb_feature {
 	eval {@names = $feat->get_tag_values('gene');} or return "$curr_name";
 	return @names[0];
 }
+
+# must return 1 for the file overall.
 1;
