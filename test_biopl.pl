@@ -2,7 +2,7 @@ require "subfuncs.pl";
 use Bio::SeqIO;
 use PostScript::Simple;
 use Bio::Align::Utilities qw(cat);
-use Bio::Tools::Run::Phylo::PAML::Codeml;
+use Bio::Tools::Run::Phylo::PAML::Yn00;
 
 
 use constant CENTER_X => 600; # X coordinate of circle center
@@ -30,7 +30,6 @@ while ($seq_object) {
 			my $strand = 0;
 			foreach $loc (@locations) {
 				$strand = $loc->strand;
-				print ("$strand\n");
 				my $start = $loc->start;
 				my $end = $loc->end;
 				my $curr_slice = $whole_aln->slice($start, $end);
@@ -59,46 +58,44 @@ while ($seq_object) {
 }
 
 my $x = @gene_alns;
-print "$x genes in alignment\n";
+print "gene\tseq1\tseq2\tka\tks\tka/ks\n";
 
-#### need to read PAML documentation to understand inputs and outputs: http://abacus.gene.ucl.ac.uk/software/pamlDOC.pdf
+foreach my $aln (@gene_alns) {
+	my $yn = Bio::Tools::Run::Phylo::PAML::Yn00->new();
+	my $perc_id = $aln->percentage_identity();
+	my $name = $aln->description();
+	$yn->alignment($aln);
+	my ($rc,$parser) = $yn->run();
+		foreach my $seq ($aln->each_seq()) {
+			print $seq->display_name(), "\t", $seq->seq(), "\n";
+		}
+	if ($rc == 0) {
+		my $t = $yn->error_string();
+		print "problem in $name: $t\n";
+		foreach my $seq ($aln->each_seq()) {
+			print $seq->display_name(), "\t", $seq->seq(), "\n";
+		}
+	} else {
+		while( my $result = $parser->next_result ) {
+			my @otus = $result->get_seqs();
+			my $MLmatrix = $result->get_MLmatrix();
 
-my $kaks_factory = Bio::Tools::Run::Phylo::PAML::Codeml->new
-	(-verbose => $verbose,
-	 -params => { 'runmode' => -2,
-		      'seqtype' => 1,
-		  }
-	 );
-
-foreach my $dna_aln (@gene_alns) {
-	my $name = $dna_aln->description();
-	my $temp = $dna_aln->get_seq_by_pos(1)->seq();
-# 	print "$name, $temp\n";
-	$kaks_factory->alignment($dna_aln);
-	my ($rc,$parser) = $kaks_factory->run();
-	foreach my $result ($parser->next_result()) {
-		my $MLmatrix = $result->get_MLmatrix();
-		my @otus = $result->get_seqs();
-		my $size = @otus;
-		my $temp = scalar ($MLmatrix->[0]);
-		print "$temp\n";
-
-		print join("\t", qw(Ka Ks Ka/Ks)), "\n";
-		for( my $i = 0; $i < ($size-1) ; $i++) {
-			for( my $j = $i+1; $j < ($size); $j++ ) {
-				#my $sub_aa_aln = $aa_aln->select_noncont($pos[$i],$pos[$j]);
-				#my $sub_dna_aln = $dna_aln->select_noncont($pos[$i],$pos[$j]);
-				print "$i $j\n";
-				print join("\t",
-					   #$otus[$i]->display_id,
-					   #$otus[$j]->display_id,
-					   $MLmatrix->[$i]->[$j]->{'dN'},
-					   $MLmatrix->[$i]->[$j]->{'dS'},
-					   $MLmatrix->[$i]->[$j]->{'omega'},
-					   #sprintf("%.2f",$sub_aa_aln->percentage_identity),
-					   #sprintf("%.2f",$sub_dna_aln->percentage_identity),
-					   ), "\n";
+#  			for (my $i=1; $i < scalar @otus; $i++) {
+# 					my $seq1 = @otus[$i]->display_name();
+# 					print "$seq1...\n";
+# 			}
+			for (my $i=1; $i < scalar @otus; $i++) {
+				for (my $j=1; $j<scalar @otus; $j++) {
+# 				for (my $j=(scalar @otus) - 1; $j > $i; $j--) {
+					my $dN = $MLmatrix->[$i]->[$j]->{dN};
+					my $dS = $MLmatrix->[$i]->[$j]->{dS};
+					my $kaks =$MLmatrix->[$i]->[$j]->{omega};
+					my $seq1 = @otus[$i]->display_name();
+					my $seq2 = @otus[$j]->display_name();
+					print "$name\t$seq1\t$seq2\t$dN\t$dS\t$kaks\n";
+				}
 			}
 		}
 	}
 }
+

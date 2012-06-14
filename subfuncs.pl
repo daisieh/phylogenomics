@@ -71,7 +71,16 @@ sub make_aln_from_fasta_file {
 	eval {$seq = $inseq->next_seq;} or die "file not in fasta format.\n";
 	$min_length = $seq->length();
 	while ($seq ne "") {
- 		my $outseq = Bio::LocatableSeq->new(-seq => $seq->seq(), -id => $seq->display_name);
+		my $name = $seq->display_name;
+		#remove weird chars, file suffixes
+		$name =~ s/(.*?)\..*/$1/;
+		$name =~ s/[\Q !@#$%^&*.-?<>,|\/\E]//g;
+		#shorten name if it's too long
+		if (length($name) > 12) {
+			$name =~ /(.{12})/;
+			$name = $1;
+		}
+ 		my $outseq = Bio::LocatableSeq->new(-seq => $seq->seq(), -id => $name);
  		$newaln->add_seq ($outseq);
  		if ($min_length > $seq->length() ) {
  			$min_length = $seq->length();
