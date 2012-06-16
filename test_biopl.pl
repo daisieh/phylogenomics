@@ -5,15 +5,7 @@ use Bio::Align::Utilities qw(cat);
 use Bio::Tools::Run::Phylo::PAML::Yn00;
 use Bio::Tools::Run::Phylo::PAML::Codeml;
 
-
-use constant CENTER_X => 600; # X coordinate of circle center
-use constant CENTER_Y => 600; # Y coordinate of circle center
-use constant PS_X_SIZE => 1200; # X size of the PostScript object
-use constant PS_Y_SIZE => 1200; # Y size of the PostScript object
-
 my $usage  = "test_biopl.pl \n";
-
-print "Version ". Bio::Align->VERSION . "\n";
 
 my $gb_file = shift or die $usage;
 my $fa_file = shift or die $usage;
@@ -60,19 +52,19 @@ while ($seq_object) {
 	$seq_object = $seqio_object->next_seq;
 }
 
-my $x = @gene_alns;
+# my $paml_exec = Bio::Tools::Run::Phylo::PAML::Codeml->new
+			   ( -params => { 'runmode' => -2,
+							  'seqtype' => 1,
+							} );
+my $paml_exec = Bio::Tools::Run::Phylo::PAML::Yn00->new();
+
+print "gene\tseq1\tseq2\tdN/dS\tdN\tdS\n";
 foreach my $aln (@gene_alns) {
-	my $yn = Bio::Tools::Run::Phylo::PAML::Codeml->new
-                   ( -params => { 'runmode' => -2,
-                                  'seqtype' => 1,
-                                  'noisy' => 9,
-                                  'verbose' => 2,
-                                } );
 	my $name = $aln->description();
-	$yn->alignment($aln);
-	my ($rc,$parser) = $yn->run();
+	$paml_exec->alignment($aln);
+	my ($rc,$parser) = $paml_exec->run();
 	if ($rc == 0) {
-		my $t = $yn->error_string();
+		my $t = $paml_exec->error_string();
 		print "problem in $name: $t\n";
 		foreach my $seq ($aln->each_seq()) {
 			print $seq->display_name(), "\t", $seq->seq(), "\n";
@@ -81,34 +73,19 @@ foreach my $aln (@gene_alns) {
 		while( my $result = $parser->next_result ) {
 			my @otus = $result->get_seqs();
 			my $MLmatrix = $result->get_MLmatrix();
-			my @t = $aln->each_seq();
-			foreach my $tx (@t) {
-				print "I put in " . $tx->display_name() . "\n";
+			#	this loop set is excessively complicated because I am trying to get the output to correspond to yn00's output block.
+			my $j = 1;
+			for (my $i=1;$i<=$j+1;$i++) {
+				if ($i == scalar @otus) { last; }
+				for ($j=0;$j<$i;$j++) {
+					my $dN = $MLmatrix->[$j]->[$i]->{dN};
+					my $dS = $MLmatrix->[$j]->[$i]->{dS};
+					my $kaks =$MLmatrix->[$j]->[$i]->{omega};
+					my $seq1 = @otus[$i]->display_name();
+					my $seq2 = @otus[$j]->display_name();
+					print "$name\t$seq1\t$seq2\t$kaks\t$dN\t$dS\n";
+				}
 			}
-			foreach my $ox (@otus) {
-				print "I got out " . $ox->display_name() . "\n";
-			}
-
-
-
-#     for my $i ( 0 .. $#MLmatrix ) {
-#         for my $j ( 0 .. $#{$MLmatrix[$i]} ) {
-#             print "elt $i $j is $MLmatrix[$i][$j]\n";
-#         }
-#     }
-			# this loop set is excessively complicated because I am trying to get the output to correspond to yn00's output block.
-# 			my $j = 1;
-# 			for (my $i=1;$i<=$j+1;$i++) {
-# 				if ($i == scalar @otus - 1) { last; }
-# 				for ($j=0;$j<$i;$j++) {
-# 					my $dN = $MLmatrix->[$j]->[$i]->{dN};
-# 					my $dS = $MLmatrix->[$j]->[$i]->{dS};
-# 					my $kaks =$MLmatrix->[$j]->[$i]->{omega};
-# 					my $seq1 = @otus[$i+1]->display_name();
-# 					my $seq2 = @otus[$j+1]->display_name();
-# 					print "$name\t$seq1\t$seq2\t$kaks\t$dN\t$dS\n";
-# 				}
-# 			}
 		}
 	}
 }
@@ -117,12 +94,11 @@ foreach my $aln (@gene_alns) {
 # yn00 code:
 
 # foreach my $aln (@gene_alns) {
-# 	my $yn = Bio::Tools::Run::Phylo::PAML::Yn00->new();
 # 	my $name = $aln->description();
-# 	$yn->alignment($aln);
-# 	my ($rc,$parser) = $yn->run();
+# 	$paml_exec->alignment($aln);
+# 	my ($rc,$parser) = $paml_exec->run();
 # 	if ($rc == 0) {
-# 		my $t = $yn->error_string();
+# 		my $t = $paml_exec->error_string();
 # 		print "problem in $name: $t\n";
 # 		foreach my $seq ($aln->each_seq()) {
 # 			print $seq->display_name(), "\t", $seq->seq(), "\n";
