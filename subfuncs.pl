@@ -26,21 +26,30 @@ my @colours = (	[255,0,0],		# red
 
 sub convert_aln_to_nexus {
 	my $aln = shift;
-
+	my $blocksize=1000;
 	my $nexblock = "";
 	my $result = "";
 	my $ntax = 0;
-	my $nchar = 0;
-	foreach my $seq ( $aln->each_seq()) {
-		my $len = $seq->length;
- 		$nexblock .= "'" . $seq->display_name . "'\t";
- 		my $seq_str = $seq->seq();
- 		$nexblock .= "$seq_str\n";
- 		$nchar = length($seq_str);
- 		$ntax++;
+	my $nchar = 1;
+	my $i = 1;
+	my $flag = 1;
+	my $len;
+	while ($flag) {
+		$ntax=0;
+		foreach my $seq ( $aln->each_seq()) {
+			$len = $seq->length;
+			if ($i > $len - $blocksize) { $flag = 0; $blocksize = $len - $i + 1;}
+			$nexblock .= "" . $seq->display_name . "\t";
+			$nchar = length($seq->seq());
+			my $seq_str = $seq->subseq($i, $i+$blocksize-1);
+			$nexblock .= "$seq_str\n";
+			$ntax++;
+		}
+		$nexblock .= "\n";
+		$i += $blocksize;
 	}
 	$result .= "#NEXUS\n\nBegin DATA;\nDimensions ntax=$ntax nchar=$nchar;\n";
-	$result .= "Format datatype=dna gap=-;\n";
+	$result .= "Format datatype=dna gap=- interleave=yes;\n";
  	$result .= "Matrix\n$nexblock\n;\nEnd;\n";
 
 	return $result;
