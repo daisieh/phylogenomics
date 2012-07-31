@@ -16,6 +16,7 @@ my @gene_alns;
 my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
 my $seq_object = $seqio_object->next_seq;
 
+my $result_str = "";
 while ($seq_object) {
 	for my $feat_object ($seq_object->get_SeqFeatures) {
 		if ($feat_object->primary_tag eq "CDS") {
@@ -23,16 +24,19 @@ while ($seq_object) {
 			my @locations = $feat_object->location->each_Location;
 			my $cat_aln = 0;
 			my $strand = 0;
+			my $last_end = 0;
 			foreach $loc (@locations) {
 				$strand = $loc->strand;
 				my $start = $loc->start;
 				my $end = $loc->end;
+				$last_end = $end;
 				my $curr_slice = $whole_aln->slice($start, $end);
 				if ($cat_aln == 0) {
 					$cat_aln = $curr_slice;
 				} else {
 					$cat_aln = cat($cat_aln, $curr_slice);
 				}
+				if ($result_str eq "") { $result_str = "$name\t$start"; }
 			}
 			if ($strand < 0) {
 				# must flip each seq in the curr_slice
@@ -47,6 +51,8 @@ while ($seq_object) {
 			$cat_aln = $cat_aln->slice(1, $cat_aln->length()-3);
 			$cat_aln->description($name);
 			push @gene_alns, $cat_aln;
+			print "$result_str\t$last_end\n";
+			$result_str = "";
 		}
 	}
 	$seq_object = $seqio_object->next_seq;
@@ -54,7 +60,7 @@ while ($seq_object) {
 
 foreach my $aln (@gene_alns) {
 	my $gene_name = $aln->description();
-	print "writing $gene_name...\n";
+	#print "writing $gene_name...\n";
 	my $outfile = "$result_dir\/$gene_name.nex";
 	my $result = convert_aln_to_nexus ($aln);
 	open my $gene_file, ">$outfile";

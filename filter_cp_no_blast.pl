@@ -4,12 +4,12 @@ use File::Basename;
 
 
 my $usage = "perl " . basename($0);
-$usage .=	" <fastafile> <resultfile>\n\n";
+$usage .=	" <fastafile> <filterfile> <resultfile>\n\n";
 
 my $fastafile = shift or die "$usage";
-#my $cpfile = shift or die "$usage";
+my $filterfile = shift or die "$usage";
 my $resultfile = shift or die "$usage";
-my $filterfile = "$fastafile.filtered";
+#my $filterfile = "$fastafile.filtered";
 
 # print "blasting...";
 #

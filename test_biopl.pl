@@ -52,23 +52,26 @@ while ($seq_object) {
 	$seq_object = $seqio_object->next_seq;
 }
 
-# my $paml_exec = Bio::Tools::Run::Phylo::PAML::Codeml->new
+my $paml_exec = Bio::Tools::Run::Phylo::PAML::Codeml->new
 			   ( -params => { 'runmode' => -2,
 							  'seqtype' => 1,
 							} );
-my $paml_exec = Bio::Tools::Run::Phylo::PAML::Yn00->new();
+#my $paml_exec = Bio::Tools::Run::Phylo::PAML::Yn00->new();
 
-print "gene\tseq1\tseq2\tdN/dS\tdN\tdS\n";
+#print "gene\tseq1\tseq2\tdN/dS\tdN\tdS\n";
+
+
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
+	my $resultstr = $name;
 	$paml_exec->alignment($aln);
 	my ($rc,$parser) = $paml_exec->run();
 	if ($rc == 0) {
 		my $t = $paml_exec->error_string();
-		print "problem in $name: $t\n";
-		foreach my $seq ($aln->each_seq()) {
-			print $seq->display_name(), "\t", $seq->seq(), "\n";
-		}
+# 		print "problem in $name: $t\n";
+# 		foreach my $seq ($aln->each_seq()) {
+# 			print $seq->display_name(), "\t", $seq->seq(), "\n";
+# 		}
 	} else {
 		while( my $result = $parser->next_result ) {
 			my @otus = $result->get_seqs();
@@ -83,45 +86,13 @@ foreach my $aln (@gene_alns) {
 					my $kaks =$MLmatrix->[$j]->[$i]->{omega};
 					my $seq1 = @otus[$i]->display_name();
 					my $seq2 = @otus[$j]->display_name();
-					print "$name\t$seq1\t$seq2\t$kaks\t$dN\t$dS\n";
+					$resultstr .= "\t$seq1#$seq2#" . $kaks;
+					#print "$name\t$seq1\t$seq2\t$kaks\t$dN\t$dS\n";
 				}
 			}
 		}
 	}
+	print $resultstr, "\n";
 }
 
 
-# yn00 code:
-
-# foreach my $aln (@gene_alns) {
-# 	my $name = $aln->description();
-# 	$paml_exec->alignment($aln);
-# 	my ($rc,$parser) = $paml_exec->run();
-# 	if ($rc == 0) {
-# 		my $t = $paml_exec->error_string();
-# 		print "problem in $name: $t\n";
-# 		foreach my $seq ($aln->each_seq()) {
-# 			print $seq->display_name(), "\t", $seq->seq(), "\n";
-# 		}
-# 	} else {
-# 		while( my $result = $parser->next_result ) {
-# 			my @otus = $result->get_seqs();
-# 			my $MLmatrix = $result->get_MLmatrix();
-# #
-# 			# this loop set is excessively complicated because I am trying to get the output to correspond to yn00's output block.
-# 			my $j = 1;
-# 			for (my $i=1;$i<=$j+1;$i++) {
-# 				if ($i == scalar @otus - 1) { last; }
-# 				for ($j=0;$j<$i;$j++) {
-# 					my $dN = $MLmatrix->[$j]->[$i]->{dN};
-# 					my $dS = $MLmatrix->[$j]->[$i]->{dS};
-# 					my $kaks =$MLmatrix->[$j]->[$i]->{omega};
-# 					my $seq1 = @otus[$i+1]->display_name();
-# 					my $seq2 = @otus[$j+1]->display_name();
-# # 					print "$name\t$seq1\t$seq2\t$kaks\t$dN\t$dS\n";
-# 				}
-# 			}
-# 		}
-# 	}
-# }
-# #

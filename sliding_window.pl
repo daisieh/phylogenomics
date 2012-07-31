@@ -5,8 +5,9 @@ require "subfuncs.pl";
 
 # Bring in the file and format, or die with a nice
 # usage statement if one or both arguments are missing.
-my $usage  = "sliding_window.pl fasta_file window_size\n";
+my $usage  = "sliding_window.pl fasta_file graph_file window_size\n";
 my $fa_file = shift or die $usage;
+my $graph_file = shift or die $usage;
 my $window_size = shift or die $usage;
 
 my $start_pos = 1;
@@ -39,12 +40,12 @@ while ($flag >= 0) {
 	$start_pos += $window_size;
 	$stop_pos += $window_size;
 }
-	$gb_seq->write_seq($seq_frag);
+$gb_seq->write_seq($seq_frag);
 
-	open $gb_fh, ">$fa_file.gb";
-	print $gb_fh $string;
+open $gb_fh, ">$fa_file.gb";
+print $gb_fh $string;
 
 close $gb_fh;
 close $diffs_file;
 
-draw_circle_graph_from_file ("perc_diffs.txt");
+draw_circle_graph_from_file ("perc_diffs.txt", $graph_file);
