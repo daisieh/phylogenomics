@@ -8,14 +8,15 @@ use Bio::Tools::Run::Phylo::PAML::Codeml;
 use File::Basename;
 use Getopt::Long;
 
-$BIOPERLDEBUG = 1;
-
-my $usage  = "pairwise_omega.pl gb_file fa_file tree_file output_name\n";
+my $usage = "perl " . basename($0);
+$usage .= " gb_file fa_file tree_file output_name\n";
 
 my $gb_file = shift or die $usage;
 my $fa_file = shift or die $usage;
 my $tree_file = shift or die $usage;
 my $output_name = shift or die $usage;
+#GetOptions ('query=s' => \$queryfile, 'subject=s' => \$subjectfile);
+
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
 my @gene_alns;
@@ -61,22 +62,46 @@ while ($seq_object) {
 	$seq_object = $seqio_object->next_seq;
 }
 
-my $paml_exec = Bio::Tools::Run::Phylo::PAML::Codeml->new
-			   ( -params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1} );
+my $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new
+#				PAML with fixed omega value (model=0 designates single omega)
+#				( -params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 0, 'fix_omega' => 1, 'omega' => 1 } );
+
+#				PAML with free omegas (model=1)
+				( -params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1, 'fix_blength' => 1 });
+#				( -params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1 }, -branchlengths => 1);
+
+#				PAML with single omega value (model=0 designates single omega)
+#				( -params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 0 } );
 
 my $treeio = Bio::TreeIO->new(-format => "nexus", -file => "$tree_file");
+#read in all of the trees
+my %trees = ();
 my $tree = $treeio->next_tree;
-$paml_exec->tree($tree);
+$paml_exec->tree($tree, {'branchLengths' => 0 }); # initialize with this first tree
+
+while ($tree) {
+	$trees{$tree->id()} = $tree;
+	$tree = $treeio->next_tree;
+}
 
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
-	print "$name\n";
+	#print "$name\n";
 	my $resultstr = $name;
  	$paml_exec->alignment($aln);
+ 	if (keys(%trees) != 1) {
+		$paml_exec->tree($trees{$name}, {'branchLengths' => 1 });
+		print "using " . $trees{$name}->id() . " for tree\n";
+	}
+	my %params = $paml_exec->get_parameters();
+	foreach my $k (keys %params) {
+		print $k . "=>" . $params{$k} . "\n";
+	}
  	$paml_exec->outfile_name("$output_name"."_$name.mlc");
  	my ($rc,$parser) = $paml_exec->run();
 	if ($rc == 0) {
 		my $t = $paml_exec->error_string();
+		print $t . "\n";
 	} else {
 		while( my $result = $parser->next_result ) {
 			my @otus = $result->get_seqs();
