@@ -89,15 +89,19 @@ foreach my $aln (@gene_alns) {
 	#print "$name\n";
 	my $resultstr = $name;
  	$paml_exec->alignment($aln);
+ 	if ($trees{$name} == undef) {
+ 		print "skipping $name because tree is not available\n";
+ 		next;
+ 	}
  	if (keys(%trees) != 1) {
 		$paml_exec->tree($trees{$name}, {'branchLengths' => 1 });
 		print "using " . $trees{$name}->id() . " for tree\n";
 	}
 	my %params = $paml_exec->get_parameters();
+ 	$paml_exec->outfile_name("$output_name"."_$name.mlc");
 	foreach my $k (keys %params) {
 		print $k . "=>" . $params{$k} . "\n";
 	}
- 	$paml_exec->outfile_name("$output_name"."_$name.mlc");
  	my ($rc,$parser) = $paml_exec->run();
 	if ($rc == 0) {
 		my $t = $paml_exec->error_string();

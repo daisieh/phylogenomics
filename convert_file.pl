@@ -21,6 +21,8 @@ if (($out_format eq "fa") || ($out_format eq "fas") || ($out_format eq "fasta"))
 	$out_format = "nexus";
 } elsif (($out_format eq "gb") || ($out_format eq "genbank")) {
 	$out_format = "genbank";
+} elsif (($out_format eq "phy") || ($out_format eq "phylip")) {
+	$out_format = "phylip";
 }
 
 my $aln;
@@ -35,22 +37,30 @@ if (($in_format eq "gb") || ($in_format eq "genbank")) {
 	}
 	$aln = $loc_aln;
 } else {
-	my $loc_aln = Bio::AlignIO->new(-file => $in_file);
+	my $guesser = Bio::Tools::GuessSeqFormat->new( -file => $in_file );
+	$in_format  = $guesser->guess;
+	my $loc_aln = Bio::AlignIO->new(-file => $in_file, -format => $in_format);
 	$aln = $loc_aln->next_aln();
 }
 
 if ($out_format eq "nexus") {
-	my $gene_name = $aln->description();
 	my $result = convert_aln_to_nexus ($aln);
 	open my $gene_file, ">$out_file";
 	truncate $gene_file, 0;
 	print $gene_file $result;
 	close $gene_file;
-} else {
+} elsif ($out_format eq "genbank") {
+	my $name = $in_file;
+	$name =~ s/\..+//;
+	$name =~ s/.*\///;
 	my $seq_out = Bio::SeqIO->new(-file => ">$out_file", -format => $out_format);
 	foreach my $seq ($aln->each_seq()) {
-		my $name = $seq->id() . "_" . $seq->length();
+		my $name = $seq->id() . "_$name";
 		my $tempseq = Bio::Seq::RichSeq->new(-seq => $seq->seq(), -id => $name, -accession_number => "");
 		$seq_out->write_seq($tempseq);
 	}
+} else {
+	open my $fh, ">$out_file";
+	my $aln_out = Bio::AlignIO->new(-fh => $fh, -format => "phylip");
+	$aln_out->write_aln($aln);
 }

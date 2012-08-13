@@ -134,7 +134,7 @@ print $outtreefile "#NEXUS\n\nbegin trees;\n";
 for (my $i=0; $i < scalar @actual_genes; $i++) {
 	#strip out the internal node labels, as this confuses the parser
 	$trees[$i] =~ s/\)\d+:/\):/g;
-	$trees[$i] =~ s/\)\d+$/\);/;
+	$trees[$i] =~ s/\)\d+$/\)/;
 	print $outtreefile "tree $actual_genes[$i] = $trees[$i];\n";
 }
 print $outtreefile "end;\n";

@@ -1,6 +1,5 @@
 require "subfuncs.pl";
 use Bio::SeqIO;
-use Bio::TreeIO;
 use PostScript::Simple;
 use Bio::Align::Utilities qw(cat);
 #use Bio::Tools::Run::Phylo::PAML::Yn00;
@@ -8,11 +7,10 @@ use Bio::Tools::Run::Phylo::PAML::Codeml;
 
 $BIOPERLDEBUG = 1;
 
-my $usage  = "pairwise_omega.pl gb_file fa_file tree_file output_name\n";
+my $usage  = "pairwise_omega.pl gb_file fa_file output_name\n";
 
 my $gb_file = shift or die $usage;
 my $fa_file = shift or die $usage;
-my $tree_file = shift or die $usage;
 my $output_name = shift or die $usage;
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
@@ -66,14 +64,9 @@ while ($seq_object) {
 }
 
 my $paml_exec = Bio::Tools::Run::Phylo::PAML::Codeml->new
-			   ( -params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1} );
+			   ( -params => { 'runmode' => -2, 'seqtype' => 1, 'model' => 1} );
 
 #$paml_exec->outfile_name("$output_name.mlc");
-my $treeio = Bio::TreeIO->new(-format => "nexus", -file => "$tree_file");
-my $tree = $treeio->next_tree;
-my @nodes = $tree->get_leaf_nodes();
-print scalar(@nodes), "\n";
-$paml_exec->tree($tree);
 
 #my $paml_exec = Bio::Tools::Run::Phylo::PAML::Yn00->new();
 
