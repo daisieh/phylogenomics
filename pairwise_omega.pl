@@ -66,10 +66,6 @@ while ($seq_object) {
 my $paml_exec = Bio::Tools::Run::Phylo::PAML::Codeml->new
 			   ( -params => { 'runmode' => -2, 'seqtype' => 1, 'model' => 1} );
 
-#$paml_exec->outfile_name("$output_name.mlc");
-
-#my $paml_exec = Bio::Tools::Run::Phylo::PAML::Yn00->new();
-
 print $total_file scalar @gene_alns . " genes in the analysis\n";
 print $total_file $whole_aln->num_sequences() . " sequences in the analysis\n\n";
 print $total_file "gene\tseq1\tseq2\tdN/dS\tdN\tdS\n";

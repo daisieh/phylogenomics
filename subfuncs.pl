@@ -139,8 +139,8 @@ sub coords_on_circle {
 
 sub draw_circle_graph_from_file {
 	my $datafile = shift;
-	my $outfile = shift;
-	my $p = new PostScript::Simple( colour => 1, eps => 0, units => "bp", xsize => PS_X_SIZE, ysize => PS_Y_SIZE );
+	my $p = shift;
+	#my $p = new PostScript::Simple( colour => 1, eps => 0, units => "bp", xsize => PS_X_SIZE, ysize => PS_Y_SIZE );
 	my $OUTER_RADIUS = 387.5;
 	my $INNER_RADIUS = 337.5;
 
@@ -203,7 +203,7 @@ sub draw_circle_graph_from_file {
 			$p->line($last_x, $last_y, $this_x, $this_y);
 			$last_x = $this_x;
 			$last_y = $this_y;
-			print "$this_x, $this_y\n";
+			print @positions[$i] . ": $this_x, $this_y\n";
 		}
 		$p->line($last_x, $last_y, @coords[0], @coords[1]);
 	}
@@ -222,7 +222,7 @@ sub draw_circle_graph_from_file {
 	$p->setcolour(black);
 	$p->text(10, 10, "Maximum percent difference ($max_diffs) is scaled to 1");
 	$p->text(10, 30, "Sliding window size of $window_size bp");
-	$p->output("$outfile.ps");
+#	$p->output("$outfile.ps");
 
 }
 

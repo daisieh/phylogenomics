@@ -46,10 +46,9 @@ my @actual_genes;
 foreach my $name (@genes) {
 	my $resultstr = $name;
 	my $filename = "$output_name"."_$name.mlc";
-	my $x = 0;
-	open my $testfile, "<$filename" or $x = 1;
-	close $testfile;
-	if ($x != 0) {
+	my $x = (-e $filename); # check to see if the file exists; if not, skip to next.
+	if ($x != 1) {
+		print "missing $filename\n";
 		next;
 	}
 	print "processing $filename...\n";
@@ -76,12 +75,7 @@ foreach my $name (@genes) {
 						$branch_omegas{$x->id()}->add_tag_value("$name-t", $tags[0]);
 					}
 					my $newname;
-# 					if ($x->is_Leaf()) {
-# 						$newname = $x->id();
-# 					} else {
-						#need a more useful name
-						$newname = $x->ancestor()->id() . "-" . $x->id();
-# 					}
+					$newname = $x->ancestor()->id() . "-" . $x->id();
 					$branch_omegas{$x->id()}->add_tag_value("label", $newname);
 				}
 			}
