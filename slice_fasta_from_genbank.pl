@@ -15,10 +15,12 @@ my @gene_alns;
 
 my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
 my $seq_object = $seqio_object->next_seq;
+print $seq_object;
 
 my $result_str = "";
 while ($seq_object) {
 	for my $feat_object ($seq_object->get_SeqFeatures) {
+		print $feat_object->primary_tag;
 		if ($feat_object->primary_tag eq "CDS") {
 			my $name = main_name_for_gb_feature($feat_object);
 			my @locations = $feat_object->location->each_Location;
@@ -58,13 +60,21 @@ while ($seq_object) {
 	$seq_object = $seqio_object->next_seq;
 }
 
+#open my $gene_file, ">", "$result_dir\/$gb_file.fa";
 foreach my $aln (@gene_alns) {
-	my $gene_name = $aln->description();
-	#print "writing $gene_name...\n";
-	my $outfile = "$result_dir\/$gene_name.nex";
-	my $result = convert_aln_to_nexus ($aln);
-	open my $gene_file, ">$outfile";
-	truncate $gene_file, 0;
-	print $gene_file $result;
-	close $gene_file;
+	foreach my $seq ( $aln->each_seq()) {
+		print ">" . $aln->description . "\n" . $seq->seq() . "\n";
+	}
 }
+
+# foreach my $aln (@gene_alns) {
+# 	my $gene_name = $aln->description();
+# 	#print "writing $gene_name...\n";
+# #	my $outfile = "$result_dir\/$gene_name.nex";
+# #	my $result = convert_aln_to_nexus ($aln);
+# #	open my $gene_file, ">$outfile";
+# #	truncate $gene_file, 0;
+# 	$result =
+# 	print $gene_file $result;
+# #	close $gene_file;
+# }
