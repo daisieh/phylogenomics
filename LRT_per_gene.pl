@@ -76,7 +76,7 @@ while ($tree) {
 	$trees{$tree->id()} = $tree;
 	$tree = $treeio->next_tree;
 }
-
+open OUT_FH, ">", "$output_name.lrt";
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
 #          1 {'tempalnfile' => undef }, # aln file goes here
@@ -124,5 +124,12 @@ foreach my $aln (@gene_alns) {
 		my $t = $bf_exec->error_string();
 		print ">>" . $t . "\n";
 	}
+	open FH, "<", $bf_exec->outfile_name();
+	my @output_fh = <FH>;
+	close FH;
 
+	my $output = join("\n", @output_fh);
+	$output =~ m/(The null hypothesis can be rejected at the alpha-level \(p-value\) of         .*\s)/g;
+	my $p_value = $1;
+	print OUT_FH "$name: $p_value";
 }
