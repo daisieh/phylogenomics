@@ -89,7 +89,6 @@ foreach my $aln (@gene_alns) {
 		print "using " . $trees{$name}->id() . " for tree\n";
 	}
  	$rel_exec->outfile_name("$output_name"."_$name.rel");
- 	print ">>>" . $rel_exec->get_parameters() . "\n";
  	my ($rc,$parser) = $rel_exec->run();
 	if ($rc == 0) {
 		my $t = $rel_exec->error_string();

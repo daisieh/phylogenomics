@@ -77,6 +77,7 @@ while ($tree) {
 	$tree = $treeio->next_tree;
 }
 open OUT_FH, ">", "$output_name.lrt";
+print OUT_FH "gene\tHa=single omega\tHa=local omegas\n";
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
 #          1 {'tempalnfile' => undef }, # aln file goes here
@@ -89,10 +90,8 @@ foreach my $aln (@gene_alns) {
 #          6 {'outfile' => undef },
 #          7 {'aicoutfile' => undef }
 	my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "ModelTest.bf", 'order' => [$aln, $firsttree, '4', 'AIC Test',  "$output_name"."_$name.aic"]});
-# 	my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "/Users/daisie/Documents/Work/Sandbox/hyphy/examples/LRT.bf", 'order' => ["Universal", "Custom", $aln, "001001", $firsttree]});
 	my $resultstr = $name;
  	$bf_exec->alignment($aln);
-# 	$bf_exec->set_parameter('3', "012012");
  	if ($trees{$name} == undef) {
  		print "skipping $name because tree is not available\n";
  		next;
@@ -114,11 +113,11 @@ foreach my $aln (@gene_alns) {
 	my $output = join("\n", @output_fh);
 	$output =~ m/Model String:(\d+)/g;
 	my $model = $1;
-	print "running LRT on $name...\n";
+	print "running LRT of neutral vs single omega on $name...\n";
 	$bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "/Users/daisie/Documents/Work/Sandbox/hyphy/examples/LRT.bf", 'order' => ["Universal", "Custom", $bf_exec->alignment, $model, $bf_exec->tree]});
 	$bf_exec->alignment($aln);
 	$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
-	$bf_exec->outfile_name("$output_name"."_$name.bfout");
+	$bf_exec->outfile_name("$output_name"."_1_$name.bfout");
  	my ($rc,$parser) = $bf_exec->run();
 	if ($rc == 0) {
 		my $t = $bf_exec->error_string();
@@ -129,7 +128,25 @@ foreach my $aln (@gene_alns) {
 	close FH;
 
 	my $output = join("\n", @output_fh);
-	$output =~ m/(The null hypothesis can be rejected at the alpha-level \(p-value\) of         .*\s)/g;
-	my $p_value = $1;
-	print OUT_FH "$name: $p_value";
+	$output =~ m/The null hypothesis can be rejected at the alpha-level \(p-value\) of         (.*)\s/g;
+	my $p_value1 = $1;
+
+	print "running LRT of local vs global omega on $name...\n";
+	$bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "/Users/daisie/Documents/Work/Sandbox/hyphy/examples/LocalvsGlobal.bf", 'order' => ["Universal", "Custom", $bf_exec->alignment, $model, $bf_exec->tree]});
+	$bf_exec->alignment($aln);
+	$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
+	$bf_exec->outfile_name("$output_name"."_2_$name.bfout");
+ 	my ($rc,$parser) = $bf_exec->run();
+	if ($rc == 0) {
+		my $t = $bf_exec->error_string();
+		print ">>" . $t . "\n";
+	}
+	open FH, "<", $bf_exec->outfile_name();
+	my @output_fh = <FH>;
+	close FH;
+
+	my $output = join("\n", @output_fh);
+	$output =~ m/p-value = (\d*\.\d+)\n/g;
+	my $p_value2 = $1;
+	print OUT_FH "$name\t$p_value1\t$p_value2\n";
 }
