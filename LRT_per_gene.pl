@@ -80,15 +80,6 @@ open OUT_FH, ">", "$output_name.lrt";
 print OUT_FH "gene\tHa=single omega\tHa=local omegas\n";
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
-#          1 {'tempalnfile' => undef }, # aln file goes here
-#          2 {'temptreefile' => undef }, # tree file goes here
-#          3 {'Number of Rate Classes' => [ '4' ] },
-#          4 {'Model Selection Method' => [ 'Both',
-#                                         'Hierarchical Test',
-#                                         'AIC Test'] },
-#          5 {'Model rejection level' => '0.05' },
-#          6 {'outfile' => undef },
-#          7 {'aicoutfile' => undef }
 	my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "ModelTest.bf", 'order' => [$aln, $firsttree, '4', 'AIC Test',  "$output_name"."_$name.aic"]});
 	my $resultstr = $name;
  	$bf_exec->alignment($aln);
@@ -114,32 +105,16 @@ foreach my $aln (@gene_alns) {
 	$output =~ m/Model String:(\d+)/g;
 	my $model = $1;
 	print "running LRT of neutral vs single omega on $name...\n";
-	$bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "/Users/daisie/Documents/Work/Sandbox/hyphy/examples/LRT.bf", 'order' => ["Universal", "Custom", $bf_exec->alignment, $model, $bf_exec->tree]});
+	$bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "", 'order' => ["Universal", $bf_exec->alignment, $model, $bf_exec->tree]});
 	$bf_exec->alignment($aln);
 	$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
 	$bf_exec->outfile_name("$output_name"."_1_$name.bfout");
+	my $bf = $bf_exec->make_batchfile_with_contents(batchfile_text());
+	$bf_exec->save_tempfiles(1);
  	my ($rc,$parser) = $bf_exec->run();
 	if ($rc == 0) {
 		my $t = $bf_exec->error_string();
-		print ">>" . $t . "\n";
-	}
-	open FH, "<", $bf_exec->outfile_name();
-	my @output_fh = <FH>;
-	close FH;
-
-	my $output = join("\n", @output_fh);
-	$output =~ m/The null hypothesis can be rejected at the alpha-level \(p-value\) of         (.*)\s/g;
-	my $p_value1 = $1;
-
-	print "running LRT of local vs global omega on $name...\n";
-	$bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "/Users/daisie/Documents/Work/Sandbox/hyphy/examples/LocalvsGlobal.bf", 'order' => ["Universal", "Custom", $bf_exec->alignment, $model, $bf_exec->tree]});
-	$bf_exec->alignment($aln);
-	$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
-	$bf_exec->outfile_name("$output_name"."_2_$name.bfout");
- 	my ($rc,$parser) = $bf_exec->run();
-	if ($rc == 0) {
-		my $t = $bf_exec->error_string();
-		print ">>" . $t . "\n";
+		print "There was an error: " . $t . "\n";
 	}
 	open FH, "<", $bf_exec->outfile_name();
 	my @output_fh = <FH>;
@@ -149,4 +124,117 @@ foreach my $aln (@gene_alns) {
 	$output =~ m/p-value = (\d*\.\d+)\n/g;
 	my $p_value2 = $1;
 	print OUT_FH "$name\t$p_value1\t$p_value2\n";
+}
+
+sub temp_batchfile {
+
+}
+
+sub batchfile_text {
+    return qq{
+RequireVersion ("0.9920060830");
+VERBOSITY_LEVEL = -1;
+
+ExecuteAFile (HYPHY_LIB_DIRECTORY+"TemplateBatchFiles"+DIRECTORY_SEPARATOR+"Utility"+DIRECTORY_SEPARATOR+"DescriptiveStatistics.bf");
+ExecuteAFile (HYPHY_LIB_DIRECTORY+"TemplateBatchFiles"+DIRECTORY_SEPARATOR+"TemplateModels"+DIRECTORY_SEPARATOR+"chooseGeneticCode.def");
+
+ModelMatrixDimension = 64;
+for (k=0; k<64; k=k+1)
+{
+	if (_Genetic_Code[k] == 10)
+	{
+		ModelMatrixDimension = ModelMatrixDimension -1;
+	}
+}
+
+ExecuteAFile (HYPHY_LIB_DIRECTORY+"TemplateBatchFiles"+DIRECTORY_SEPARATOR+"2RatesAnalyses"+DIRECTORY_SEPARATOR+"MG94xREV.mdl");
+
+SetDialogPrompt     ("Choose a nucleotide alignment");
+DataSet ds        = ReadDataFile (PROMPT_FOR_FILE);
+
+DataSetFilter	  	filteredData = CreateFilter (ds,3,"","",GeneticCodeExclusions);
+
+SKIP_MODEL_PARAMETER_LIST = 1;
+done 					  = 0;
+
+while (!done)
+{
+	fprintf (stdout,"\nPlease enter a 6 character model designation (e.g:010010 defines HKY85):");
+	fscanf  (stdin,"String", modelDesc);
+	if (Abs(modelDesc)==6)
+	{
+		done = 1;
+	}
+}
+modelType 				  = 0;
+ExecuteAFile (HYPHY_LIB_DIRECTORY+"TemplateBatchFiles"+DIRECTORY_SEPARATOR+"TemplateModels"+DIRECTORY_SEPARATOR+"MG94custom.mdl");
+SKIP_MODEL_PARAMETER_LIST = 0;
+
+ExecuteAFile 		(HYPHY_LIB_DIRECTORY+"TemplateBatchFiles"+DIRECTORY_SEPARATOR+"queryTree.bf");
+
+brNames				= BranchName (givenTree,-1);
+COVARIANCE_PARAMETER 				= {};
+global global_OMEGA = 1;
+for (k=0; k < Columns (brNames)-1; k=k+1)
+{
+	ExecuteCommands ("givenTree."+brNames[k]+".nonSynRate:=givenTree."+brNames[k]+".omega*givenTree."+brNames[k]+".synRate;");
+	COVARIANCE_PARAMETER["givenTree."+brNames[k]+".omega"] = 1;
+}
+
+LikelihoodFunction  theLnLik = (filteredData, givenTree);
+
+
+for (k=0; k < Columns (brNames)-1; k=k+1)
+{
+//  set all of the branches to have omega constrained to the same global_OMEGA
+	ExecuteCommands ("givenTree."+brNames[k]+".omega:=global_OMEGA;");
+}
+
+fprintf 					   (stdout, "\nFitting the global model to the data...\n");
+Optimize 					   (res_global, theLnLik);
+fprintf						   (stdout, theLnLik,"\n\n");
+
+for (k=0; k < Columns (brNames)-1; k=k+1)
+{
+//  set each branch to have unconstrained omega
+	ExecuteCommands ("givenTree."+brNames[k]+".omega=global_OMEGA;");
+}
+
+fprintf 					   (stdout, "\nFitting the local model to the data...\n");
+Optimize 					   (res_local, theLnLik);
+fprintf						   (stdout, theLnLik,"\n\n");
+
+for (k=0; k < Columns (brNames)-1; k=k+1)
+{
+//  set each branch to have omega = 1
+	ExecuteCommands ("givenTree."+brNames[k]+".omega:=1;");
+}
+
+fprintf 					   (stdout, "\nFitting the neutral model to the data...\n");
+Optimize 					   (res_neutral, theLnLik);
+fprintf						   (stdout, theLnLik,"\n\n");
+
+LR = 2(res_local[1][0]-res_global[1][0]);
+DF = res_local[1][1]-res_global[1][1];
+
+fprintf (stdout, "\nGlobal omega calculated to be ", R, "\n");
+
+fprintf (stdout, "\nLRT for variable omega across the tree\n\tLR = ", LR, "\n\tConstraints = ", DF, "\n\tp-value = ", 1-CChi2(LR,DF),"\n\n");
+
+LR = 2(res_global[1][0]-res_neutral[1][0]);
+DF = res_global[1][1]-res_neutral[1][1];
+
+fprintf (stdout, "\nLRT for single omega across the tree\n\tLR = ", LR, "\n\tConstraints = ", DF, "\n\tp-value = ", 1-CChi2(LR,DF),"\n\n");
+
+COVARIANCE_PRECISION = 0.95;
+CovarianceMatrix (covMx, theLnLik);
+//
+VERBOSITY_LEVEL = 0;
+//
+for (k=0; k < Columns (brNames)-1; k=k+1)
+{
+	fprintf (stdout, "Branch :", brNames[k], "\n\tomega MLE = ", Format (covMx[k][1],6,3), "\n\t95% CI = (",Format (covMx[k][0],6,3), ",", Format (covMx[k][2],6,3), ")\n");
+}
+
+    };
 }
