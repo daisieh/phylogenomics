@@ -77,9 +77,10 @@ while ($tree) {
 	$tree = $treeio->next_tree;
 }
 open OUT_FH, ">", "$output_name.lrt";
-print OUT_FH "gene\tHa=single omega\tHa=local omegas\n";
+print OUT_FH "gene\tHa=single omega\tHa=local omegas\tglobal omega\n";
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
+	print "getting model for $name...";
 	my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "ModelTest.bf", 'order' => [$aln, $firsttree, '4', 'AIC Test',  "$output_name"."_$name.aic"]});
 	my $resultstr = $name;
  	$bf_exec->alignment($aln);
@@ -89,7 +90,7 @@ foreach my $aln (@gene_alns) {
  	}
  	if (keys(%trees) != 1) {
 		$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
-		print "using " . $trees{$name}->id() . " for tree\n";
+		#print "using " . $trees{$name}->id() . " for tree\n";
 	}
  	$bf_exec->outfile_name("$output_name"."_$name.bfout");
  	my ($rc,$parser) = $bf_exec->run();
@@ -104,13 +105,14 @@ foreach my $aln (@gene_alns) {
 	my $output = join("\n", @output_fh);
 	$output =~ m/Model String:(\d+)/g;
 	my $model = $1;
-	print "running LRT of neutral vs single omega on $name...\n";
+	print "$model chosen.\n";
+	print "running LRTs on $name...\n";
 	$bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "", 'order' => ["Universal", $bf_exec->alignment, $model, $bf_exec->tree]});
+# 	$bf_exec->save_tempfiles(1);
 	$bf_exec->alignment($aln);
 	$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
-	$bf_exec->outfile_name("$output_name"."_1_$name.bfout");
+	$bf_exec->outfile_name("$output_name"."_$name.bfout");
 	my $bf = $bf_exec->make_batchfile_with_contents(batchfile_text());
-	$bf_exec->save_tempfiles(1);
  	my ($rc,$parser) = $bf_exec->run();
 	if ($rc == 0) {
 		my $t = $bf_exec->error_string();
@@ -121,9 +123,13 @@ foreach my $aln (@gene_alns) {
 	close FH;
 
 	my $output = join("\n", @output_fh);
-	$output =~ m/p-value = (\d*\.\d+)\n/g;
+	$output =~ m/Global omega calculated to be (.+?)\n/g;
+	my $omega = $1;
+	$output =~ m/LRT for single omega across the tree: p-value = (.+?),/g;
+	my $p_value1 = $1;
+	$output =~ m/LRT for variable omega across the tree: p-value = (.+?),/g;
 	my $p_value2 = $1;
-	print OUT_FH "$name\t$p_value1\t$p_value2\n";
+	print OUT_FH "$name\t$p_value1\t$p_value2\t$omega\n";
 }
 
 sub temp_batchfile {
@@ -193,6 +199,7 @@ for (k=0; k < Columns (brNames)-1; k=k+1)
 fprintf 					   (stdout, "\nFitting the global model to the data...\n");
 Optimize 					   (res_global, theLnLik);
 fprintf						   (stdout, theLnLik,"\n\n");
+global omega_MLE = global_OMEGA;
 
 for (k=0; k < Columns (brNames)-1; k=k+1)
 {
@@ -214,17 +221,17 @@ fprintf 					   (stdout, "\nFitting the neutral model to the data...\n");
 Optimize 					   (res_neutral, theLnLik);
 fprintf						   (stdout, theLnLik,"\n\n");
 
-LR = 2(res_local[1][0]-res_global[1][0]);
-DF = res_local[1][1]-res_global[1][1];
-
-fprintf (stdout, "\nGlobal omega calculated to be ", R, "\n");
-
-fprintf (stdout, "\nLRT for variable omega across the tree\n\tLR = ", LR, "\n\tConstraints = ", DF, "\n\tp-value = ", 1-CChi2(LR,DF),"\n\n");
+fprintf (stdout, "\nGlobal omega calculated to be ", omega_MLE, "\n");
 
 LR = 2(res_global[1][0]-res_neutral[1][0]);
 DF = res_global[1][1]-res_neutral[1][1];
 
-fprintf (stdout, "\nLRT for single omega across the tree\n\tLR = ", LR, "\n\tConstraints = ", DF, "\n\tp-value = ", 1-CChi2(LR,DF),"\n\n");
+fprintf (stdout, "\nLRT for single omega across the tree: p-value = ", 1-CChi2(LR,DF), ", LR = ", LR, ", Constraints = ", DF, "\n\n");
+
+LR = 2(res_local[1][0]-res_global[1][0]);
+DF = res_local[1][1]-res_global[1][1];
+
+fprintf (stdout, "\nLRT for variable omega across the tree: p-value = ", 1-CChi2(LR,DF), ", LR = ", LR, ", Constraints = ", DF, "\n\n");
 
 COVARIANCE_PRECISION = 0.95;
 CovarianceMatrix (covMx, theLnLik);
