@@ -8,6 +8,7 @@ use Bio::Tools::Run::Phylo::Hyphy::REL;
 use Bio::Tools::Run::Phylo::Hyphy::BatchFile;
 use Bio::Tools::Run::Phylo::Hyphy::SLAC;
 use File::Basename;
+use Cwd 'abs_path';
 use Getopt::Long;
 
 my $usage = "perl " . basename($0);
@@ -16,10 +17,10 @@ $usage .= " gb_file fa_file tree_file output_name\n";
 my $gb_file = shift or die $usage;
 my $fa_file = shift or die $usage;
 my $tree_file = shift or die $usage;
-my $output_name = shift or die $usage;
-#GetOptions ('query=s' => \$queryfile, 'subject=s' => \$subjectfile);
+my $output_name_as_entered = shift or die $usage;
 
-
+my $output_name = abs_path( $output_name_as_entered );
+print "using $output_name as output path\n";
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
 my @gene_alns;
@@ -82,6 +83,8 @@ foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
 	print "getting model for $name...";
 	my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "ModelTest.bf", 'order' => [$aln, $firsttree, '4', 'AIC Test',  "$output_name"."_$name.aic"]});
+#  	$bf_exec->save_tempfiles(1);
+#     print "tempdir is " . $bf_exec->tempdir() . "\n";
 	my $resultstr = $name;
  	$bf_exec->alignment($aln);
  	if ($trees{$name} == undef) {
@@ -108,7 +111,6 @@ foreach my $aln (@gene_alns) {
 	print "$model chosen.\n";
 	print "running LRTs on $name...\n";
 	$bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "", 'order' => ["Universal", $bf_exec->alignment, $model, $bf_exec->tree]});
-# 	$bf_exec->save_tempfiles(1);
 	$bf_exec->alignment($aln);
 	$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
 	$bf_exec->outfile_name("$output_name"."_$name.bfout");
