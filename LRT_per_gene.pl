@@ -12,12 +12,16 @@ use Cwd 'abs_path';
 use Getopt::Long;
 
 my $usage = "perl " . basename($0);
-$usage .= " gb_file fa_file tree_file output_name\n";
+$usage .= " gb_file fa_file tree_file output_name [num_threads]\n";
 
 my $gb_file = shift or die $usage;
 my $fa_file = shift or die $usage;
 my $tree_file = shift or die $usage;
 my $output_name_as_entered = shift or die $usage;
+my $num_threads = shift;
+unless (defined $num_threads) {
+    $num_threads = 1;
+}
 
 my $output_name = abs_path( $output_name_as_entered );
 
@@ -99,7 +103,7 @@ foreach my $aln (@gene_alns) {
     }
     my $x = fork_me($aln, $tree);
     push @pids, $x;
-    if ((scalar @pids) > 7) {
+    if ((scalar @pids) >= $num_threads) {
         wait_for_pids(@pids);
         @pids = ();
     }
