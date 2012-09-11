@@ -20,7 +20,6 @@ my $tree_file = shift or die $usage;
 my $output_name_as_entered = shift or die $usage;
 
 my $output_name = abs_path( $output_name_as_entered );
-print "using $output_name as output path\n";
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
 my @gene_alns;
@@ -66,12 +65,12 @@ while ($seq_object) {
 	$seq_object = $seqio_object->next_seq;
 }
 
-
 my $treeio = Bio::TreeIO->new(-format => "nexus", -file => "$tree_file");
 #read in all of the trees
 my %trees = ();
 my $tree = $treeio->next_tree;
 my $firsttree = $tree;
+my %pids = ();
 
 while ($tree) {
 	$trees{$tree->id()} = $tree;
@@ -79,63 +78,108 @@ while ($tree) {
 }
 open OUT_FH, ">", "$output_name.lrt";
 print OUT_FH "gene\tHa=single omega\tHa=local omegas\tglobal omega\n";
+my @pids;
+my $last_aln = @gene_alns[(scalar @gene_alns) - 1];
+foreach my $aln (@gene_alns) {
+    if ("$last_aln" eq "$aln") {
+        print "last! passing in " . join (" ",@pids) . "\n";
+        wait_for_pids(@pids);
+        @pids = ();
+        last;
+    }
+	my $name = $aln->description();
+    if ($trees{$name} == undef) {
+        print "skipping $name because tree is not available\n";
+        next;
+    }
+    if (keys(%trees) != 1) {
+        $tree = $trees{$name};
+    } else {
+        $tree = $firsttree;
+    }
+    my $x = fork_me($aln, $tree);
+    push @pids, $x;
+    if ((scalar @pids) > 7) {
+        wait_for_pids(@pids);
+        @pids = ();
+    }
+}
+
+
+print "okay, all processes returned.\n";
+
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
-	print "getting model for $name...";
-	my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "ModelTest.bf", 'order' => [$aln, $firsttree, '4', 'AIC Test',  "$output_name"."_$name.aic"]});
-#  	$bf_exec->save_tempfiles(1);
-#     print "tempdir is " . $bf_exec->tempdir() . "\n";
-	my $resultstr = $name;
- 	$bf_exec->alignment($aln);
- 	if ($trees{$name} == undef) {
- 		print "skipping $name because tree is not available\n";
- 		next;
- 	}
- 	if (keys(%trees) != 1) {
-		$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
-		#print "using " . $trees{$name}->id() . " for tree\n";
-	}
- 	$bf_exec->outfile_name("$output_name"."_$name.bfout");
- 	my ($rc,$parser) = $bf_exec->run();
-	if ($rc == 0) {
-		my $t = $bf_exec->error_string();
-		print ">>" . $t . "\n";
-	}
-	open FH, "<", $bf_exec->outfile_name();
+	open FH, "<", "$output_name"."_$name.bfout" or next;
 	my @output_fh = <FH>;
 	close FH;
-
+    print "reading output for $name\n";
 	my $output = join("\n", @output_fh);
-	$output =~ m/Model String:(\d+)/g;
-	my $model = $1;
-	print "$model chosen.\n";
-	print "running LRTs on $name...\n";
-	$bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "", 'order' => ["Universal", $bf_exec->alignment, $model, $bf_exec->tree]});
-	$bf_exec->alignment($aln);
-	$bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
-	$bf_exec->outfile_name("$output_name"."_$name.bfout");
-	my $bf = $bf_exec->make_batchfile_with_contents(batchfile_text());
- 	my ($rc,$parser) = $bf_exec->run();
-	if ($rc == 0) {
-		my $t = $bf_exec->error_string();
-		print "There was an error: " . $t . "\n";
-	}
-	open FH, "<", $bf_exec->outfile_name();
-	my @output_fh = <FH>;
-	close FH;
-
-	my $output = join("\n", @output_fh);
+	my ($omega, $p_value1, $pvalue2) = "";
 	$output =~ m/Global omega calculated to be (.+?)\n/g;
-	my $omega = $1;
+	$omega = $1;
 	$output =~ m/LRT for single omega across the tree: p-value = (.+?),/g;
-	my $p_value1 = $1;
+	$p_value1 = $1;
 	$output =~ m/LRT for variable omega across the tree: p-value = (.+?),/g;
-	my $p_value2 = $1;
+	$p_value2 = $1;
 	print OUT_FH "$name\t$p_value1\t$p_value2\t$omega\n";
 }
 
-sub temp_batchfile {
+sub wait_for_pids {
+    @pid_in = @_;
+    print "waiting on batch: " . join (" ",@pids) . "\n";
+    foreach my $item (@pids) {
+        print "waiting for $item\n";
+        waitpid $item, 0;
+    }
+    return;
+}
 
+sub fork_me {
+    $aln = shift;
+    $trees = shift;
+    my $name = $aln->description();
+    my $child_pid = fork();
+    unless ($child_pid) { #child process
+        my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "ModelTest.bf", 'order' => [$aln, $firsttree, '4', 'AIC Test',  "$output_name"."_$name.aic"]});
+        my $resultstr = $name;
+        $bf_exec->alignment($aln);
+        if ($trees{$name} == undef) {
+            print "skipping $name because tree is not available\n";
+            next;
+        }
+        if (keys(%trees) != 1) {
+            $bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
+        }
+        $bf_exec->outfile_name("$output_name"."_$name.bfout");
+        my ($rc,$parser) = $bf_exec->run();
+        if ($rc == 0) {
+            my $t = $bf_exec->error_string();
+            print ">>" . $t . "\n";
+        }
+        open FH, "<", $bf_exec->outfile_name();
+        my @output_fh = <FH>;
+        close FH;
+
+        my $output = join("\n", @output_fh);
+        $output =~ m/Model String:(\d+)/g;
+        my $model = $1;
+        print "$model chosen for $name\n";
+        print "running LRTs on $name...\n";
+        $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "", 'order' => ["Universal", $bf_exec->alignment, $model, $bf_exec->tree]});
+        $bf_exec->alignment($aln);
+        $bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
+        $bf_exec->outfile_name("$output_name"."_$name.bfout");
+        my $bf = $bf_exec->make_batchfile_with_contents(batchfile_text());
+        my ($rc,$parser) = $bf_exec->run();
+        if ($rc == 0) {
+            my $t = $bf_exec->error_string();
+            print "There was an error: " . $t . "\n";
+        }
+        exit;
+    } else { #parent process
+        return $child_pid;
+    }
 }
 
 sub batchfile_text {
