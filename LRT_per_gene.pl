@@ -1,12 +1,8 @@
 require "subfuncs.pl";
 use Bio::SeqIO;
 use Bio::TreeIO;
-use Bio::Root::Test;
-use PostScript::Simple;
 use Bio::Align::Utilities qw(cat);
-use Bio::Tools::Run::Phylo::Hyphy::REL;
 use Bio::Tools::Run::Phylo::Hyphy::BatchFile;
-use Bio::Tools::Run::Phylo::Hyphy::SLAC;
 use File::Basename;
 use Cwd 'abs_path';
 use Getopt::Long;
@@ -85,39 +81,36 @@ print OUT_FH "gene\tHa=single omega\tHa=local omegas\tglobal omega\n";
 my @pids;
 my $last_aln = @gene_alns[(scalar @gene_alns) - 1];
 foreach my $aln (@gene_alns) {
-    if ("$last_aln" eq "$aln") {
-        print "last! passing in " . join (" ",@pids) . "\n";
-        wait_for_pids(@pids);
-        @pids = ();
-        last;
-    }
 	my $name = $aln->description();
     if ($trees{$name} == undef) {
         print "skipping $name because tree is not available\n";
         next;
     }
-    if (keys(%trees) != 1) {
+    if (keys(%trees) != 1) { # if there's only one tree, use that tree for every alignment.
         $tree = $trees{$name};
     } else {
         $tree = $firsttree;
     }
-    my $x = fork_me($aln, $tree);
-    push @pids, $x;
+    my $hyphy_pid = fork_hyphy($aln, $tree);
+    push @pids, $hyphy_pid;
+    if ("$last_aln" eq "$aln") {
+        wait_for_pids(@pids);
+        last;
+    }
     if ((scalar @pids) >= $num_threads) {
         wait_for_pids(@pids);
         @pids = ();
     }
 }
 
-
-print "okay, all processes returned.\n";
+print "Done with HYPHY. Processing outputs...\n";
 
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
 	open FH, "<", "$output_name"."_$name.bfout" or next;
 	my @output_fh = <FH>;
 	close FH;
-    print "reading output for $name\n";
+    print "$name...";
 	my $output = join("\n", @output_fh);
 	my ($omega, $p_value1, $pvalue2) = "";
 	$output =~ m/Global omega calculated to be (.+?)\n/g;
@@ -129,17 +122,21 @@ foreach my $aln (@gene_alns) {
 	print OUT_FH "$name\t$p_value1\t$p_value2\t$omega\n";
 }
 
+print "\nResults in $output_name.lrt\n";
+
 sub wait_for_pids {
     @pid_in = @_;
-    print "waiting on batch: " . join (" ",@pids) . "\n";
+    if ((scalar @pid_in) > 1) {
+        print "waiting on pids " . join (", ",@pids) . "...\n";
+    }
     foreach my $item (@pids) {
-        print "waiting for $item\n";
+        print "waiting for pid $item to return...\n";
         waitpid $item, 0;
     }
     return;
 }
 
-sub fork_me {
+sub fork_hyphy {
     $aln = shift;
     $trees = shift;
     my $name = $aln->description();
@@ -159,7 +156,7 @@ sub fork_me {
         my ($rc,$parser) = $bf_exec->run();
         if ($rc == 0) {
             my $t = $bf_exec->error_string();
-            print ">>" . $t . "\n";
+            print $t . "\n";
         }
         open FH, "<", $bf_exec->outfile_name();
         my @output_fh = <FH>;
@@ -168,8 +165,7 @@ sub fork_me {
         my $output = join("\n", @output_fh);
         $output =~ m/Model String:(\d+)/g;
         my $model = $1;
-        print "$model chosen for $name\n";
-        print "running LRTs on $name...\n";
+        print "Model string $model chosen for $name\n";
         $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "", 'order' => ["Universal", $bf_exec->alignment, $model, $bf_exec->tree]});
         $bf_exec->alignment($aln);
         $bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
