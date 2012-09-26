@@ -82,11 +82,11 @@ my @pids;
 my $last_aln = @gene_alns[(scalar @gene_alns) - 1];
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
-    if ($trees{$name} == undef) {
-        print "skipping $name because tree is not available\n";
-        next;
-    }
     if (keys(%trees) != 1) { # if there's only one tree, use that tree for every alignment.
+        if ($trees{$name} == undef) {
+            print "skipping $name because tree is not available\n";
+            next;
+        }
         $tree = $trees{$name};
     } else {
         $tree = $firsttree;
