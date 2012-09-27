@@ -11,7 +11,10 @@ my $usage = "perl " . basename($0);
 $usage .= " gb_file fa_file tree_file output_name [num_threads]\n";
 
 my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-print "starting " . basename($0) . "at $hour:$min on $yday $mon $year\n";
+$mon++;
+$mon = sprintf("%02d", $mon);
+$year -= 100;
+print "starting " . basename($0) . " at $hour:$min:$sec on $year$mon$mday\n";
 
 my $gb_file = shift or die $usage;
 my $fa_file = shift or die $usage;
