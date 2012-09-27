@@ -83,7 +83,7 @@ sub make_aln_from_fasta_file {
 		my $name = $seq->display_name;
 		#remove weird chars, file suffixes
 		$name =~ s/(.*?)\..*/$1/;
-		$name =~ s/[\Q !@#$%^&*.-?<>,|\/\E]//g;
+		#$name =~ s/[\Q !@#$%^&*.-?<>,|\/\E]//g;
 		#shorten name if it's too long
 		if (length($name) > 12) {
 			$name =~ /(.{12})/;

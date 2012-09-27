@@ -138,20 +138,16 @@ sub wait_for_pids {
 
 sub fork_hyphy {
     $aln = shift;
-    $trees = shift;
+    $tree = shift;
     my $name = $aln->description();
+
+
     my $child_pid = fork();
     unless ($child_pid) { #child process
-        my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "ModelTest.bf", 'order' => [$aln, $firsttree, '4', 'AIC Test',  "$output_name"."_$name.aic"]});
+        my $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "ModelTest.bf", 'order' => [$aln, $tree, '4', 'AIC Test',  "$output_name"."_$name.aic"]});
         my $resultstr = $name;
         $bf_exec->alignment($aln);
-        if ($trees{$name} == undef) {
-            print "skipping $name because tree is not available\n";
-            next;
-        }
-        if (keys(%trees) != 1) {
-            $bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
-        }
+        $bf_exec->tree($tree, {'branchLengths' => 1 });
         $bf_exec->outfile_name("$output_name"."_$name.bfout");
         my ($rc,$parser) = $bf_exec->run();
         if ($rc == 0) {
@@ -168,7 +164,7 @@ sub fork_hyphy {
         print "Model string $model chosen for $name\n";
         $bf_exec = Bio::Tools::Run::Phylo::Hyphy::BatchFile->new(-params => {'bf' => "", 'order' => ["Universal", $bf_exec->alignment, $model, $bf_exec->tree]});
         $bf_exec->alignment($aln);
-        $bf_exec->tree($trees{$name}, {'branchLengths' => 1 });
+        $bf_exec->tree($tree, {'branchLengths' => 1 });
         $bf_exec->outfile_name("$output_name"."_$name.bfout");
         my $bf = $bf_exec->make_batchfile_with_contents(batchfile_text());
         my ($rc,$parser) = $bf_exec->run();
