@@ -242,6 +242,11 @@ sub timestamp {
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
     $mon++;
     $mon = sprintf("%02d", $mon);
+    $min = sprintf("%02d", $min);
+    $sec = sprintf("%02d", $sec);
+    $hour = sprintf("%02d", $hour);
+    $mday = sprintf("%02d", $mday);
+
     $year -= 100;
     my $time = "$hour:$min:$sec";
     my $date = "$year$mon$mday";
