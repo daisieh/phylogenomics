@@ -238,5 +238,15 @@ sub main_name_for_gb_feature {
 	return @names[0];
 }
 
+sub timestamp {
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $mon++;
+    $mon = sprintf("%02d", $mon);
+    $year -= 100;
+    my $time = "$hour:$min:$sec";
+    my $date = "$year$mon$mday";
+    return ($time, $date);
+}
+
 # must return 1 for the file overall.
 1;

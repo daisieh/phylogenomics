@@ -10,11 +10,8 @@ use Getopt::Long;
 my $usage = "perl " . basename($0);
 $usage .= " gb_file fa_file tree_file output_name [num_threads]\n";
 
-my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-$mon++;
-$mon = sprintf("%02d", $mon);
-$year -= 100;
-print "starting " . basename($0) . " at $hour:$min:$sec on $year$mon$mday\n";
+my ($time, $date) = timestamp();
+print "starting " . basename($0) . " at $time on $date\n";
 
 my $gb_file = shift or die $usage;
 my $fa_file = shift or die $usage;
@@ -128,7 +125,8 @@ foreach my $aln (@gene_alns) {
 	print OUT_FH "$name\t$p_value1\t$p_value2\t$omega\n";
 }
 
-print "\nResults in $output_name.lrt\n";
+($time, $date) = timestamp();
+print "\nResults in $output_name.lrt\nFinished at $time on $date\n";
 
 sub wait_for_pids {
     @pid_in = @_;
