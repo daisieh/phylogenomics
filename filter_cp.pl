@@ -13,7 +13,7 @@ my $filterfile = "$fastafile.filtered";
 
 print "blasting...";
 
-my @blastargs = ("blastn", "-evalue", "20", "-subject", "$cpfile", "-query", "$fastafile", "-outfmt", "6 qseqid bitscore", "-out", "$filterfile");
+my @blastargs = ("blastn", "-evalue", "10", "-subject", "$cpfile", "-query", "$fastafile", "-outfmt", "6 qseqid bitscore evalue", "-out", "$filterfile");
 system (@blastargs);
 
 print "done (results in $filterfile)\n";
