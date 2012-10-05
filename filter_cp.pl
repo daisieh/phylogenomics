@@ -12,6 +12,7 @@ my $evalue = 10;
 my $task = "keep-hits";
 GetOptions ('fasta=s' => \$fastafile,
             'reference=s' => \$reffile,
+            'outputfile=s' => \$resultfile,
             'task=s' => \$task,
             'evalue:i' => \$evalue) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
@@ -19,6 +20,7 @@ unless ($fastafile && $reffile && $resultfile) {
     my $msg = qq{Error: an option was mis-specified:
     fasta=$fastafile
     reference=$reffile
+    outputfile=$resultfile
     task=$task
     };
     pod2usage(-msg => $msg, -exitval => 2);
