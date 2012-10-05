@@ -9,31 +9,38 @@ $usage .=	" <fastafile> <cp.fasta> <resultfile>\n\n";
 
 my ($fastafile, $reffile, $resultfile, $task) = 0;
 my $evalue = 10;
+my $run_blast = 1; # run blast by default
 my $task = "keep-hits";
 GetOptions ('fasta=s' => \$fastafile,
             'reference=s' => \$reffile,
             'outputfile=s' => \$resultfile,
             'task=s' => \$task,
-            'evalue:i' => \$evalue) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+            'evalue:i' => \$evalue,
+            'blast!' => \$run_blast) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
-unless ($fastafile && $reffile && $resultfile) {
+unless (($fastafile && $reffile && $resultfile) || (!$run_blast && $fastafile && $resultfile)) {
     my $msg = qq{Error: an option was mis-specified:
     fasta=$fastafile
     reference=$reffile
     outputfile=$resultfile
     task=$task
     };
+
     pod2usage(-msg => $msg, -exitval => 2);
 }
 
 my $filterfile = "$resultfile.filtered";
 
-print "blasting...";
+if ($run_blast) {
+    print "blasting...";
 
-my @blastargs = ("blastn", "-evalue", "$evalue", "-subject", "$reffile", "-query", "$fastafile", "-outfmt", "6 qseqid bitscore evalue", "-out", "$filterfile");
-system (@blastargs);
+    my @blastargs = ("blastn", "-evalue", "$evalue", "-subject", "$reffile", "-query", "$fastafile", "-outfmt", "6 qseqid bitscore evalue", "-out", "$filterfile");
+    system (@blastargs);
 
-print "done (results in $filterfile)\n";
+    print "done (results in $filterfile)\n";
+} else {
+    print "not running blast, using results from $filterfile\n";
+}
 
 open my $F, "<$fastafile" or die "couldn't open fasta file";
 my $fs = readline $F;
@@ -77,6 +84,13 @@ while ($fs ne "") {
 		}
 	}
     if ($task eq "discard-hits") {
+        $filtering =~ /(.+?)\t/;
+        my $curr_seq = $1;
+        if ($first_header =~ m/$curr_seq/) {
+            $filtering = readline $this_file;
+        } else {
+            print "$first_header$sequence";
+        }
         last;
     } else {
         if ($filtering ne "%%%") {
@@ -121,6 +135,8 @@ filter_cp [options]
     -reference: fasta file of the reference to be filtered against
     -task:      "discard-hits" means to discard hits to the reference
                 "keep-hits" means to keep hits
+    -evalue:    sets the evalue for blastn (default is 10)
+    --blast/noblast:    runs blastn or uses previously generated filtered list (default is to run blastn)
 
 =head1 DESCRIPTION
 
