@@ -9,12 +9,13 @@ $usage .=	" <fastafile> <cp.fasta> <resultfile>\n\n";
 
 my ($fastafile, $reffile, $resultfile, $task) = 0;
 my $evalue = 10;
+my $task = "keep-hits";
 GetOptions ('fasta=s' => \$fastafile,
             'reference=s' => \$reffile,
             'task=s' => \$task,
             'evalue:i' => \$evalue) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
-unless ($gb_file && $fa_file && $tree_file && $output_name) {
+unless ($fastafile && $reffile && $resultfile) {
     my $msg = qq{Error: an option was mis-specified:
     fasta=$fastafile
     reference=$reffile
