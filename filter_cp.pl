@@ -6,6 +6,7 @@ use Pod::Usage;
 
 my $usage = "perl " . basename($0);
 $usage .=	" <fastafile> <cp.fasta> <resultfile>\n\n";
+print "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
 my ($fastafile, $reffile, $resultfile, $task) = 0;
 my $evalue = 10;
@@ -19,6 +20,7 @@ GetOptions ('fasta=s' => \$fastafile,
             'discard-hits!' => \$task_switch,
             'evalue:i' => \$evalue,
             'blast!' => \$run_blast) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
 
 if ($task_switch) {
     $task = "discard-hits";
@@ -38,7 +40,7 @@ unless (($fastafile && $reffile && $resultfile) || (!$run_blast && $fastafile &&
 my $filterfile = "$resultfile.filtered";
 
 if ($run_blast) {
-    print "blasting...";
+    print "blasting...\n";
 
     my @blastargs = ("blastn", "-evalue", "$evalue", "-subject", "$reffile", "-query", "$fastafile", "-outfmt", "6 qseqid bitscore evalue", "-out", "$filterfile");
     system (@blastargs);
