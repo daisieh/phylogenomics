@@ -11,12 +11,18 @@ my ($fastafile, $reffile, $resultfile, $task) = 0;
 my $evalue = 10;
 my $run_blast = 1; # run blast by default
 my $task = "keep-hits";
+my $task_switch;
 GetOptions ('fasta=s' => \$fastafile,
             'reference=s' => \$reffile,
             'outputfile=s' => \$resultfile,
-            'task=s' => \$task,
+            'task:s' => \$task,
+            'discard-hits!' => \$task_switch,
             'evalue:i' => \$evalue,
             'blast!' => \$run_blast) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+if ($task_switch) {
+    $task = "discard-hits";
+}
 
 unless (($fastafile && $reffile && $resultfile) || (!$run_blast && $fastafile && $resultfile)) {
     my $msg = qq{Error: an option was mis-specified:
@@ -42,82 +48,66 @@ if ($run_blast) {
     print "not running blast, using results from $filterfile\n";
 }
 
-open my $F, "<$fastafile" or die "couldn't open fasta file";
-my $fs = readline $F;
+print "filtering...\n";
 
-open my $this_file, "<$filterfile" or die "error opening filtered seqs file";
-
-my $filtering = readline $this_file;
-if (eof($this_file)) {
-	print "no sequences blasted to reference.\n";
-	$filtering = "%%%";
-}
-
-while ($filtering =~ m/^\s+$/) {
-	$filtering = readline $this_file;
-	if (eof($this_file)) {
-		print "%%%";
-		$filtering = "%%%";
-		last;
-	}
-}
-
-print "filtering...";
-
+open fastaFH, "<$fastafile" or die "couldn't open fasta file";
+open my $filterFH, "<$filterfile" or die "error opening filtered seqs file";
 open my $outfile, ">$resultfile.fasta" or die "couldn't create result file";
 truncate $outfile, 0;
 
-while ($fs ne "") {
-	#first line:
-	my $first_header = "$fs";
-	$fs = readline $F;
+if (eof($filterFH)) {
+    print "no sequences blasted to reference.\n";
+    exit;
+}
 
-	#second line:
-	my $sequence = "$fs";
-	$fs = readline $F;
-	while (($fs !~ m/>.*/)) {
-		chomp $sequence;
-		$sequence .= "$fs";
-		$fs = readline $F;
-		if (eof($F)) {
-			last;
-		}
-	}
-    if ($task eq "discard-hits") {
-        $filtering =~ /(.+?)\t/;
-        my $curr_seq = $1;
-        if ($first_header =~ m/$curr_seq/) {
-            $filtering = readline $this_file;
-        } else {
-            print "$first_header$sequence";
+my $filter_seq = find_next_seq (0, $filterFH);
+my $fasta_line = readline fastaFH;
+while (($fasta_line ne "") && $filter_seq) {
+    #first line:
+    my $first_header = "$fasta_line";
+    $fasta_line = readline fastaFH;
+    #second line:
+    my $sequence = "$fasta_line";
+    $fasta_line = readline fastaFH;
+    while (($fasta_line !~ m/>.*/)) {
+        $sequence .= "$fasta_line";
+        $fasta_line = readline fastaFH;
+        if (eof(fastaFH)) {
+            last;
         }
-        last;
+    }
+    if ($first_header =~ m/$filter_seq/) {
+        if ($task ne "discard-hits") {
+            print $outfile "$first_header$sequence";
+        }
+        $filter_seq = find_next_seq ($filter_seq, $filterFH);
     } else {
-        if ($filtering ne "%%%") {
-            $filtering =~ /(.+?)\t/;
-            my $curr_seq = $1;
-
-            if ($first_header =~ m/$curr_seq/) {
-                $filtering = readline $this_file;
-                print $outfile "$first_header$sequence";
-                while ($filtering =~ m/$curr_seq/) {
-                    $filtering = readline $this_file;
-                    if ($filtering eq "") {
-                        $filtering = "%%%";
-                        last;
-                    }
-                }
-            }
+        if ($task eq "discard-hits") {
+            print $outfile "$first_header$sequence";
         }
-
     }
 }
 
 print "done\n";
 
-close $this_file;
-close $F;
+close $filterFH;
+close fastaFH;
 close $outfile;
+
+sub find_next_seq {
+    my $curr_seq = shift;
+    my $FH = shift;
+
+    my ($filtering, $seq);
+    while ($filtering = readline $FH) {
+        $filtering =~ /(.+?)\s/;
+        $seq = $1;
+        if ($seq !~ m/$curr_seq/) {
+            return $seq;
+        }
+    }
+    return undef;
+}
 
 __END__
 
