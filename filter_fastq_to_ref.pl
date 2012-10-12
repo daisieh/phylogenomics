@@ -12,7 +12,7 @@ GetOptions ('1=s' => \$fastqfile1,
             'reference=s' => \$reference,
             'outputfile:s' => \$resultfile) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
-open my $refFH, "<", "$reffile.fai";
+open my $refFH, "<", "$reference.fai";
 if ((-e $refFH) != 1) {
     print "samtools reference index didn't exist, making reference index.\n";
     system("samtools faidx $reference");
