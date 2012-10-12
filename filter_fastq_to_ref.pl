@@ -5,29 +5,12 @@ use File::Spec;
 use IO::File;
 use Symbol qw(gensym);
 
-my ($fastqfile1, $fastqfile2, $reffile, $resultfile) = 0;
+my ($fastqfile1, $fastqfile2, $reference, $resultfile) = 0;
 
 GetOptions ('1=s' => \$fastqfile1,
             '2=s' => \$fastqfile2,
-            'reference=s' => \$reffile,
+            'reference=s' => \$reference,
             'outputfile:s' => \$resultfile) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
-
-# #test for necessary commands:
-# # my $old_stderr = STDERR;
-# # open (STDERR, ">", "temp");
-# my *CATCHERR = IO::File->new_tmpfile;
-# my $result = system("samtools 2> \$CATCHERR");
-#
-# print <CATCHERR>;
-#
-# if ($result < 0) {
-#     my $msg = "Samtools not available.";
-#     pod2usage(-msg => $msg, -exitval => 2);
-# }
-#
-# open (STDERR, ">", $old_stderr);
-# my $result = system("samtools");
-#
 
 open my $refFH, "<", "$reffile.fai";
 if ((-e $refFH) != 1) {
