@@ -66,15 +66,3 @@ foreach my $aln (@gene_alns) {
 		print ">" . $aln->description . "\n" . $seq->seq() . "\n";
 	}
 }
-
-# foreach my $aln (@gene_alns) {
-# 	my $gene_name = $aln->description();
-# 	#print "writing $gene_name...\n";
-# #	my $outfile = "$result_dir\/$gene_name.nex";
-# #	my $result = convert_aln_to_nexus ($aln);
-# #	open my $gene_file, ">$outfile";
-# #	truncate $gene_file, 0;
-# 	$result =
-# 	print $gene_file $result;
-# #	close $gene_file;
-# }
