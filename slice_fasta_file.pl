@@ -15,7 +15,7 @@ print "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 my ($fastafile, $resultfile, $gb_file, $start, $end, $oneslice) = 0;
 GetOptions ('fasta=s' => \$fastafile,
             'outputfile=s' => \$resultfile,
-            'genbank|gb_file' => \$gb_file,
+            'genbank|gb_file=s' => \$gb_file,
             'start:i' => \$start,
             'end:i' => \$end) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
@@ -44,23 +44,22 @@ if ($oneslice) {
 	$aln_out->write_aln($curr_slice);
 	close $fh;
 } elsif ($gb_file) {
+    print "$gb_file\n";
     my @gene_alns;
 
     my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
     my $seq_object = $seqio_object->next_seq;
-    print $seq_object;
 
     my $result_str = "";
     while ($seq_object) {
         for my $feat_object ($seq_object->get_SeqFeatures) {
-            print $feat_object->primary_tag;
             if ($feat_object->primary_tag eq "CDS") {
                 my $name = main_name_for_gb_feature($feat_object);
                 my @locations = $feat_object->location->each_Location;
                 my $cat_aln = 0;
                 my $strand = 0;
                 my $last_end = 0;
-                foreach $loc (@locations) {
+                foreach my $loc (@locations) {
                     $strand = $loc->strand;
                     my $start = $loc->start;
                     my $end = $loc->end;
@@ -76,7 +75,7 @@ if ($oneslice) {
                 if ($strand < 0) {
                     # must flip each seq in the curr_slice
                     my $flipped_aln = Bio::SimpleAlign->new();
-                    foreach $seq ( $cat_aln->each_seq() ) {
+                    foreach my $seq ( $cat_aln->each_seq() ) {
                         $seq = $seq->revcom();
                         $flipped_aln->add_seq($seq);
                     }
@@ -86,18 +85,19 @@ if ($oneslice) {
                 $cat_aln = $cat_aln->slice(1, $cat_aln->length()-3);
                 $cat_aln->description($name);
                 push @gene_alns, $cat_aln;
-                print "$result_str\t$last_end\n";
                 $result_str = "";
             }
         }
         $seq_object = $seqio_object->next_seq;
     }
 
-    #open my $gene_file, ">", "$result_dir\/$gb_file.fa";
     foreach my $aln (@gene_alns) {
+        my $gene = $aln->description;
+        open geneFH, ">", "$resultfile\/$gene.fa";
         foreach my $seq ( $aln->each_seq()) {
-            print ">" . $aln->description . "\n" . $seq->seq() . "\n";
+            print geneFH ">" . $seq->id() . "\n" . $seq->seq() . "\n";
         }
+        close geneFH;
     }
 }
 
@@ -109,16 +109,15 @@ tree_omega
 
 =head1 SYNOPSIS
 
-filter_cp [options]
+slice_fasta_file [options]
 
 =head1 OPTIONS
 
-    -fasta:     fasta file to filter
-    -reference: fasta file of the reference to be filtered against
-    -task:      "discard-hits" means to discard hits to the reference
-                "keep-hits" means to keep hits
-    -evalue:    sets the evalue for blastn (default is 10)
-    --blast/noblast:    runs blastn or uses previously generated filtered list (default is to run blastn)
+    -fasta:     fasta file of aligned sequences
+	-outputfile:    name of output file or directory for output files (if using -genbank)
+	-genbank|gb_file:	genbank file specifying genes
+	-start:	start position of single slice
+	-end:   end position of single slice
 
 =head1 DESCRIPTION
 
