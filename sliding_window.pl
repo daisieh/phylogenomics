@@ -21,7 +21,6 @@ open($stringfh, ">", \$string) or die "Could not open string for writing: $!";  
 my $gb_seq = Bio::SeqIO->new(-format => "genbank", -fh => $stringfh);
 
 my $curr_aln = make_aln_from_fasta_file ($fa_file);
-#my $seq_frag = Bio::Seq->new(-seq => $curr_aln->consensus_iupac(), -id => "consensus");
 my $seq_frag = Bio::Seq->new(-seq => $curr_aln->get_seq_by_pos(1)->seq(), -id => "chloroplast", -is_circular => 1);
 
 open my $diffs_file, ">perc_diffs.txt";
@@ -48,4 +47,4 @@ print $gb_fh $string;
 close $gb_fh;
 close $diffs_file;
 
-draw_circle_graph_from_file ("perc_diffs.txt", $graph_file);
+draw_circle_graph_from_file ("perc_diffs.txt", "$graph_file.ps");
