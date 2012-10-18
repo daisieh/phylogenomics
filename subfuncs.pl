@@ -139,8 +139,8 @@ sub coords_on_circle {
 
 sub draw_circle_graph_from_file {
 	my $datafile = shift;
-	my $p = shift;
-	#my $p = new PostScript::Simple( colour => 1, eps => 0, units => "bp", xsize => PS_X_SIZE, ysize => PS_Y_SIZE );
+	my $graphfile = shift;
+	my $p = new PostScript::Simple( colour => 1, eps => 0, units => "bp", xsize => PS_X_SIZE, ysize => PS_Y_SIZE );
 	my $OUTER_RADIUS = 387.5;
 	my $INNER_RADIUS = 337.5;
 
@@ -151,7 +151,7 @@ sub draw_circle_graph_from_file {
 	my $max_diffs = 0;
 	my @labels = split /\t/, $line;
 	my $num_graphs = @labels-1;
-	print "$num_graphs\n";
+	print "drawing $num_graphs graphs\n";
 
 	# print legend
 	$p->setfont("Helvetica", 12);
@@ -192,20 +192,21 @@ sub draw_circle_graph_from_file {
 		$last_x = @coords[0];
 		$last_y = @coords[1];
 
-		$p->setcolour($colours[$j][0],$colours[$j][1],$colours[$j][2]);
+ 		$p->setcolour($colours[$j][0],$colours[$j][1],$colours[$j][2]);
+# 		$p->moveto(@coords[0],@coords[1]);
+		$p->{pspages} .= "@coords[0] @coords[1] newpath moveto\n";
 		for (my $i = 0; $i < $total_elems; $i++) {
 			my $angle = (@positions[$i]/$circle_size) * 360;
-			#my $radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@differences[$i]/$max_diffs));
 			my $radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@differences[($i*$num_graphs)+$j]/$max_diffs));
 			my @new_coords = coords_on_circle($angle,$radius);
 			$this_x = @new_coords[0];
 			$this_y = @new_coords[1];
-			$p->line($last_x, $last_y, $this_x, $this_y);
+# 			$p->line($last_x, $last_y, $this_x, $this_y);
+			$p->{pspages} .= "$this_x $this_y lineto\n";
 			$last_x = $this_x;
 			$last_y = $this_y;
-			print @positions[$i] . ": $this_x, $this_y\n";
 		}
-		$p->line($last_x, $last_y, @coords[0], @coords[1]);
+		$p->{pspages} .= "@coords[0] @coords[1] lineto\nclosepath\nstroke\n";
 	}
 
 	$p->setfont("Helvetica", 6);
@@ -222,7 +223,7 @@ sub draw_circle_graph_from_file {
 	$p->setcolour(black);
 	$p->text(10, 10, "Maximum percent difference ($max_diffs) is scaled to 1");
 	$p->text(10, 30, "Sliding window size of $window_size bp");
-#	$p->output("$outfile.ps");
+	$p->output($graphfile);
 
 }
 
