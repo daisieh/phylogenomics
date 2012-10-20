@@ -39,7 +39,7 @@ for (my $i = 0; $i < @inputs; $i++) {
 
 	my $start_angle = ($start/$circle_size) * 360;
 	my $stop_angle = ($stop/$circle_size) * 360;
- 	my $radius = $x->inner_radius;
+ 	my $radius = $x->inner_radius + 20;
 
  	$x->set_percent_red((1-$value)*100);
 	$x->draw_filled_arc ($radius, $start_angle, $stop_angle);
@@ -47,11 +47,11 @@ for (my $i = 0; $i < @inputs; $i++) {
 	# label this element
 	my $center_angle = ($start_angle + $stop_angle) / 2;
     $x->set_font("Helvetica", 6, "black");
- 	$x->circle_label($center_angle, $x->inner_radius + 2, $label);
+ 	$x->circle_label($center_angle, $x->inner_radius + 22, $label);
 
 }
 
-$x->draw_circle($x->inner_radius - 5, {filled => 1, color => "white"});
+$x->draw_circle($x->inner_radius, {filled => 1, color => "white"});
 $x->draw_circle($x->inner_radius);
 
 $x->output_ps();
