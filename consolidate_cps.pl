@@ -6,7 +6,6 @@ my $filelistname = shift;
 open FH, "<", $filelistname or die "couldn't open $filelistname";
 my @filelist = <FH>;
 close FH;
-print "hi" . @filelist . "\n";
 
 foreach my $fastafile (@filelist) {
 	open my $filehandle, "<$fastafile" or die "couldn't open $fastafile";
