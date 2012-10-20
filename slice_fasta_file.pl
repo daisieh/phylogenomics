@@ -8,8 +8,6 @@ use Bio::Align::Utilities qw(cat);
 
 require "subfuncs.pl";
 
-my $usage = "perl " . basename($0);
-$usage .=	" <fastafile> <cp.fasta> <resultfile>\n\n";
 print "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
 my ($fastafile, $resultfile, $gb_file, $start, $end, $oneslice) = 0;
