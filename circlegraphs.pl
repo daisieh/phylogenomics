@@ -25,34 +25,6 @@ my @colours = (	[255,0,0],		# red
 				[100,0,255]		# violet
 				);
 
-sub test_ps { # create a new PostScript object
-	my $outfile = shift;
-	my $p = new PostScript::Simple( colour => 1, eps => 0, units => "bp", xsize => PS_X_SIZE, ysize => PS_Y_SIZE );
-	$p->newpage;
-
-	# draw some lines and other shapes
-	$p->circle(CENTER_X,CENTER_Y, $MAIN_RADIUS);
-	$p->circle(CENTER_X,CENTER_Y, $MAIN_RADIUS-50);
-
-	my @inner_coords = coords_on_circle(45,$MAIN_RADIUS-50);
-	my @outer_coords = coords_on_circle(45,$MAIN_RADIUS);
-	$p->line ( @inner_coords[0], @inner_coords[1], @outer_coords[0], @outer_coords[1]);
-
-	@inner_coords = coords_on_circle(22.5,$MAIN_RADIUS-50);
-	$p->line ( @inner_coords[0], @inner_coords[1], @outer_coords[0], @outer_coords[1]);
-
-	@outer_coords = coords_on_circle(0,$MAIN_RADIUS);
-	$p->line ( @inner_coords[0], @inner_coords[1], @outer_coords[0], @outer_coords[1]);
-
-	# add some text in red
-	$p->setcolour("red");
-	$p->setfont("Times-Roman", 20);
-	$p->text({align => 'centre'}, CENTER_X,CENTER_Y, "Hello");
-
-	# write the output to a file
-	$p->output("file.ps");
-}
-
 sub coords_on_circle {
 	my $angle = shift;
 	my $radius = shift;
@@ -60,7 +32,7 @@ sub coords_on_circle {
 	return ( CENTER_X + ($radius*cos(($angle * PI)/180)), CENTER_Y + ($radius*sin(($angle * PI)/180)));
 }
 
-sub draw_circle_graph_from_file_old {
+sub draw_circle_graph_from_file {
 	my $datafile = shift;
 	my $graphfile = shift;
 	my $p = new PostScript::Simple( colour => 1, eps => 0, units => "bp", xsize => PS_X_SIZE, ysize => PS_Y_SIZE );
@@ -124,52 +96,7 @@ sub draw_circle_graph_from_file_old {
 		}
 		$p->{pspages} .= "@coords[0] @coords[1] lineto\nclosepath\nstroke\n";
 	}
-
-	$p->setfont("Helvetica", 6);
-	$p->setcolour(black);
-
-	for (my $i = 0; $i < $total_elems; $i++) {
-		my $angle = (@positions[$i]/$circle_size) * 360;
-		my $radius = $OUTER_RADIUS + 10;
-		my @new_coords = coords_on_circle($angle,$radius);
-		$p->text( {rotate => $angle}, @new_coords[0], @new_coords[1], "@positions[$i]");
-	}
-
-	$p->setfont("Helvetica", 12);
-	$p->setcolour(black);
-	$p->text(10, 10, "Maximum percent difference ($max_diffs) is scaled to 1");
-	$p->text(10, 30, "Sliding window size of $window_size bp");
-	$p->output($graphfile);
-
 }
-
-sub draw_filled_arc {
-	my $radius = shift;
-	my $start_angle = shift;
-	my $stop_angle = shift;
-	my $center_angle = ($start_angle + $stop_angle) / 2;
-
- 	my @start_coords = coords_on_circle($start_angle, $radius);
- 	my @stop_coords = coords_on_circle($stop_angle, $radius);
- 	my @center_coords = coords_on_circle($center_angle, $radius);
-
-	$p->arc({filled => 1}, CENTER_X,CENTER_Y,$radius, $start_angle, $stop_angle);
- 	$p->polygon({filled => 1}, CENTER_X,CENTER_Y, @start_coords[0], @start_coords[1], @center_coords[0], @center_coords[1], @stop_coords[0], @stop_coords[1]);
-}
-
-sub set_percent_red {
-	my $p = shift;
-	my $percent_red = shift;
-	my $scaling = ($percent_red/100);
-
-	my @zero_red = (255,240,240);
-	my @full_red = (204,0,0);
-	my $r = int(((@full_red[0]-@zero_red[0])*$scaling) + @zero_red[0]);
-	my $g = int(((@full_red[1]-@zero_red[1])*$scaling) + @zero_red[1]);
-	my $b = int(((@full_red[2]-@zero_red[2])*$scaling) + @zero_red[2]);
-	$p->setcolour($r, $g, $b);
-}
-
 
 # must return 1 for the file overall.
 1;
