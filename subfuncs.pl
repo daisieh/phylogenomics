@@ -1,5 +1,7 @@
 use Bio::AlignIO;
 use Bio::SeqIO;
+use Bio::Align::Utilities qw(cat);
+
 
 
 sub convert_aln_to_nexus {
@@ -31,6 +33,41 @@ sub convert_aln_to_nexus {
  	$result .= "Matrix\n$nexblock\n;\nEnd;\n";
 
 	return $result;
+}
+
+sub parse_genbank_file {
+    my $gb_file = shift;
+    my @gene_alns;
+
+    my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
+    my $seq_object = $seqio_object->next_seq;
+    my $source_start, $source_end;
+
+    my $result_str = "";
+    while ($seq_object) {
+        for my $feat_object ($seq_object->get_SeqFeatures) {
+            if ($feat_object->primary_tag eq "source") {
+                my @locations = $feat_object->location->each_Location;
+                $source_start = @locations[0]->start;
+                $source_end = @locations[0]->end;
+            }
+            if ($feat_object->primary_tag eq "CDS") {
+                my $name = main_name_for_gb_feature($feat_object);
+                my @locations = $feat_object->location->each_Location;
+                my $exon = 1;
+                foreach my $loc (@locations) {
+                    my $exon_name = $name . "_" . $exon++;
+                    my $start = $loc->start;
+                    my $end = $loc->end;
+                    if (@locations == 1) { $exon_name = $name; }
+                    $result_str .= "$exon_name\t$start\t$end\n";
+                }
+            }
+        }
+        $seq_object = $seqio_object->next_seq;
+    }
+    $result_str .= "source\t$source_start\t$source_end\n";
+    return "$result_str";
 }
 
 sub perc_diff_partition {
