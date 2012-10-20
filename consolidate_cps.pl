@@ -1,12 +1,16 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
 use strict;
 use File::Basename;
 
-my @filelist = @ARGV;
+my $filelistname = shift;
+open FH, "<", $filelistname or die "couldn't open $filelistname";
+my @filelist = <FH>;
+close FH;
+print "hi" . @filelist . "\n";
 
 foreach my $fastafile (@filelist) {
 	open my $filehandle, "<$fastafile" or die "couldn't open $fastafile";
-	my $cp_entry = ">$fastafile\n";
+	my $cp_entry = ">$fastafile";
 	my $line = readline $filehandle;
 	while ($line ne "") {
 		$line = readline $filehandle;
