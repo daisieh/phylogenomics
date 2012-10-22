@@ -1,20 +1,47 @@
 #!/usr/bin/perl
 use strict;
 use File::Basename;
+use Getopt::Long;
 
-my $filelistname = shift;
+my ($filelistname, $namefile, $out_file) = 0;
+
+GetOptions ('files|input=s' => \$filelistname,
+            'names:s' => \$namefile,
+            'outputfile:s' => \$out_file) or die "options misspecified";
+
 open FH, "<", $filelistname or die "couldn't open $filelistname";
 my @filelist = <FH>;
 close FH;
 
-foreach my $fastafile (@filelist) {
+my @namelist = @filelist;
+
+if ($namefile) {
+    open FH, "<", $namefile or die "couldn't open $namefile";
+    @namelist = <FH>;
+    close FH;
+}
+
+if (scalar @namelist != scalar @filelist) {
+    die "number of names doesn't match number of files.";
+}
+
+my $result = "";
+for (my $i; $i < @filelist; $i++) {
+    my $fastafile = @filelist[$i];
 	open my $filehandle, "<$fastafile" or die "couldn't open $fastafile";
-	my $cp_entry = ">$fastafile";
+	my $cp_entry = ">@namelist[$i]";
 	my $line = readline $filehandle;
 	while ($line ne "") {
 		$line = readline $filehandle;
 		$cp_entry .= "$line";
 	}
-	print "$cp_entry\n";
+	$result .= "$cp_entry\n";
 }
 
+if ($out_file) {
+    open OUTFH, ">", $out_file;
+    print OUTFH $result;
+    close OUTFH;
+} else {
+    print $result;
+}
