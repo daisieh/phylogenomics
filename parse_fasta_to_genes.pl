@@ -19,7 +19,7 @@ my $seq_object = $seqio_object->next_seq;
 my $result_str = "";
 while ($seq_object) {
 	for my $feat_object ($seq_object->get_SeqFeatures) {
-		if ($feat_object->primary_tag eq "CDS") {
+		if ($feat_object->primary_tag eq "gene") {
 			my $name = main_name_for_gb_feature($feat_object);
 			my @locations = $feat_object->location->each_Location;
 			my $cat_aln = 0;
@@ -58,7 +58,6 @@ while ($seq_object) {
 	#print "writing $gene_name...\n";
 # my $seq_out = Bio::SeqIO->new(-file => ">$out_file", -format => "fasta");
 	open my $gene_file, ">$out_file.fasta";
-	truncate $gene_file, 0;
 
 foreach my $aln (@gene_alns) {
 	my $gene_name = $aln->description();
