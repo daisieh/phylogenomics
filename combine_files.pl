@@ -11,18 +11,21 @@ use Getopt::Long;
 
 my @files = ();
 my $has_names = 0;
+my $has_header = 0;
 my $out_file = 0;
 
 GetOptions ('files|input=s{2,}' => \@files,
             'names!' => \$has_names,
+            'header!' => \$has_header,
             'outputfile:s' => \$out_file) or die "options misspecified";
 
-my $result = combine_files (\@files, $has_names, $out_file);
+my $result = combine_files (\@files, $has_names, $has_header, $out_file);
 print $result;
 
 sub combine_files {
     my $fileptr = shift;
     my $has_names = shift;
+    my $has_header = shift;
     my $out_file = shift;
 
     my @files = @$fileptr;
@@ -37,13 +40,30 @@ sub combine_files {
         push @inputs, \@data;
     }
 
+    my $result = "";
+    my @labels = ();
     my $num_entries = scalar @{@inputs[0]};
     for (my $i = 0; $i < @files; $i++) {
         if (scalar @{@inputs[$i]} != $num_entries) {
             die "Error: files have different numbers of inputs." . scalar @{@inputs[$i]};
         }
+        if ($has_header) {
+            my @heads = split /\t/, (@{@inputs[$i]}[0]);
+            foreach $head (@heads) {
+                $head = @files[$i] . "|" . $head;
+            }
+            @{@inputs[$i]}[0] = join ("\t", @heads);
+        }
     }
-    my $result = "";
+
+
+#     if ($has_header) {
+#         my $header = join ("\t",@files);
+#         if ($has_names) {
+#             $header = "\t$header";
+#         }
+#         $result .= "$header\n";
+#     }
 
     for (my $j = 0; $j < $num_entries; $j++) {
         if ($has_names) {
@@ -59,6 +79,10 @@ sub combine_files {
                 $entry = $2;
             }
             $result .= $entry . "\t";
+        }
+        if ($has_header && $has_names && ($j==0)) {
+            #clean up the header row
+            $result =~ s/^.*?\|//;
         }
         $result .= "\n";
     }
