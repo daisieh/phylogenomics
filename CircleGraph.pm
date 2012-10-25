@@ -55,14 +55,29 @@ sub ps_object {
 }
 
 sub inner_radius {
+    my $self = shift;
+    my $arg = shift;
+    if ($arg) {
+        $INNER_RADIUS = $arg;
+    }
     return $INNER_RADIUS;
 }
 
 sub main_radius {
+    my $self = shift;
+    my $arg = shift;
+    if ($arg) {
+        $MAIN_RADIUS = $arg;
+    }
     return $MAIN_RADIUS;
 }
 
 sub outer_radius {
+    my $self = shift;
+    my $arg = shift;
+    if ($arg) {
+        $OUTER_RADIUS = $arg;
+    }
     return $OUTER_RADIUS;
 }
 
@@ -194,7 +209,6 @@ sub plot_line {
         my $angle = (@x_vals[$i]/$circle_size) * 360;
         my $radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@y_vals[$i]));
         my @new_coords = $self->coords_on_circle($angle,$radius);
-#         print join("+", @y_vals) . "\n";
         $this_x = @new_coords[0];
         $this_y = @new_coords[1];
         $p->{pspages} .= "$this_x $this_y lineto\n";
