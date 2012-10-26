@@ -2,10 +2,12 @@ use File::Basename;
 use Getopt::Long;
 require "subfuncs.pl";
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
+
 my @files = ();
-my $has_names = 0;
-my $has_header = 0;
-my $out_file = 0;
+my ($has_names, $has_header, $out_file) = 0;
 
 GetOptions ('files|input=s{2,}' => \@files,
             'names!' => \$has_names,
