@@ -85,17 +85,36 @@ sub legend {
     my $self = shift;
     my $arg = shift;
     if ($arg) {
-        $self->{legend} = $arg;
+        $self->{legend} = "<item color=black>$arg</item>";
     }
     return $self->{legend};
 }
 
+sub append_to_legend {
+    my $self = shift;
+    my $text = shift;
+    my $color = shift;
+    if (defined($color)) {
+        $self->{legend} .= "<item color=$color>$text</item>";
+    } else {
+        $self->{legend} .= "<item color=black>$text</item>";
+    }
+}
+
 sub draw_legend_text {
     my $self = shift;
-    my @legend_lines = split(/\n/, $self->{legend});
-    my $top_text = 10 + (@legend_lines * 20);
-    for (my $i=0; $i < scalar(@legend_lines); $i++) {
-        $self->{ps_object}->text(10, $top_text - ($i*20), @legend_lines[$i]);
+
+    my $legend_text = $self->legend;
+    my $num_lines = split(/<item/,$legend_text) - 1;
+    my $top_text = 10 + ($num_lines * 20);
+    my $i = 0;
+
+    while ($legend_text =~ s/<item color=(.+?)>(.+?)<\/item>//) {
+        my $color = $1;
+        my $text = $2;
+        $self->set_color($color);
+        $self->{ps_object}->text(10, $top_text - ($i*20), $text);
+        $i++;
     }
 }
 
