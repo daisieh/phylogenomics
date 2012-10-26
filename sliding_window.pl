@@ -4,6 +4,7 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 require "subfuncs.pl";
+require "circlegraphs.pl";
 
 print "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
@@ -16,7 +17,7 @@ GetOptions ('fasta:s' => \$fastafile,
 
 my $circle_size;
 
-if ($gb_file) {
+if ($gb_file =~ /\.gb$/) {
     open FH, ">", "$out_file.genes";
     print FH parse_genbank_file($gb_file);
     close FH;
@@ -28,77 +29,39 @@ if ($fastafile) {   # if we were given a fasta file, we should create the diffs 
     my $start_pos = 1;
     my $stop_pos = $window_size;
     my $len;
-    my $flag = 1;
+    my $val = 1;
 
     my $curr_aln = make_aln_from_fasta_file ($fastafile);
     $datafile = "$out_file.diffs";
 
     open FH, ">", "$datafile" ;
-    truncate $diffs_file, 0;
-    while ($flag >= 0) {
+    print FH "pos\t$fastafile\n";
+    $val = perc_diff_partition ($curr_aln, $start_pos, $stop_pos);
+    my $firstval = $val;
+    while ($val >= 0) {
         my $gene_name = "$start_pos";
-        $flag = perc_diff_partition ($curr_aln, $start_pos, $stop_pos);
-        if ($flag >= 0) {
-            my $val = $flag;
+        if ($val >= 0) {
             print FH "$start_pos\t$val\n";
         }
         $start_pos = $stop_pos;
         $stop_pos = $start_pos + $window_size;
+        $val = perc_diff_partition ($curr_aln, $start_pos, $stop_pos);
     }
     $circle_size = $curr_aln->length();
-    print FH "$circle_size\t-1\n";
+    print FH "$circle_size\t$firstval\n";
     close FH;
 }
 
-open my $F, "<$datafile" or die "$datafile failed to open\n";
-my $line = readline $F;
-my $max_diffs = 0;
-my @positions, @differences;
-while ($line ne "") {
-    my @items = split ('\t', $line);
-    my $pos = shift @items;
-    push (@positions, $pos);
-    push (@differences, @items);
-    $line = readline $F;
-}
-my $circle_size = pop @positions;
-pop @differences;
+# using the data file to make a graph
+my $x = draw_circle_graph($datafile);
 
-my @sorted = sort (@differences);
-my $diff_len = @sorted;
-$max_diffs = @sorted[@sorted-1];
-$max_diffs =~ s/\n//;
-
-for(my $i=0; $i<@differences; $i++) {
-    @differences[$i] = (@differences[$i]/$max_diffs);
-}
-
-my $x = new CircleGraph();
-$x->draw_circle($x->inner_radius);
-$x->draw_circle($x->outer_radius);
-$x->set_color(0);
-$x->plot_line(\@positions, \@differences);
-
-# labeling positions along the outer circle
-$x->set_font("Helvetica", 6, "black");
-my $radius = $x->outer_radius;
-$x->circle_label(0, $radius, "  1");
-
-for (my $i = 0; $i < @positions; $i++) {
-    my $angle = (@positions[$i]/$circle_size) * 360;
-    my $label = "  @positions[$i]";
-    if ((($label % 1000) != 0) && ($label != 0)) {
-        $label = "-";
-    }
-    $x->circle_label($angle, $radius, "$label");
+if ($window_size > 0) {
+    $x->append_to_legend("Sliding window of $window_size bp");
 }
 
 $x->set_font("Helvetica", 12, "black");
-$x->legend($x->legend . "Maximum percent difference ($max_diffs) is scaled to 1\n");
-if ($window_size > 0) {
-    $x->legend($x->legend . "Sliding window of $window_size bp\n");
-}
 $x->draw_legend_text;
+
 
 if ($gb_file) {
     open INPUTFILE, "<$out_file.genes" or die "$out_file.genes failed to open\n";
@@ -108,13 +71,10 @@ if ($gb_file) {
     while (@inputs[0] !~ /\t/) { #there's some sort of header
         shift @inputs;
         if (@inputs == 0) {
-            die "no data in input file.";
+            die "no data in $out_file.genes.\n";
         }
     }
 
-    my @sorted = sort (@differences);
-    my $diff_len = @sorted;
-    my $max_diffs = @sorted[@sorted-1];
     (undef, undef, my $circle_size, undef) = split /\t/, pop @inputs;
     $circle_size =~ s/\n//;
 
@@ -157,19 +117,17 @@ __END__
 
 =head1 NAME
 
-tree_omega
+sliding_window
 
 =head1 SYNOPSIS
 
-slice_fasta_file [options]
+sliding_window [options]
 
 =head1 OPTIONS
 
     -fasta:     fasta file of aligned sequences
-	-outputfile:    name of output file or directory for output files (if using -genbank)
+	-outputfile:    prefix of output files
 	-genbank|gb_file:	genbank file specifying genes
-	-start:	start position of single slice
-	-end:   end position of single slice
 
 =head1 DESCRIPTION
 
