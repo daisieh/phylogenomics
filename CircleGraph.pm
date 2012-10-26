@@ -139,23 +139,27 @@ sub set_color {
     my @colors_by_name = qw(red green blue yellow magenta cyan orange fuchsia dark_green violet);
 
     my %colors = (
-        red => [255,0,0],
-        green => [0,255,0],
-        blue => [0,0,255],
-        yellow => [200,200,0],
-        magenta => [255,0,255],
-        cyan => [0,255,255],
-        orange => [255,100,0],
-        fuchsia => [200,50,200],
-        dark_green => [70,150,0],
-        violet => [100,0,255],
-        white => [255,255,255],
+        red => [1,0,0],
+        green => [0,1,0],
+        blue => [0,0,1],
+        yellow => [0.8,0.8,0],
+        magenta => [1,0,1],
+        cyan => [0,1,1],
+        orange => [1,0.4,0],
+        fuchsia => [0.8,0.2,0.8],
+        dark_green => [0.27,0.3,0],
+        violet => [0.4,0,1],
+        white => [1,1,1],
         black => [0,0,0]
     );
 
     if (ref($arg) =~ /ARRAY/) {
-        print "array\n";
         @color = @$arg;
+        if ((@color[0]>1) && (@color[1]>1) && (@color[2]>1)) {
+            @color[0] = @color[0]/255;
+            @color[1] = @color[1]/255;
+            @color[2] = @color[2]/255;
+        }
     } elsif (ref($arg) eq "") {
         if (exists $colors{$arg}) {
             @color = @{$colors{$arg}};
