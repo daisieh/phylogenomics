@@ -289,6 +289,58 @@ sub combine_files {
     return $result;
 }
 
+=pod
+
+slice_fasta_to_exons ( String $fa_file, String $gb_file, String $out_file )
+
+Given a fasta file of aligned sequences and a corresponding genbank file
+with the CDS coordinates, will create a fasta file with each
+CDS corresponding to a separate sequence block.
+
+$fa_file:   fasta file of aligned sequences
+$gb_file:   genbank file with CDS coordinates
+$out_file:  prefix of output files
+
+=cut
+
+sub slice_fasta_to_exons {
+    my $fa_file = shift;
+    my $gb_file = shift;
+    my $out_file = shift;
+
+    my $whole_aln = make_aln_from_fasta_file ($fa_file);
+    my @gene_alns;
+
+    my $result_str = get_locations_from_genbank_file ($gb_file, "CDS");
+    my @exons = split (/\n/,$result_str);
+
+    # we don't need the last line; it just says the size of the gb source sequence
+    while ({pop @exons} =~ /source/) {
+    }
+
+    foreach my $exon (@exons) {
+        $exon =~ /(.+?)\t(.+?)\t(.+)\s*.*/;
+        my $name = $1;
+        my $start = $2;
+        my $end = $3;
+        my $curr_slice = $whole_aln->slice($start, $end);
+        $curr_slice->description($name);
+        push @gene_alns, $curr_slice;
+    }
+
+    open my $gene_file, ">$out_file.fasta";
+
+    foreach my $aln (@gene_alns) {
+        my $gene_name = $aln->description();
+        foreach my $seq ($aln->each_seq()) {
+            my $name = $seq->id() . "_$gene_name: " . $seq->length();
+            print $gene_file ">$name\n";
+            print $gene_file $seq->seq() . "\n";
+        }
+    }
+    close $gene_file;
+}
+
 
 # must return 1 for the file overall.
 1;
