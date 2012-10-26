@@ -1,12 +1,4 @@
 use File::Basename;
-
-my $usage  = "perl " . basename($0) . " file1 file2...\n";
-$usage .= qq{
-Takes any number of input lists of the same length and creates a tab-delimited
-file with each list as a column.
-};
-
-use File::Basename;
 use Getopt::Long;
 
 my @files = ();
@@ -17,7 +9,7 @@ my $out_file = 0;
 GetOptions ('files|input=s{2,}' => \@files,
             'names!' => \$has_names,
             'header!' => \$has_header,
-            'outputfile:s' => \$out_file) or die "options misspecified";
+            'outputfile:s' => \$out_file) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 my $result = combine_files (\@files, $has_names, $has_header, $out_file);
 print $result;
@@ -56,15 +48,6 @@ sub combine_files {
         }
     }
 
-
-#     if ($has_header) {
-#         my $header = join ("\t",@files);
-#         if ($has_names) {
-#             $header = "\t$header";
-#         }
-#         $result .= "$header\n";
-#     }
-
     for (my $j = 0; $j < $num_entries; $j++) {
         if ($has_names) {
             my $entry = @{@inputs[0]}[$j];
@@ -95,6 +78,7 @@ sub combine_files {
         return $result;
     }
 }
+
 __END__
 
 =head1 NAME
