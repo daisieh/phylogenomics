@@ -75,48 +75,7 @@ $circlegraph_obj->draw_legend_text;
 
 
 if ($gb_file) {
-    open INPUTFILE, "<$out_file.genes" or die "$out_file.genes failed to open\n";
-    my @inputs = <INPUTFILE>;
-    close INPUTFILE;
-
-    while (@inputs[0] !~ /\t/) { #there's some sort of header
-        shift @inputs;
-        if (@inputs == 0) {
-            die "no data in $out_file.genes.\n";
-        }
-    }
-
-    (undef, undef, my $circle_size, undef) = split /\t/, pop @inputs;
-    $circle_size =~ s/\n//;
-
-    my @labels = ();
-    for (my $i = 0; $i < @inputs; $i++) {
-        my $line = @inputs[$i];
-        my ($label, $start, $stop, $value) = split /\t/, $line;
-        $value =~ s/\n//;
-        if ($value eq "") {
-            $value = 0;
-        }
-
-        my $start_angle = ($start/$circle_size) * 360;
-        my $stop_angle = ($stop/$circle_size) * 360;
-        my $radius = $circlegraph_obj->inner_radius;
-
-        $circlegraph_obj->set_percent_red((1-$value)*100);
-        $circlegraph_obj->draw_filled_arc ($radius, $start_angle, $stop_angle);
-
-        # label this element
-        my $center_angle = ($start_angle + $stop_angle) / 2;
-        push @labels, "$label\t$center_angle";
-    }
-
-    $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius - 5, {filled => 1, color => "white"});
-    $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
-    $circlegraph_obj->set_font("Helvetica", 6, "black");
-    foreach my $line (@labels) {
-        $line =~ /(.+?)\t(.+?)$/;
-        $circlegraph_obj->circle_label($2, $circlegraph_obj->inner_radius - 5, $1, "right");
-    }
+	draw_gene_map ("$out_file.genes", $circlegraph_obj);
 }
 
 $circlegraph_obj->output_ps();
