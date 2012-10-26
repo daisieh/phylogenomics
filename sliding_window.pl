@@ -5,8 +5,14 @@ use Pod::Usage;
 require "subfuncs.pl";
 require "circlegraphs.pl";
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
+
+my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
 my ($fastafile, $datafile, $out_file, $gb_file, $window_size, $help) = 0;
+
 GetOptions ('fasta:s' => \$fastafile,
             'data:s' => \$datafile,
             'outputfile=s' => \$out_file,
@@ -14,11 +20,11 @@ GetOptions ('fasta:s' => \$fastafile,
             'window:i' => \$window_size,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
-if ((@ARGV == 0) || ($help)) {
+if ($help) {
     pod2usage(-verbose => 1);
 }
 
-print "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
+print $runline;
 
 my $circle_size;
 
