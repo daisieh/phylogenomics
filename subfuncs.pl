@@ -2,7 +2,20 @@ use Bio::AlignIO;
 use Bio::SeqIO;
 use Bio::Align::Utilities qw(cat);
 
+=head1
 
+Arbitrary collection of helper subfunctions that don't have another home.
+
+=cut
+
+
+=pod
+
+String $nexus_str convert_aln_to_nexus ( SimpleAlign $aln )
+
+Takes a SimpleAlign object and returns a NEXUS-formatted string representing the alignment.
+
+=cut
 
 sub convert_aln_to_nexus {
 	my $aln = shift;
@@ -35,9 +48,26 @@ sub convert_aln_to_nexus {
 	return $result;
 }
 
-sub parse_genbank_file {
+
+=pod
+
+String $genes_str get_locations_from_genbank_file ( String $genbank_file, <optional> String $type )
+
+Takes a genbank-formatted file and returns a tab-delimited list of genes and positions.
+The final entry in the list will be the size of the source genbank file.
+
+$genbank_file is the name of the genbank file to parse
+$type is the tag of interest (will be "gene" if this is not specified)
+
+=cut
+
+sub get_locations_from_genbank_file {
     my $gb_file = shift;
+    my $type = shift;
     my @gene_alns;
+
+    # default type is "gene"
+    unless ($type) { $type = "gene"; }
 
     my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
     my $seq_object = $seqio_object->next_seq;
@@ -51,7 +81,7 @@ sub parse_genbank_file {
                 $source_start = @locations[0]->start;
                 $source_end = @locations[0]->end;
             }
-            if ($feat_object->primary_tag eq "CDS") {
+            if ($feat_object->primary_tag eq $type) {
                 my $name = main_name_for_gb_feature($feat_object);
                 my @locations = $feat_object->location->each_Location;
                 my $exon = 1;
@@ -70,19 +100,37 @@ sub parse_genbank_file {
     return "$result_str";
 }
 
+=pod
+
+Int $percent_diff perc_diff_partition ( SimpleAlign $aln, Int $start, Int $end )
+
+Finds the overall percentage difference for the specified region of the SimpleAlign object.
+
+=cut
+
 sub perc_diff_partition {
-	my $newaln = shift;
+	my $aln = shift;
 	my $start_pos = shift;
 	my $stop_pos = shift;
 
-	if ($stop_pos < $newaln->length()) {
-		my $aln_slice = $newaln->slice($start_pos, $stop_pos);
+	if ($stop_pos < $aln->length()) {
+		my $aln_slice = $aln->slice($start_pos, $stop_pos);
 		my $p = $aln_slice->percentage_identity();
 		return 100-$p;
 	} else {
 		return -1;
 	}
 }
+
+
+=pod
+
+SimpleAlign $fa_aln make_aln_from_fasta_file ( String $fasta_file )
+
+Takes a fasta-formatted file and returns a SimpleAlign object.
+The sequences in the fasta file must already be aligned.
+
+=cut
 
 sub make_aln_from_fasta_file {
 	my $fa_file = shift;
@@ -118,17 +166,40 @@ sub make_aln_from_fasta_file {
 }
 
 
+=pod
+
+String $name main_name_for_gb_feature ( SeqFeatureI $feature )
+
+Finds the main name for the given SeqFeatureI from a BioPerl-parsed Genbank object.
+
+=cut
+
 sub main_name_for_gb_feature {
 	my $feat = shift;
 	my @names;
 	my $curr_name = "n/a";
-	eval {@names = $feat->get_tag_values('locus_tag');} or @names="";
-	if (@names) {
+
+	if ($feat->has_tag('locus_tag')) {
+        @names = $feat->get_tag_values('locus_tag');
 		$curr_name = @names[0];
 	}
-	eval {@names = $feat->get_tag_values('gene');} or return "$curr_name";
-	return @names[0];
+
+	if ($feat->has_tag('gene')) {
+        @names = $feat->get_tag_values('gene');
+		$curr_name = @names[0];
+	}
+
+	return $curr_name;
 }
+
+
+=pod
+
+(String $time, String $date) timestamp ()
+
+Convenience function to get the current time and date as formatted strings.
+
+=cut
 
 sub timestamp {
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
@@ -144,6 +215,80 @@ sub timestamp {
     my $date = "$year$mon$mday";
     return ($time, $date);
 }
+
+=pod
+
+String $result_str combine_files ( Array \@files, Boolean $has_names, Boolean $has_header)
+
+Takes any number of input files containing tab-delimited lists of the same length
+and creates a tab-delimited string with each list as a column.
+
+@files:     a pointer to a list of filenames
+$has_names: 1 if files have the same column of names (first column of each file), otherwise 0.
+$has_header:1 if files have column labels in first row, otherwise 0.
+
+Default is no column names, no common row names.
+
+=cut
+
+sub combine_files {
+    my $fileptr = shift;
+    my $has_names = shift;
+    my $has_header = shift;
+    my $out_file = shift;
+
+    my @files = @$fileptr;
+
+    if (@files < 2) { die $usage; }
+
+    my @inputs;
+    for (my $i=0; $i<@files; $i++) {
+        open FH, "<", @files[$i] or die $usage;
+        my @data = <FH>;
+        close FH;
+        push @inputs, \@data;
+    }
+
+    my $result = "";
+    my @labels = ();
+    my $num_entries = scalar @{@inputs[0]};
+    for (my $i = 0; $i < @files; $i++) {
+        if (scalar @{@inputs[$i]} != $num_entries) {
+            die "Error: files have different numbers of inputs." . scalar @{@inputs[$i]};
+        }
+        if ($has_header) {
+            my @heads = split /\t/, (@{@inputs[$i]}[0]);
+            foreach $head (@heads) {
+                $head = @files[$i] . "|" . $head;
+            }
+            @{@inputs[$i]}[0] = join ("\t", @heads);
+        }
+    }
+
+    for (my $j = 0; $j < $num_entries; $j++) {
+        if ($has_names) {
+            my $entry = @{@inputs[0]}[$j];
+            $entry =~ /(.+?)\t(.*)/;
+            $result .= "$1\t";
+        }
+        for (my $i = 0; $i < @files; $i++) {
+            my $entry = @{@inputs[$i]}[$j];
+            $entry =~ s/\n//g;
+            if ($has_names) {
+                $entry =~ /(.+?)\t(.*)/;
+                $entry = $2;
+            }
+            $result .= $entry . "\t";
+        }
+        if ($has_header && $has_names && ($j==0)) {
+            #clean up the header row
+            $result =~ s/^.*?\|//;
+        }
+        $result .= "\n";
+    }
+    return $result;
+}
+
 
 # must return 1 for the file overall.
 1;
