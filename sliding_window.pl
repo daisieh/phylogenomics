@@ -14,7 +14,7 @@ my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 my ($fastafile, $datafile, $out_file, $gb_file, $window_size, $help) = 0;
 
 GetOptions ('fasta:s' => \$fastafile,
-            'data:s' => \$datafile,
+            'datafile|inputfile:s' => \$datafile,
             'outputfile=s' => \$out_file,
             'genbank|gb_file:s' => \$gb_file,
             'window:i' => \$window_size,
@@ -28,11 +28,6 @@ print $runline;
 
 my $circle_size;
 
-if ($gb_file =~ /\.gb$/) {
-    open FH, ">", "$out_file.genes";
-    print FH get_locations_from_genbank_file($gb_file);
-    close FH;
-}
 
 if ($fastafile) {   # if we were given a fasta file, we should create the diffs file.
     unless ($window_size > 0) { pod2usage(-msg => "no window size specified.", -exitval => 2); }
@@ -75,7 +70,13 @@ $circlegraph_obj->draw_legend_text;
 
 
 if ($gb_file) {
-	draw_gene_map ("$out_file.genes", $circlegraph_obj);
+	if ($gb_file =~ /\.gb$/) {
+		open FH, ">", "$out_file.genes";
+		print FH get_locations_from_genbank_file($gb_file);
+		close FH;
+	    $gb_file = "$out_file.genes";
+	}
+	draw_gene_map ($gb_file, $circlegraph_obj);
 }
 
 $circlegraph_obj->output_ps();
