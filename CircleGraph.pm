@@ -103,17 +103,40 @@ sub append_to_legend {
 
 sub draw_legend_text {
     my $self = shift;
+    my $params = shift;
+
+    my $font = "Helvetica";
+    my $size = 12;
+    my $height = 20;
+    my $margin = 10;
+
+    if (ref($params) eq "HASH") {
+        if ($params->{"font"}) {
+            $font = $params->{"font"};
+        }
+        if ($params->{"size"}) {
+            $size = $params->{"size"};
+        }
+        if ($params->{"height"}) {
+            $height = $params->{"height"};
+        }
+        if ($params->{"margin"}) {
+            $margin = $params->{"margin"};
+        }
+    }
+
+    $self->set_font($font, $size);
 
     my $legend_text = $self->legend;
     my $num_lines = split(/<item/,$legend_text) - 1;
-    my $top_text = 10 + ($num_lines * 20);
+    my $top_text = $margin + ($num_lines * $height);
     my $i = 0;
 
     while ($legend_text =~ s/<item color=(.+?)>(.+?)<\/item>//) {
         my $color = $1;
         my $text = $2;
         $self->set_color($color);
-        $self->{ps_object}->text(10, $top_text - ($i*20), $text);
+        $self->{ps_object}->text($margin, $top_text - ($i*$height), $text);
         $i++;
     }
 }
@@ -150,7 +173,10 @@ sub set_color {
         dark_green => [0.27,0.3,0],
         violet => [0.4,0,1],
         white => [1,1,1],
-        black => [0,0,0]
+        black => [0,0,0],
+        grey => [0.5,0.5,0.5],
+        light_grey => [0.8,0.8,0.8],
+        dark_grey => [0.3,0.3,0.3],
     );
 
     if (ref($arg) =~ /ARRAY/) {
@@ -188,7 +214,7 @@ sub draw_circle {
     my $linewidth = 1;
     my $p = $self->{ps_object};
 
-    if (ref($params)) {
+    if (ref($params) eq "HASH") {
         if ($params->{filled}) {
             $filled = $params->{filled};
         }
@@ -224,21 +250,44 @@ sub plot_line {
 	my $circle_size = @x_vals[(scalar @x_vals)-1] + $window_size;
 
     my @coords = $self->coords_on_circle(0,$INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@y_vals[0])));
-    my ($last_x, $last_y, $this_x, $this_y);
+    my ($last_x, $last_y, $last_angle, $this_x, $this_y, $this_angle, $this_radius);
+    my @blank_sectors;
     $last_x = @coords[0];
     $last_y = @coords[1];
+    $last_angle = 0;
     $p->{pspages} .= "@coords[0] @coords[1] newpath moveto\n";
     for (my $i = 0; $i < (scalar @x_vals); $i++) {
-        my $angle = (@x_vals[$i]/$circle_size) * 360;
-        my $radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@y_vals[$i]));
-        my @new_coords = $self->coords_on_circle($angle,$radius);
+        $this_angle = (@x_vals[$i]/$circle_size) * 360;
+        $this_radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@y_vals[$i]));
+
+        # if the value to map is negative, we don't actually want to map it as-is:
+        # map radius 0 instead, then cover it up with a sector.
+        if (@y_vals[$i] < 0) {
+            $this_radius = $self->inner_radius;
+            my @angle_to_blank = ($last_angle, $this_angle);
+            push @blank_sectors, \@angle_to_blank;
+        }
+
+        my @new_coords = $self->coords_on_circle($this_angle,$this_radius);
         $this_x = @new_coords[0];
         $this_y = @new_coords[1];
         $p->{pspages} .= "$this_x $this_y lineto\n";
+
+
         $last_x = $this_x;
         $last_y = $this_y;
+        $last_angle = $this_angle;
     }
     $p->{pspages} .= "closepath\nstroke\n";
+
+    if (@blank_sectors > 0) {
+        foreach my $sector (@blank_sectors) {
+            my $start_angle = @$sector[0];
+            my $end_angle = @$sector[1];
+
+            $self->draw_filled_arc ($self->outer_radius, $start_angle, $end_angle, "light_grey");
+        }
+    }
 
 }
 
@@ -269,7 +318,11 @@ sub draw_filled_arc {
 	my $radius = shift;
 	my $start_angle = shift;
 	my $stop_angle = shift;
+	my $color = shift;
 
+    if ($color) {
+        $self->set_color($color);
+    }
     my $p = $self->{ps_object};
 
     $p->{pspages} .= "newpath\n";
@@ -279,18 +332,28 @@ sub draw_filled_arc {
 
 }
 
-sub set_percent_red {
+sub set_color_by_percent {
     my $self = shift;
 	my $percent_red = shift;
+	my $zero_color = shift;
+	my $full_color = shift;
 	my $scaling = ($percent_red/100);
 
-    my $p = $self->{ps_object};
+    # red is the default color
 	my @zero_red = (255,240,240);
 	my @full_red = (204,0,0);
+
+    if (ref($zero_color) eq "ARRAY") {
+        @zero_red = @$zero_color;
+    }
+    if (ref($full_color) eq "ARRAY") {
+        @full_red = @$full_color;
+    }
+
 	my $r = int(((@full_red[0]-@zero_red[0])*$scaling) + @zero_red[0]);
 	my $g = int(((@full_red[1]-@zero_red[1])*$scaling) + @zero_red[1]);
 	my $b = int(((@full_red[2]-@zero_red[2])*$scaling) + @zero_red[2]);
-	$p->setcolour($r, $g, $b);
+	$self->{ps_object}->setcolour($r, $g, $b);
 }
 
 
