@@ -69,7 +69,6 @@ sub draw_circle_graph {
     $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
     $circlegraph_obj->draw_circle($circlegraph_obj->outer_radius);
 
-    # draw graphs
     for (my $j=0; $j<@graphs; $j++) {
         $circlegraph_obj->set_color($j);
         $circlegraph_obj->plot_line(\@positions, $graphs[$j]);
@@ -83,13 +82,8 @@ sub draw_circle_graph {
     for (my $i = 0; $i < $total_elems; $i++) {
         my $angle = (@positions[$i]/$circle_size) * 360;
         my $radius = $circlegraph_obj->outer_radius + 10;
-        my $label = @positions[$i];
-        if (($label % 1000)!=0) { $label = "-"; }
-        $circlegraph_obj->circle_label($angle, $radius, "$label");
+        $circlegraph_obj->circle_label($angle, $radius, "@positions[$i]");
     }
-
-    $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius, {'filled'=>1, 'color'=>"white"} );
-    $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
 
     $circlegraph_obj->append_to_legend("Maximum percent difference ($max_diffs) is scaled to 1");
     return $circlegraph_obj;
