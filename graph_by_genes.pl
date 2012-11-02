@@ -41,7 +41,7 @@ for (my $i = 0; $i < @inputs; $i++) {
 	my $stop_angle = ($stop/$circle_size) * 360;
  	my $radius = $x->inner_radius + 20;
 
- 	$x->set_percent_red((1-$value)*100);
+ 	$x->set_color_by_percent((1-$value)*100);
 	$x->draw_filled_arc ($radius, $start_angle, $stop_angle);
 
 	# label this element
