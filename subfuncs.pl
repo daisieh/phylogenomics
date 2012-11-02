@@ -4,14 +4,14 @@ use Bio::Align::Utilities qw(cat);
 
 =head1
 
-B<Arbitrary collection of helper subfunctions that don't have another home.>
+Arbitrary collection of helper subfunctions that don't have another home.
 
 =cut
 
 
-=head1
+=pod
 
-B<String $nexus_str convert_aln_to_nexus ( SimpleAlign $aln )>
+String $nexus_str convert_aln_to_nexus ( SimpleAlign $aln )
 
 Takes a SimpleAlign object and returns a NEXUS-formatted string representing the alignment.
 
@@ -49,9 +49,9 @@ sub convert_aln_to_nexus {
 }
 
 
-=head1
+=pod
 
-B<String $genes_str get_locations_from_genbank_file ( String $genbank_file, <optional> String $type )>
+String $genes_str get_locations_from_genbank_file ( String $genbank_file, <optional> String $type )
 
 Takes a genbank-formatted file and returns a tab-delimited list of genes and positions.
 The final entry in the list will be the size of the source genbank file.
@@ -100,9 +100,9 @@ sub get_locations_from_genbank_file {
     return "$result_str";
 }
 
-=head1
+=pod
 
-B<Int $percent_diff perc_diff_partition ( SimpleAlign $aln, Int $start, Int $end )>
+Int $percent_diff perc_diff_partition ( SimpleAlign $aln, Int $start, Int $end )
 
 Finds the overall percentage difference for the specified region of the SimpleAlign object.
 
@@ -112,38 +112,20 @@ sub perc_diff_partition {
 	my $aln = shift;
 	my $start_pos = shift;
 	my $stop_pos = shift;
-	my $check_for_num_seqs = shift;
 
 	if ($stop_pos < $aln->length()) {
 		my $aln_slice = $aln->slice($start_pos, $stop_pos);
-
-		# check to see if one of the sequences was excluded.
-		if ($aln->num_sequences != $aln_slice->num_sequences) {
-            # if there were only two seqs in the first place, there won't be a valid number here.
-            if ($aln->num_sequences == 2) {
-                return -1;
-            } else {
-                my $p = $aln_slice->percentage_identity();
-                if ($check_for_num_seqs) {
-                    # return the negative of the perc identity to denote that a seq was excluded
-                    return $p-100;
-                } else {
-                    return 100-$p;
-                }
-            }
-        } else {
-            my $p = $aln_slice->percentage_identity();
-            return 100-$p;
-        }
+		my $p = $aln_slice->percentage_identity();
+		return 100-$p;
 	} else {
-		return -200;
+		return -1;
 	}
 }
 
 
-=head1
+=pod
 
-B<SimpleAlign $fa_aln make_aln_from_fasta_file ( String $fasta_file )>
+SimpleAlign $fa_aln make_aln_from_fasta_file ( String $fasta_file )
 
 Takes a fasta-formatted file and returns a SimpleAlign object.
 The sequences in the fasta file must already be aligned.
@@ -184,9 +166,9 @@ sub make_aln_from_fasta_file {
 }
 
 
-=head1
+=pod
 
-B<String $name main_name_for_gb_feature ( SeqFeatureI $feature )>
+String $name main_name_for_gb_feature ( SeqFeatureI $feature )
 
 Finds the main name for the given SeqFeatureI from a BioPerl-parsed Genbank object.
 
@@ -211,9 +193,9 @@ sub main_name_for_gb_feature {
 }
 
 
-=head1
+=pod
 
-B<(String $time, String $date) timestamp ()>
+(String $time, String $date) timestamp ()
 
 Convenience function to get the current time and date as formatted strings.
 
@@ -234,9 +216,9 @@ sub timestamp {
     return ($time, $date);
 }
 
-=head1
+=pod
 
-B<String $result_str combine_files ( Array \@files, Boolean $has_names, Boolean $has_header)>
+String $result_str combine_files ( Array \@files, Boolean $has_names, Boolean $has_header)
 
 Takes any number of input files containing tab-delimited lists of the same length
 and creates a tab-delimited string with each list as a column.
@@ -257,7 +239,7 @@ sub combine_files {
 
     my @files = @$fileptr;
 
-    if (@files < 1) { die "no files provided."; }
+    if (@files < 2) { die $usage; }
 
     my @inputs;
     for (my $i=0; $i<@files; $i++) {
@@ -276,23 +258,12 @@ sub combine_files {
         }
         if ($has_header) {
             my @heads = split /\t/, (@{@inputs[$i]}[0]);
-#             foreach $head (@heads) {
-#                 $head = @files[$i] . "|" . $head;
-#             }
+            foreach $head (@heads) {
+                $head = @files[$i] . "|" . $head;
+            }
             @{@inputs[$i]}[0] = join ("\t", @heads);
         }
     }
-
-    #if different files have same column names, must disambiguate column names.
-#     my @sortedheads = sort(@heads);
-#     my $flag = 0;
-#     my $common_name = @sortedheads[0];
-#     for(my $j=1; $j<@sortedheads; $j++) {
-#         if ($common_name eq @sortedheads[$j]) {
-#
-#         }
-#     }
-#
 
     for (my $j = 0; $j < $num_entries; $j++) {
         if ($has_names) {
@@ -318,9 +289,9 @@ sub combine_files {
     return $result;
 }
 
-=head1
+=pod
 
-B<slice_fasta_to_exons ( String $fa_file, String $gb_file, String $out_file )>
+slice_fasta_to_exons ( String $fa_file, String $gb_file, String $out_file )
 
 Given a fasta file of aligned sequences and a corresponding genbank file
 with the CDS coordinates, will create a fasta file with each
