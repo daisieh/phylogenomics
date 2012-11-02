@@ -11,11 +11,11 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($fastafile, $datafile, $outfile, $gb_file, $window_size, $help) = 0;
+my ($fastafile, $datafile, $out_file, $gb_file, $window_size, $help) = 0;
 
 GetOptions ('fasta:s' => \$fastafile,
             'datafile|inputfile:s' => \$datafile,
-            'outputfile=s' => \$outfile,
+            'outputfile=s' => \$out_file,
             'genbank|gb_file:s' => \$gb_file,
             'window:i' => \$window_size,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
@@ -38,7 +38,7 @@ if ($fastafile) {   # if we were given a fasta file, we should create the diffs 
     my $val = 1;
 
     my $curr_aln = make_aln_from_fasta_file ($fastafile);
-    $datafile = "$outfile.diffs";
+    $datafile = "$out_file.diffs";
 
     open FH, ">", "$datafile" ;
     print FH "pos\t$fastafile\n";
@@ -71,16 +71,16 @@ $circlegraph_obj->draw_legend_text;
 
 if ($gb_file) {
 	if ($gb_file =~ /\.gb$/) {
-		open FH, ">", "$outfile.genes";
+		open FH, ">", "$out_file.genes";
 		print FH get_locations_from_genbank_file($gb_file);
 		close FH;
-	    $gb_file = "$outfile.genes";
+	    $gb_file = "$out_file.genes";
 	}
 	draw_gene_map ($gb_file, $circlegraph_obj);
 }
 
 $circlegraph_obj->output_ps();
-open OUT, ">", "$outfile.ps" or die "couldn't make output file $outfile";
+open OUT, ">", "$out_file.ps" or die "couldn't make output file $out_file";
 print OUT $circlegraph_obj->output_ps . "\n";
 close OUT;
 
