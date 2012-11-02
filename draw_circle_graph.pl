@@ -30,7 +30,8 @@ print "$datafile, $outfile\n";
 }
 
 my $circlegraph_obj = draw_circle_graph($datafile);
-$circlegraph_obj->draw_legend_text ({"size"=>10, "height"=>15});
+$circlegraph_obj->set_font("Helvetica", 12, "black");
+$circlegraph_obj->draw_legend_text;
 
 if ($gb_file) {
 	if ($gb_file =~ /\.gb$/) {
