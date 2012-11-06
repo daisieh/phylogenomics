@@ -28,6 +28,12 @@ if ($help) {
 
 print $runline;
 
+unless ($outfile) {
+    $fastafile =~ /(.*?)\.fa(sta)*/;
+    $outfile = $1;
+    print "No output name specified, using $outfile.\n";
+}
+
 my $master_alignment = make_aln_from_fasta_file ($fastafile);
 
 if ($reference ne "") {
@@ -44,7 +50,7 @@ for (my $i=2; $i<=$master_alignment->num_sequences(); $i++) {
     print $comp_seq->id() . "\n";
     my $start_pos = 1;
     my $stop_pos = $window_size;
-    my $filename = $outfile.$comp_seq->id().".diffs";
+    my $filename = $outfile.".".$comp_seq->id().".diffs";
     push @files, $filename;
     open FH, ">", $filename;
     print FH "pos\t".$comp_seq->id()."\n";
@@ -65,7 +71,7 @@ for (my $i=2; $i<=$master_alignment->num_sequences(); $i++) {
 
 my $diff_matrix = combine_files(\@files, 1, 1);
 
-my $filename = $outfile."total.diffs";
+my $filename = $outfile.".total.diffs";
 open FH, ">", $filename;
 print FH $diff_matrix;
 close FH;
@@ -92,7 +98,7 @@ my $newlegend = $circlegraph_obj->legend;
 $circlegraph_obj->set_font("Times-Roman", 10, "black");
 $circlegraph_obj->draw_legend_text;
 
-open OUT, ">", $outfile."graph.ps" or die "couldn't make output file $outfile.ps";
+open OUT, ">", $outfile.".ps" or die "couldn't make output file $outfile.ps";
 print OUT $circlegraph_obj->output_ps . "\n";
 close OUT;
 
