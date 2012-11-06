@@ -59,6 +59,10 @@ sub draw_circle_graph {
     $max_diffs = @sorted[@sorted-1];
     $max_diffs =~ s/\n//;
 
+    if ($max_diffs == 0) {
+        die "Couldn't draw graph: there were no pairwise differences.";
+    }
+
     for(my $i=0; $i<@graphs; $i++) {
         for (my $j=0; $j<@{$graphs[$i]}; $j++) {
             @{$graphs[$i]}[$j] = (@{$graphs[$i]}[$j]/$max_diffs);
@@ -142,7 +146,7 @@ sub draw_gene_map {
         my $stop_angle = ($stop/$circle_size) * 360;
         my $radius = $circlegraph_obj->inner_radius;
 
-        $circlegraph_obj->set_color([0, 0, 0.8]);
+        $circlegraph_obj->set_color("tardis");
         $circlegraph_obj->draw_filled_arc ($radius, $start_angle, $stop_angle);
 
         # label this element
@@ -157,6 +161,68 @@ sub draw_gene_map {
         $line =~ /(.+?)\t(.+?)$/;
         $circlegraph_obj->circle_label($2, $circlegraph_obj->inner_radius - 5, $1, "right");
     }
+    return $circlegraph_obj;
+}
+
+=pod
+
+CircleGraph $circlegraph_obj draw_regions ( String $region_file, CircleGraph $circlegraph_obj, (optional) $color, (optional) $radius )
+
+$region_file is a tab-delimited file of region locations, with the size of the circle as the last entry.
+$circlegraph_obj is an optional parameter for an existing CircleGraph.
+
+The function returns a CircleGraph object with the gene locations plotted around the edge
+of an inner circle and the names plotted inside the circle.
+
+=cut
+
+sub draw_regions {
+    my $region_file = shift;
+    my $circlegraph_obj = shift;
+    my $color = shift;
+    my $radius = shift;
+    unless ($circlegraph_obj) {
+        $circlegraph_obj = new CircleGraph();
+    }
+
+    if ($color) {
+        $circlegraph_obj->set_color($color);
+    } else {
+        $circlegraph_obj->set_color([0, 0, 0.8]);
+    }
+
+    unless ($radius) {
+        $radius = $circlegraph_obj->inner_radius;
+    }
+
+    open INPUTFILE, "<$region_file" or die "$region_file failed to open\n";
+    my @inputs = <INPUTFILE>;
+    close INPUTFILE;
+
+    while (@inputs[0] !~ /\t/) { #there's some sort of header
+        shift @inputs;
+        if (@inputs == 0) {
+            die "no data in $region_file.\n";
+        }
+    }
+    (undef, undef, my $circle_size, undef) = split /\t/, pop @inputs;
+    $circle_size =~ s/\n//;
+
+    my @labels = ();
+    for (my $i = 0; $i < @inputs; $i++) {
+        my $line = @inputs[$i];
+        my ($label, $start, $stop, $value) = split /\t/, $line;
+        $value =~ s/\n//;
+        if ($value eq "") {
+            $value = 0;
+        }
+
+        my $start_angle = ($start/$circle_size) * 360;
+        my $stop_angle = ($stop/$circle_size) * 360;
+
+        $circlegraph_obj->draw_arc ($radius, $start_angle, $stop_angle, {color => $color, width => 5});
+    }
+
     return $circlegraph_obj;
 }
 
