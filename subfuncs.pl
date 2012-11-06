@@ -261,7 +261,7 @@ sub combine_files {
 
     my @inputs;
     for (my $i=0; $i<@files; $i++) {
-        open FH, "<", @files[$i] or die $usage;
+        open FH, "<", @files[$i] or die "can't open @files[$i]\n";
         my @data = <FH>;
         close FH;
         push @inputs, \@data;
