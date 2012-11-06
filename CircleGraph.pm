@@ -7,10 +7,10 @@ use Carp;
 use PostScript::Simple;
 
 use constant PI 	=> 3.1415926535897932384626433832795;
-use constant CENTER_X => 600; # X coordinate of circle center500
-use constant CENTER_Y => 600; # Y coordinate of circle center
-use constant PS_X_SIZE => 1200; # X size of the PostScript object1000
-use constant PS_Y_SIZE => 1200; # Y size of the PostScript object
+use constant CENTER_X => 500; # X coordinate of circle center
+use constant CENTER_Y => 500; # Y coordinate of circle center
+use constant PS_X_SIZE => 1000; # X size of the PostScript object
+use constant PS_Y_SIZE => 1000; # Y size of the PostScript object
 
 #
 # graphics default values
@@ -159,7 +159,7 @@ sub set_color {
     my $self = shift;
     my $arg = shift;
     my @color = (0,0,0);
-    my @colors_by_name = qw(red green blue yellow magenta cyan orange fuchsia dark_green violet);
+    my @colors_by_name = qw(red green blue yellow magenta cyan orange fuchsia dark_green violet grey brown slate pink gold tardis);
 
     my %colors = (
         red => [1,0,0],
@@ -177,6 +177,11 @@ sub set_color {
         grey => [0.5,0.5,0.5],
         light_grey => [0.8,0.8,0.8],
         dark_grey => [0.3,0.3,0.3],
+        brown => [0.65,0.35,0.2],
+        slate => [0.35,0.45,0.6],
+        pink => [1,0.8,0.8],
+        gold => [1,0.8,0],
+        tardis => [0,0,0.65],
     );
 
     if (ref($arg) =~ /ARRAY/) {
@@ -190,6 +195,7 @@ sub set_color {
         if (exists $colors{$arg}) {
             @color = @{$colors{$arg}};
         } elsif ($arg =~ /\d+/) {
+            $arg = $arg % @colors_by_name;
             @color = @{$colors{@colors_by_name[$arg]}};
         }
     }
@@ -329,6 +335,35 @@ sub draw_filled_arc {
     $p->{pspages} .= CENTER_X . " ux " . CENTER_Y . " uy $radius $start_angle $stop_angle arc\n";
     $p->{pspages} .= CENTER_X . " ux " . CENTER_Y . " uy lineto\n";
     $p->{pspages} .= "closepath fill\n";
+
+}
+
+sub draw_arc {
+    my $self = shift;
+	my $radius = shift;
+	my $start_angle = shift;
+	my $stop_angle = shift;
+	my $params = shift;
+
+	my $color = "black";
+	my $width = 5;
+
+    if (ref($params) eq "HASH") {
+        if ($params->{"color"}) {
+            $color = $params->{"color"};
+        }
+        if ($params->{"width"}) {
+            $width = $params->{"width"};
+        }
+    }
+
+    $self->set_color($color);
+    my $p = $self->{ps_object};
+
+    $p->{pspages} .= "newpath\n";
+    $p->{pspages} .= "$width u setlinewidth\n";
+    $p->{pspages} .= CENTER_X . " ux " . CENTER_Y . " uy $radius $start_angle $stop_angle arc\n";
+    $p->{pspages} .= "stroke\n";
 
 }
 
