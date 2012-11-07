@@ -107,18 +107,19 @@ __END__
 
 =head1 NAME
 
-sliding_window
+pairwise_circle_graphs
 
 =head1 SYNOPSIS
 
-sliding_window [-fasta -window | -data] [-genbank] [-output]
+pairwise_circle_graphs -fasta -window -output [-genbank] [-labels]
 
 =head1 OPTIONS
-
   -fasta:           fasta file of aligned sequences
   -window:          size of sliding window (if not specified, 1000)
   -outputfile:      prefix of output files
   -reference:       optional: name of sequence to be used as reference (default is first seq)
+  -genbank|gb:      optional: genbank file to generate a map along the graph
+  -labels:          optional: tab-delimited list of samples and their corresponding labels
 
 =head1 DESCRIPTION
 
