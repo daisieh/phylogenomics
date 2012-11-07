@@ -370,6 +370,32 @@ sub slice_fasta_to_exons {
     close $gene_file;
 }
 
+=head1
+
+B<Hashref make_label_lookup ( String $labelfile )>
+
+Given a tab-delimited file of sample ids and human-readable labels, returns
+a hash ref for quick lookup.
+
+$labelfile:   tab-delimited file of sample ids and human-readable labels
+
+=cut
+
+sub make_label_lookup {
+    my $labelfile = shift;
+    my %labels;
+    if ($labelfile) {
+        open FH, "<", "$labelfile";
+        my @items = <FH>;
+        close FH;
+        foreach my $line (@items) {
+            (my $name, my $label) = split (/\t/,$line);
+            $label =~ s/\r|\n//;
+            $labels{$name} = $label;
+        }
+    }
+    return \%labels;
+}
 
 # must return 1 for the file overall.
 1;

@@ -37,16 +37,9 @@ close FH;
 
 my $circle_size = 157733;
 
-my %labels;
+my $labels;
 if ($labelfile) {
-    open FH, "<", "$labelfile";
-    my @items = <FH>;
-    close FH;
-    foreach my $line (@items) {
-        (my $name, my $label) = split (/\t/,$line);
-        $label =~ s/\r|\n//;
-        $labels{$name} = $label;
-    }
+    $labels = make_label_lookup ($labelfile);
 }
 
 my %samples;
@@ -197,8 +190,8 @@ $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius-5);
 $j = 0;
 foreach my $name (@names) {
     my $label = $name;
-    if (exists $labels{$name}) {
-        $label = $labels{$name};
+    if (exists $labels->{$name}) {
+        $label = $labels->{$name};
     }
     $circlegraph_obj->append_to_legend($label,$j++);
 }
