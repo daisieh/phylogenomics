@@ -1,0 +1,20 @@
+These are the scripts I write as I do my work. You're free to use them but please cite me if you do.
+
+Notes:
+Many of the scripts require subfuncs.pl and circlegraph.pl, so unless you are
+planning to always call the scripts from the main directory, you might want to add
+this directory to your $PERL5LIB variable.
+
+CircleGraph.pm is an object-oriented package that makes it easier to draw graphs along
+a circle. It makes postscript objects.
+
+subfuncs.pl is a random hodgepodge of utility functions.
+
+circlegraph.pl has helper functions that draw specific kinds of circular graphs.
+
+The subdirs contain scripts for various tasks:
+- converting: helper scripts to convert files from one format to another
+- parsing: uses Bioperl to slice and dice sequence files in various ways.
+- plastome: scripts that take input about the plastome and draw circle graphs to
+  represent that data.
+- selection_analysis: scripts that use Bioperl, PAML, HyPhy to analyze selection on genes.
