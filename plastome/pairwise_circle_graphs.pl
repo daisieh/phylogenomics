@@ -123,8 +123,7 @@ pairwise_circle_graphs -fasta -window -output [-genbank] [-labels]
 
 =head1 DESCRIPTION
 
-Given a fasta file and a sliding window size, calculates
-the percent difference for each seq pair and maps it to a circular graph.
+Given a fasta file of aligned sequences, draws graphs comparing them pairwise to the reference seq.
 
 =cut
 
