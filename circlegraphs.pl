@@ -21,6 +21,7 @@ positions mapped around the edge, and a legend describing the graph.
 sub draw_circle_graph {
     my $datafile = shift;
     my $circlegraph_obj = shift;
+    my $labelhash = shift;
     unless ($circlegraph_obj) {
         $circlegraph_obj = new CircleGraph();
     }

@@ -1,5 +1,6 @@
 use CircleGraph;
 use File::Basename;
+use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
 require "subfuncs.pl";
@@ -11,15 +12,18 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($fastafile, $outfile, $reference, $ref_seq, $gb_file) = 0;
+my ($fastafile, $outfile, $reference, $ref_seq, $gb_file, $labelfile) = 0;
 my $window_size = 1000;
 my $help = 0;
+my $keepfiles = 0;
 
 GetOptions ('fasta:s' => \$fastafile,
             'outputfile=s' => \$outfile,
             'window:i' => \$window_size,
             'reference:s' => \$reference,
             'genbank|gb:s' => \$gb_file,
+            'labels:s' => \$labelfile,
+            'keepfiles!' => \$keepfiles,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -72,19 +76,21 @@ for (my $i=2; $i<=$master_alignment->num_sequences(); $i++) {
 my $diff_matrix = combine_files(\@files, 1, 1);
 
 my $filename = $outfile.".total.diffs";
+push @files, $filename;
 open FH, ">", $filename;
 print FH $diff_matrix;
 close FH;
 
 print "drawing graphs...\n";
-my $circlegraph_obj = draw_circle_graph($filename);
+my $circlegraph_obj = draw_circle_graph($filename, 0, $labels);
 
+# draw the gene map
 if ($gb_file) {
 	if ($gb_file =~ /\.gb$/) {
-		open FH, ">", "$outfile.genes";
-		print FH get_locations_from_genbank_file($gb_file);
-		close FH;
-	    $gb_file = "$outfile.genes";
+        my ($fh, $filename) = tempfile(UNLINK => 1);
+		print $fh get_locations_from_genbank_file($gb_file);
+		close $fh;
+	    $gb_file = "$filename";
 	}
 	draw_gene_map ($gb_file, $circlegraph_obj);
 }
@@ -92,9 +98,6 @@ if ($gb_file) {
 $circlegraph_obj->append_to_legend("Pairwise comparisons to $reference");
 my $newlegend = $circlegraph_obj->legend;
 
-# #$newlegend =~ s/<item( color=">(.*?)\|/>/g;
-# print $newlegend;
-# $circlegraph_obj->{legend} = $newlegend;
 $circlegraph_obj->set_font("Times-Roman", 10, "black");
 $circlegraph_obj->draw_legend_text;
 
@@ -102,6 +105,11 @@ open OUT, ">", $outfile.".ps" or die "couldn't make output file $outfile.ps";
 print OUT $circlegraph_obj->output_ps . "\n";
 close OUT;
 
+if (!$keepfiles) {
+    foreach my $file (@files) {
+        unlink $file or warn "could not delete $file";
+    }
+}
 
 __END__
 
