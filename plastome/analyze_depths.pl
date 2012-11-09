@@ -35,7 +35,7 @@ open FH, "<", "$samplefile" or die "no such file";
 my @names = <FH>;
 close FH;
 
-my $circle_size = 157733;
+my $circle_size = 157033;
 
 my $labels;
 if ($labelfile) {
@@ -52,25 +52,29 @@ foreach my $name (@names) {
     my @indels = ();
     my $i = 1;
     my $in_indel = 0;
-    my $curr_indel_start = 0;
     my $line = readline VCF_FH;
-    for ($i; $i <= $circle_size; $i++) {
-        $line =~ /Chloroplast\t(.*?)\t(.*?)\s/;
+    my $curr_indel_start = 0;
+	$line =~ /\t(.*?)\t(.*?)\s/;
+	if ($2 == 0) {
+		$curr_indel_start = 1;
+	}
+    for ($i=1; $i <= $circle_size; $i++) {
+        $line =~ /\t(.*?)\t(.*?)\s/;
         if ($i == $1) {
             push @depths, $2;
-            if ($curr_indel_start) {
-                push @indels, "$curr_indel_start\t$i";
-                $curr_indel_start = 0;
-            }
+            if ($2 == 0) {
+				if ($curr_indel_start) {
+					push @indels, "$curr_indel_start\t$i";
+					$curr_indel_start = 0;
+				} else {
+					$curr_indel_start = $i;
+				}
+			}
             $line = readline VCF_FH;
         } else {
-            if ($curr_indel_start) {
-                ##
-            } else {
-                $curr_indel_start = $i;
-            }
             push @depths, "0";
         }
+#         $line = readline VCF_FH;
     }
     close VCF_FH;
     if ($curr_indel_start) {
@@ -116,7 +120,7 @@ my $max=0;
 my %graphs;
 foreach my $name (@names) {
     #open the depths file
-    open FH, "<", "$outfile_"."$name"."_depths.txt";
+    open FH, "<", "$outfile"."_$name"."_depths.txt";
     my @items = <FH>;
     close FH;
     my $header = shift @items;
