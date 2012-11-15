@@ -81,23 +81,22 @@ foreach my $name (@names) {
             if ($2 == 0) {
 				if ($curr_indel_start) {
 					push @indels, "$curr_indel_start\t$i";
+					print "\tend indel at $i\n";
 					$curr_indel_start = 0;
 				} else {
 					$curr_indel_start = $i;
+					print "\tstart indel at $i\n";
 				}
 			}
             $line = readline VCF_FH;
         } else {
             push @depths, "0";
         }
-#         $line = readline VCF_FH;
     }
     close VCF_FH;
     if ($curr_indel_start) {
         push @indels, "$curr_indel_start\t".($i-1);
     }
-#     $samples{$samplename."_depths"} = \@depths;
-#     $samples{$samplename."_indels"} = \@indels;
     $samples{$samplename}{"depths"} = \@depths;
     $samples{$samplename}{"indels"} = \@indels;
 }
