@@ -95,6 +95,7 @@ foreach my $name (@names) {
     }
     close VCF_FH;
     if ($curr_indel_start) {
+		print "\tend indel because end of depths\n";
         push @indels, "$curr_indel_start\t".($i-1);
     }
     $samples{$samplename}{"depths"} = \@depths;
