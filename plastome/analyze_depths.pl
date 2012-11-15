@@ -31,10 +31,26 @@ if ($help) {
 
 print $runline;
 
-open FH, "<", "$samplefile" or die "no such file";
-my @names = <FH>;
-close FH;
+my @names;
+if ($samplefile =~ /(.+?)\.depth/) {
+    $samplefile = $1;
+#     $samplefile =~ s/.*\///;
+    push @names, $samplefile;
+} else {
+    open FH, "<", "$samplefile" or die "no such file";
+    @names = <FH>;
+    close FH;
 
+    my @checkednames;
+    # don't process blank names
+    foreach my $name (@names) {
+        $name =~ s/\n//;
+        if ($name !~ /^\s*$/) {
+            push @checkednames, $name;
+        }
+    }
+    $names = \@checkednames;
+}
 my $circle_size = 157033;
 
 my $labels;
@@ -44,10 +60,10 @@ if ($labelfile) {
 
 my %samples;
 foreach my $name (@names) {
-    $name =~ s/\n//;
     my $depthfile = "$name".".depth";
-    print "processing $depthfile\n";
-    open VCF_FH, "<", "$depthfile";
+    my $samplename = basename($name);
+    print "processing $samplename\n";
+    open VCF_FH, "<", "$depthfile" or die "couldn't open $depthfile";
     my @depths = ();
     my @indels = ();
     my $i = 1;
@@ -80,47 +96,48 @@ foreach my $name (@names) {
     if ($curr_indel_start) {
         push @indels, "$curr_indel_start\t".($i-1);
     }
-    $samples{$name."_depths"} = \@depths;
-    $samples{$name."_indels"} = \@indels;
+#     $samples{$samplename."_depths"} = \@depths;
+#     $samples{$samplename."_indels"} = \@indels;
+    $samples{$samplename}{"depths"} = \@depths;
+    $samples{$samplename}{"indels"} = \@indels;
 }
 
 
 while (($key, $value) = each %samples) {
-    my @array = @$value;
-    if ($key =~ /depths/) {
-        open FH, ">", "$outfile"."_$key.txt";
-        print FH "pos\t$key\n";
-        my $sum = 0;
-        my $i;
-        for ($i=1; $i<=@array; $i++) {
-            if ($samplesize) {
-                if (($i%$samplesize)==0) {
-                    print FH "$i\t".@array[$i-1]."\n";
-                }
-            } else {
-                print FH "$i\t".@array[$i-1]."\n";
+    my @depth_array = @{$value->{"depths"}};
+    open FH, ">", "$outfile"."_$key"."_depths.txt";
+    print FH "pos\t$key\n";
+    my $sum = 0;
+    my $i;
+    for ($i=1; $i<=@depth_array; $i++) {
+        if ($samplesize) {
+            if (($i%$samplesize)==0) {
+                print FH "$i\t".@depth_array[$i-1]."\n";
             }
+        } else {
+            print FH "$i\t".@depth_array[$i-1]."\n";
         }
-        close FH;
-    } else {
-        open FH, ">", "$outfile"."_$key.txt";
-        my $sum = 0;
-        my $i;
-        for ($i=1; $i<=@array; $i++) {
-            print FH "$i\t".@array[$i-1]."\n";
-        }
-        print FH "size\t1\t$circle_size\n";
-        close FH;
     }
+    close FH;
+
+    my @indel_array = @{$value->{"indels"}};
+    open FH, ">", "$outfile"."_$key"."_indels.txt";
+    my $sum = 0;
+    my $i;
+    for ($i=1; $i<=@indel_array; $i++) {
+        print FH "$i\t".@indel_array[$i-1]."\n";
+    }
+    print FH "size\t1\t$circle_size\n";
+    close FH;
 }
 
 print "drawing graphs...\n";
 my $circlegraph_obj = new CircleGraph();
 my $max=0;
 my %graphs;
-foreach my $name (@names) {
-    #open the depths file
-    open FH, "<", "$outfile"."_$name"."_depths.txt";
+while (($key, $value) = each %samples) {
+    # process each depths file
+    open FH, "<", "$outfile"."_$key"."_depths.txt";
     my @items = <FH>;
     close FH;
     my $header = shift @items;
@@ -136,14 +153,14 @@ foreach my $name (@names) {
     if (!exists($graphs{"x"})) {
         $graphs{"x"} = \@xvals;
     }
-    $graphs{$name} = \@yvals;
+    $graphs{$key} = \@yvals;
 }
 
-#process yvals so that they are scaled
-foreach my $name (@names) {
-    my @yvals = @{$graphs{$name}};
+#process yvals so that they are scaled to 1
+while (($key, $value) = each %samples) {
+    my @yvals = @{$graphs{$key}};
     for (my $y=0;$y<@yvals;$y++) {
-        @{$graphs{$name}}[$y] = @yvals[$y]/$max;
+        @{$graphs{$key}}[$y] = @yvals[$y]/$max;
     }
 }
 
@@ -151,8 +168,8 @@ my $j = 0;
 
 # draw the coverage maps
 my @xvals = @{$graphs{"x"}};
-foreach my $name (@names) {
-    my @yvals = @{$graphs{$name}};
+while (($key, $value) = each %samples) {
+    my @yvals = @{$graphs{$key}};
     $circlegraph_obj->set_color($j);
     $circlegraph_obj->plot_line(\@xvals, \@yvals);
     $j++;
@@ -161,10 +178,11 @@ foreach my $name (@names) {
 $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
 $circlegraph_obj->draw_circle($circlegraph_obj->outer_radius);
 $circlegraph_obj->set_font("Helvetica", 6, "black");
-for (my $i = 0; $i < @xvals; $i++) {
-    my $angle = (@xvals[$i]/$circle_size) * 360;
+for (my $i = 1000; $i < $circle_size; $i=$i+1000) {
+# for (my $i = 0; $i < @xvals; $i++) {
+    my $angle = ($i/$circle_size) * 360;
     my $radius = $circlegraph_obj->outer_radius + 10;
-    my $label = @xvals[$i];
+    my $label = $i;
     $circlegraph_obj->circle_label($angle, $radius, "$label");
 }
 
@@ -183,8 +201,8 @@ print "drawing reference mismatch maps...\n";
 # draw the indel maps
 $j = 0;
 $circlegraph_obj->inner_radius($circlegraph_obj->inner_radius - 150);
-foreach my $name (@names) {
-    $circlegraph_obj = draw_regions ( "$outfile"."_$name"."_indels.txt", $circlegraph_obj, $j, $circlegraph_obj->inner_radius + ($j*5) );
+while (($key, $value) = each %samples) {
+    $circlegraph_obj = draw_regions ( "$outfile"."_$key"."_indels.txt", $circlegraph_obj, $j, $circlegraph_obj->inner_radius + ($j*5) );
     $j++;
 }
 
@@ -192,10 +210,10 @@ $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius-5);
 
 # draw the labels
 $j = 0;
-foreach my $name (@names) {
-    my $label = $name;
-    if (exists $labels->{$name}) {
-        $label = $labels->{$name};
+while (($key, $value) = each %samples) {
+    my $label = $key;
+    if (exists $labels->{$key}) {
+        $label = $labels->{$key};
     }
     $circlegraph_obj->append_to_legend($label,$j++);
 }
@@ -209,7 +227,8 @@ close FH;
 
 if (!$keepfiles) {
     while (($key, $value) = each %samples) {
-        unlink "$outfile"."_$key.txt" or warn "could not delete $outfile"."_$key.txt";
+        unlink "$outfile"."_$key"."_depths.txt" or warn "could not delete $outfile"."_$key"."_depths.txt";
+        unlink "$outfile"."_$key"."_indels.txt" or warn "could not delete $outfile"."_$key"."_indels.txt";
     }
 }
 
