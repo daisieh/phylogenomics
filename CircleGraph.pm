@@ -159,7 +159,7 @@ sub set_color {
     my $self = shift;
     my $arg = shift;
     my @color = (0,0,0);
-    my @colors_by_name = qw(red green blue yellow magenta cyan orange fuchsia dark_green violet grey brown slate pink gold tardis);
+    my @colors_by_name = qw(red green blue yellow magenta cyan orange fuchsia dark_green violet grey brown slate pink gold tardis teal brick);
 
     my %colors = (
         red => [1,0,0],
@@ -182,6 +182,8 @@ sub set_color {
         pink => [1,0.8,0.8],
         gold => [1,0.8,0],
         tardis => [0,0,0.65],
+        teal => [0.2,0.75,0.75],
+        brick => [0.6,0.05,0.05],
     );
 
     if (ref($arg) =~ /ARRAY/) {
@@ -349,15 +351,15 @@ sub draw_arc {
 	my $width = 5;
 
     if (ref($params) eq "HASH") {
-        if ($params->{"color"}) {
+        if (exists $params->{"color"}) {
             $color = $params->{"color"};
         }
-        if ($params->{"width"}) {
+        if (exists $params->{"width"}) {
             $width = $params->{"width"};
         }
     }
 
-    $self->set_color($color);
+    $self->set_color("$color");
     my $p = $self->{ps_object};
 
     $p->{pspages} .= "newpath\n";
