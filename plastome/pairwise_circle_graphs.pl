@@ -46,7 +46,7 @@ if ($reference ne "") {
     $reference = $master_alignment->get_seq_by_pos(1)->id();
 }
 
-my @files;
+my @tempfiles;
 
 for (my $i=2; $i<=$master_alignment->num_sequences(); $i++) {
     my $comp_seq = $master_alignment->get_seq_by_pos($i);
@@ -55,7 +55,7 @@ for (my $i=2; $i<=$master_alignment->num_sequences(); $i++) {
     my $start_pos = 1;
     my $stop_pos = $window_size;
     my $filename = $outfile.".".$comp_seq->id().".diffs";
-    push @files, $filename;
+    push @tempfiles, $filename;
     open FH, ">", $filename;
     print FH "pos\t".$comp_seq->id()."\n";
     my $val = perc_diff_partition ($comp_aln, $start_pos, $stop_pos, 1);
@@ -73,10 +73,10 @@ for (my $i=2; $i<=$master_alignment->num_sequences(); $i++) {
     close FH;
 }
 
-my $diff_matrix = combine_files(\@files, 1, 1);
+my $diff_matrix = combine_files(\@tempfiles, 1, 1);
 
 my $filename = $outfile.".total.diffs";
-push @files, $filename;
+push @tempfiles, $filename;
 open FH, ">", $filename;
 print FH $diff_matrix;
 close FH;
@@ -106,7 +106,7 @@ print OUT $circlegraph_obj->output_ps . "\n";
 close OUT;
 
 if (!$keepfiles) {
-    foreach my $file (@files) {
+    foreach my $file (@tempfiles) {
         unlink $file or warn "could not delete $file";
     }
 }
