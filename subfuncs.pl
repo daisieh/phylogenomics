@@ -166,10 +166,10 @@ sub make_aln_from_fasta_file {
 		$name =~ s/(.*?)\..*/$1/;
 		#$name =~ s/[\Q !@#$%^&*.-?<>,|\/\E]//g;
 		#shorten name if it's too long
-		if (length($name) > 12) {
-			$name =~ /(.{12})/;
-			$name = $1;
-		}
+# 		if (length($name) > 12) {
+# 			$name =~ /(.{12})/;
+# 			$name = $1;
+# 		}
  		my $outseq = Bio::LocatableSeq->new(-seq => $seq->seq(), -id => $name);
  		$newaln->add_seq ($outseq);
  		if ($min_length > $seq->length() ) {
