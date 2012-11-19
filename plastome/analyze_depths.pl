@@ -76,26 +76,26 @@ foreach my $name (@names) {
 	}
     for ($i=1; $i <= $circle_size; $i++) {
         $line =~ /\t(.*?)\t(.*?)\s/;
-        if ($i == $1) {
-            push @depths, $2;
-            if ($2 == 0) {
-				if ($curr_indel_start) {
-					push @indels, "$curr_indel_start\t$i";
-					print "\tend indel at $i\n";
-					$curr_indel_start = 0;
-				} else {
-					$curr_indel_start = $i;
-					print "\tstart indel at $i\n";
-				}
-			}
-            $line = readline VCF_FH;
+        my $depth = $2;
+        if ($i != $1) { # this position isn't listed in the depths file; assume it is 0
+        	$depth = 0;
         } else {
-            push @depths, "0";
+			$line = readline VCF_FH;
         }
+		if ($curr_indel_start) { # are we in an indel already?
+			if ($depth != 0) { # we're not in an indel anymore; end the indel.
+				push @indels, "$curr_indel_start\t$i";
+				$curr_indel_start = 0;
+			}
+		} else { # we're not in an indel. Start one if the depth is 0.
+			if ($depth == 0) {
+				$curr_indel_start = $i;
+			}
+		}
+		push @depths, $depth;
     }
     close VCF_FH;
     if ($curr_indel_start) {
-		print "\tend indel because end of depths\n";
         push @indels, "$curr_indel_start\t".($i-1);
     }
     $samples{$samplename}{"depths"} = \@depths;
@@ -202,7 +202,7 @@ print "drawing reference mismatch maps...\n";
 $j = 0;
 $circlegraph_obj->inner_radius($circlegraph_obj->inner_radius - 150);
 while (($key, $value) = each %samples) {
-    $circlegraph_obj = draw_regions ( "$outfile"."_$key"."_indels.txt", $circlegraph_obj, $j, $circlegraph_obj->inner_radius + ($j*5) );
+    $circlegraph_obj = draw_regions ( "$outfile"."_$key"."_indels.txt", $circlegraph_obj, $j, $circlegraph_obj->inner_radius + ($j*5));
     $j++;
 }
 
@@ -215,7 +215,8 @@ while (($key, $value) = each %samples) {
     if (exists $labels->{$key}) {
         $label = $labels->{$key};
     }
-    $circlegraph_obj->append_to_legend($label,$j++);
+    $circlegraph_obj->append_to_legend($label,$j);
+    $j++;
 }
 
 $circlegraph_obj->append_to_legend("Maximum coverage was $max, scaled to 1");
