@@ -186,12 +186,9 @@ sub draw_regions {
         $circlegraph_obj = new CircleGraph();
     }
 
-    if ($color) {
-        $circlegraph_obj->set_color($color);
-    } else {
-        $circlegraph_obj->set_color([0, 0, 0.8]);
+    if ($color eq "") {
+        $color = "tardis";
     }
-
     unless ($radius) {
         $radius = $circlegraph_obj->inner_radius;
     }
@@ -221,7 +218,7 @@ sub draw_regions {
         my $start_angle = ($start/$circle_size) * 360;
         my $stop_angle = ($stop/$circle_size) * 360;
 
-        $circlegraph_obj->draw_arc ($radius, $start_angle, $stop_angle, {color => $color, width => 5});
+        $circlegraph_obj->draw_arc ($radius, $start_angle, $stop_angle, {color => "$color", width => 5});
     }
 
     return $circlegraph_obj;
