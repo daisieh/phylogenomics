@@ -1,73 +1,102 @@
 #!/usr/bin/perl
 use strict;
 use File::Basename;
+use File::Temp qw/ tempfile tempdir /;
+use Getopt::Long;
+use Pod::Usage;
+require "subfuncs.pl";
 
-
-my $usage = "perl " . basename($0);
-$usage .=	" <file.fastq> <result>\n\n";
-
-my $fastafile = shift or die "$usage";
-my $resultfile = shift or die "$usage";
-
-my $result1 = "";
-my $result2 = "";
-my $ref_seq = "";
-my $second_seq = "";
-my $ref_taxon = "";
-my $second_taxon = "";
-
-open my $F, "<$fastafile" or die "couldn't open fasta file";
-my $fs = readline $F;
-my $ref_taxon = "$fs";
-$fs = readline $F;
-
-while ($fs !~ m/>/) {
-	chomp $fs;
-	$ref_seq .= "$fs";
-	$fs = readline $F;
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
 }
 
-$second_taxon = "$fs";
-$fs = readline $F;
+my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-while ($fs) {
-	chomp $fs;
-	$second_seq .= "$fs";
-	$fs = readline $F;
+my ($fastafile, $outfile, $reference, $ref_seq) = 0;
+my $window_size = 1000;
+my $help = 0;
+my $keepfiles = 0;
+
+GetOptions ('fasta:s' => \$fastafile,
+            'outputfile=s' => \$outfile,
+            'reference:s' => \$reference,
+            'keepfiles!' => \$keepfiles,
+            'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+if ($help) {
+    pod2usage(-verbose => 1);
 }
 
-print "$ref_taxon\n";
-$ref_seq =~ m/(-+)/g;
-my $x = $1;
-my $start_pos = 0;
-my $stop_pos = (pos $ref_seq)-(length $x);
-open my $outfile1, ">$resultfile.fasta" or die "couldn't create result file";
-truncate $outfile1, 0;
+print $runline;
 
+my $master_alignment = make_aln_from_fasta_file ($fastafile);
 
-while (pos $ref_seq) {
-	print "$start_pos $stop_pos\n";
-	$result1 .= substr ($ref_seq, $start_pos, ($stop_pos - $start_pos));
-	$result2 .= substr ($second_seq, $start_pos, ($stop_pos - $start_pos));
-# 	$result1 .= "\n";
-# 	$result2 .= "\n";
-
-	$start_pos = pos $ref_seq;
-	$x = $1;
-	$ref_seq =~ m/(-+)/g;
-	$stop_pos = (pos $ref_seq)-(length $1);
+if ($reference ne "") {
+    $master_alignment = $master_alignment->set_new_reference($reference);
+} else {
+    $reference = $master_alignment->get_seq_by_pos(1)->id();
 }
 
-	$start_pos = $start_pos + (length $x);
-	$stop_pos = length $ref_seq;
-	print "#$start_pos $stop_pos\n";
-# 	$result1 .= "\n";
-# 	$result2 .= "\n";
-	$result1 .= substr ($ref_seq, $start_pos, ($stop_pos - $start_pos));
-	$result2 .= substr ($second_seq, $start_pos, ($stop_pos - $start_pos));
+# look over the reference sequence: find regions that are not gaps
+my @regions = ();
+$ref_seq = $master_alignment->get_seq_by_pos(1)->seq();
+my $curr_pos = 0;
+my $position;
+my @sequences = ();
+foreach my $seqio ($master_alignment->each_seq) {
+	my $seq = "";
+	push @sequences, \$seq;
+}
 
-print "done\n";
+while ($ref_seq =~ m/-/gc) {
+	$position = pos($ref_seq);
+	my @reg_pair = ($curr_pos, $position);
+	if (!$position) {
+		@reg_pair[1] = length ($ref_seq);
+		push @regions, \@reg_pair;
+		last;
+	}
+	push @regions, \@reg_pair;
+	$ref_seq =~ m/-*/gc;
+	$curr_pos = pos($ref_seq);
+}
+# then, for all of those regions, push the slices into a new SimpleAlign.
+foreach my $reg_ptr (@regions) {
+	my @reg_pair = @$reg_ptr;
+	$curr_pos = @reg_pair[0];
+	$position = @reg_pair[1];
+	for (my $i=0; $i<@sequences; $i++) {
+		${@sequences[$i]} .= substr($master_alignment->get_seq_by_pos($i+1)->seq(),$curr_pos,($position-$curr_pos-1));
+	}
+}
 
-close $F;
-print $outfile1 "$ref_taxon$result1\n$second_taxon$result2\n";
-close $outfile1;
+open FH, ">", $outfile or die "couldn't make output file $outfile";
+foreach (my $i=0; $i<@sequences; $i++) {
+	my $name = $master_alignment->get_seq_by_pos($i+1)->id();
+	print FH ">$name\n".${@sequences[$i]}."\n";
+}
+close FH;
+
+__END__
+
+=head1 NAME
+
+pairwise_circle_graphs
+
+=head1 SYNOPSIS
+
+trim_to_ref -fasta -output [-reference] [--keepfiles]
+
+=head1 OPTIONS
+  -fasta:           fasta file of aligned sequences
+  -outputfile:      prefix of output files
+  -reference:       optional: name of sequence to be used as reference (default is first seq)
+  --keepfiles:		optional: keep temp files (default is no)
+
+=head1 DESCRIPTION
+
+Given a fasta file of aligned sequences, removes gaps from the reference sequence and
+trims the rest of the alignment to match.
+
+=cut
+
