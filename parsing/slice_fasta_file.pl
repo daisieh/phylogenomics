@@ -4,6 +4,7 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 use Bio::SeqIO;
+use Bio::Seq;
 use Bio::Align::Utilities qw(cat);
 require "subfuncs.pl";
 
@@ -13,10 +14,11 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($fastafile, $resultfile, $gb_file, $start, $end, $oneslice, $help) = 0;
+my ($fastafile, $resultfile, $gb_file, $start, $end, $oneslice, $help, $slice_list) = 0;
 GetOptions ('fasta=s' => \$fastafile,
             'outputfile=s' => \$resultfile,
             'genbank|gb_file:s' => \$gb_file,
+            'slices|slicelist:s' => \$slice_list,
             'start:i' => \$start,
             'end:i' => \$end,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
@@ -50,6 +52,28 @@ if ($oneslice) {
 	close $fh;
 } elsif ($gb_file) {
     slice_fasta_to_exons ($fastafile, $gb_file, $resultfile);
+} elsif ($slice_list) {
+    my $seqio = Bio::SeqIO->new(-file => $fastafile, -format => "fasta");
+    my %seqhash;
+    while (my $seq = $seqio->next_seq()) {
+        $seqhash{$seq->id} = $seq;
+    }
+    open FH, "<", $slice_list or die "Couldn't open slice list $slice_list";
+    print "hashed fasta file\n";
+    my @slices = <FH>;
+    close FH;
+    open FH, ">", $resultfile or die "Couldn't open output file $resultfile";
+    foreach my $slice (@slices) {
+        if ($slice =~ /(.+?)\t(.+?)\t(.+)$/) {
+            my $name = $1;
+            my $start = $2;
+            my $end = $3;
+            my $seq = $seqhash{$name};
+            bless $seq, "Bio::Seq";
+            my $result = substr($seq->seq,$start,$end-$start);
+            print FH ">$name:$start-$end\n$result\n";
+        }
+    }
 } else {
     pod2usage(-msg => "Must specify either a genbank file or a start and end point", -exitval => 2);
 }
