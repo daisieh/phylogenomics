@@ -12,7 +12,7 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($samplefile, $gb_file, $labelfile, $outfile) = 0;
+my ($samplefile, $gb_file, $labelfile, $outfile, $min_coverage) = 0;
 my $samplesize = 1000;
 my $keepfiles = 0;
 my $help = 0;
@@ -23,6 +23,7 @@ GetOptions ('samples|input=s' => \$samplefile,
             'labels:s' => \$labelfile,
             'genbank|gb:s' => \$gb_file,
             'keepfiles!' => \$keepfiles,
+            'coverage:i' => \$min_coverage,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -34,22 +35,19 @@ print $runline;
 my @names;
 if ($samplefile =~ /(.+?)\.depth/) {
     $samplefile = $1;
-#     $samplefile =~ s/.*\///;
     push @names, $samplefile;
 } else {
     open FH, "<", "$samplefile" or die "no such file";
-    @names = <FH>;
+    my @rawnames = <FH>;
     close FH;
 
-    my @checkednames;
     # don't process blank names
-    foreach my $name (@names) {
+    foreach my $name (@rawnames) {
         $name =~ s/\n//;
         if ($name !~ /^\s*$/) {
-            push @checkednames, $name;
+            push @names, $name;
         }
     }
-    $names = \@checkednames;
 }
 my $circle_size = 157033;
 
@@ -83,12 +81,12 @@ foreach my $name (@names) {
 			$line = readline VCF_FH;
         }
 		if ($curr_indel_start) { # are we in an indel already?
-			if ($depth != 0) { # we're not in an indel anymore; end the indel.
+			if ($depth > $min_coverage) { # we're not in an indel anymore; end the indel.
 				push @indels, "$curr_indel_start\t$i";
 				$curr_indel_start = 0;
 			}
 		} else { # we're not in an indel. Start one if the depth is 0.
-			if ($depth == 0) {
+			if ($depth <= $min_coverage) {
 				$curr_indel_start = $i;
 			}
 		}
