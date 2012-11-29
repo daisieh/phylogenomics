@@ -218,6 +218,8 @@ while (($key, $value) = each %samples) {
 }
 
 $circlegraph_obj->append_to_legend("Maximum coverage was $max, scaled to 1");
+$circlegraph_obj->append_to_legend("Minimum coverage for mismatches was $min_coverage");
+$circlegraph_obj->append_to_legend("Sampling frequency was $samplesize");
 $circlegraph_obj->draw_legend_text({size => 10, height => 15});
 
 open FH, ">", "$outfile.ps" or die "couldn't open $outfile.ps";
