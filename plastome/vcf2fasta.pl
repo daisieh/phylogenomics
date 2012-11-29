@@ -82,16 +82,16 @@ for (my $i=0;$i<@positions; $i++) {
 	if ($depth > $cov_thresh) {
 		if ($alt_depth/($alt_depth+$ref_depth) > 0.8) {
 			if ($alt =~ /\.|,/) {
-				$alt = "N";
+				$alt = "-";
 			}
 			$seq .= $alt;
 		} elsif ($ref_depth/($alt_depth+$ref_depth) > 0.8) {
 			$seq .= $ref;
 		} else {
-			$seq .= "N";
+			$seq .= "-";
 		}
 	} else {
-		$seq .= "N";
+		$seq .= "-";
 	}
 }
 
