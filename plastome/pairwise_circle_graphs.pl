@@ -68,7 +68,7 @@ for (my $i=2; $i<=$master_alignment->num_sequences(); $i++) {
         $stop_pos = $start_pos + $window_size;
         $val = perc_diff_partition ($comp_aln, $start_pos, $stop_pos, 1);
     }
-    $circle_size = $comp_aln->length();
+    my $circle_size = $comp_aln->length();
     print FH "$circle_size\t$firstval\n";
     close FH;
 }
@@ -82,7 +82,7 @@ print FH $diff_matrix;
 close FH;
 
 print "drawing graphs...\n";
-my $circlegraph_obj = draw_circle_graph($filename, 0, $labels);
+my $circlegraph_obj = draw_circle_graph($filename, 0);
 
 # draw the gene map
 if ($gb_file) {
@@ -98,8 +98,7 @@ if ($gb_file) {
 $circlegraph_obj->append_to_legend("Pairwise comparisons to $reference");
 my $newlegend = $circlegraph_obj->legend;
 
-$circlegraph_obj->set_font("Times-Roman", 10, "black");
-$circlegraph_obj->draw_legend_text;
+$circlegraph_obj->draw_legend_text({size => 10, height => 15});
 
 open OUT, ">", $outfile.".ps" or die "couldn't make output file $outfile.ps";
 print OUT $circlegraph_obj->output_ps . "\n";
@@ -119,7 +118,7 @@ pairwise_circle_graphs
 
 =head1 SYNOPSIS
 
-pairwise_circle_graphs -fasta -window -output [-genbank] [-labels]
+pairwise_circle_graphs -fasta -window -output [-reference] [-genbank] [-labels]
 
 =head1 OPTIONS
   -fasta:           fasta file of aligned sequences
