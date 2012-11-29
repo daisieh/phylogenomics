@@ -21,7 +21,7 @@ positions mapped around the edge, and a legend describing the graph.
 sub draw_circle_graph {
     my $datafile = shift;
     my $circlegraph_obj = shift;
-    my $labelhash = shift;
+	my $circle_size = shift;
     unless ($circlegraph_obj) {
         $circlegraph_obj = new CircleGraph();
     }
@@ -55,8 +55,7 @@ sub draw_circle_graph {
         $line = readline DATAFH;
     }
 
-    my @sorted = sort (@differences);
-    my $diff_len = @sorted;
+    my @sorted = sort {$a <=> $b} @differences;
     $max_diffs = @sorted[@sorted-1];
     $max_diffs =~ s/\n//;
 
@@ -83,7 +82,9 @@ sub draw_circle_graph {
 
     # draw labels around the edge
     $circlegraph_obj->set_font("Helvetica", 6, "black");
-    my $circle_size = @positions[@positions-1];
+    if ($circle_size eq "") {
+		$circle_size = @positions[@positions-1];
+	}
 
     for (my $i = 0; $i < $total_elems; $i++) {
         my $angle = (@positions[$i]/$circle_size) * 360;
