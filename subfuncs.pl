@@ -152,7 +152,12 @@ The sequences in the fasta file must already be aligned.
 
 sub make_aln_from_fasta_file {
 	my $fa_file = shift;
+	my $flush = shift;
 	my $min_length = 0;
+
+	if ($flush eq "") { # unless otherwise specified, return a flush alignment
+		$flush = 1;
+	}
 
 	my $inseq = Bio::SeqIO->new(-file => "<$fa_file", -format => "fasta");
 	my $newaln = Bio::SimpleAlign->new();
@@ -164,12 +169,6 @@ sub make_aln_from_fasta_file {
 		my $name = $seq->display_name;
 		#remove weird chars, file suffixes
 		$name =~ s/(.*?)\..*/$1/;
-		#$name =~ s/[\Q !@#$%^&*.-?<>,|\/\E]//g;
-		#shorten name if it's too long
-# 		if (length($name) > 12) {
-# 			$name =~ /(.{12})/;
-# 			$name = $1;
-# 		}
  		my $outseq = Bio::LocatableSeq->new(-seq => $seq->seq(), -id => $name);
  		$newaln->add_seq ($outseq);
  		if ($min_length > $seq->length() ) {
@@ -178,9 +177,11 @@ sub make_aln_from_fasta_file {
  		$seq = $inseq->next_seq;
 	}
 
-	my $flush_aln = $newaln->slice(1,$min_length);
-
-	return $flush_aln;
+	if ($flush) {
+		my $flush_aln = $newaln->slice(1,$min_length);
+		return $flush_aln;
+	}
+	return $newaln;
 }
 
 
