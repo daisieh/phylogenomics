@@ -60,7 +60,7 @@ sub draw_circle_graph {
     $max_diffs =~ s/\n//;
 
     if ($max_diffs == 0) {
-        die "Couldn't draw graph: there were no pairwise differences.";
+        die "Couldn't draw graph: all values are 0.";
     }
 
     for(my $i=0; $i<@graphs; $i++) {
@@ -75,8 +75,7 @@ sub draw_circle_graph {
 
     # draw graphs
     for (my $j=0; $j<@graphs; $j++) {
-        $circlegraph_obj->set_color($j);
-        $circlegraph_obj->plot_line(\@positions, $graphs[$j]);
+        $circlegraph_obj->plot_line(\@positions, $graphs[$j], {color=>$j});
         $circlegraph_obj->append_to_legend("@labels[$j]", "$j");
     }
 
@@ -148,8 +147,7 @@ sub draw_gene_map {
         my $stop_angle = ($stop/$circle_size) * 360;
         my $radius = $circlegraph_obj->inner_radius;
 
-        $circlegraph_obj->set_color("tardis");
-        $circlegraph_obj->draw_filled_arc ($radius, $start_angle, $stop_angle);
+        $circlegraph_obj->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"tardis"});
 
         # label this element
         my $center_angle = ($start_angle + $stop_angle) / 2;
