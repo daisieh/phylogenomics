@@ -168,8 +168,7 @@ my $j = 0;
 my @xvals = @{$graphs{"x"}};
 while (($key, $value) = each %samples) {
     my @yvals = @{$graphs{$key}};
-    $circlegraph_obj->set_color($j);
-    $circlegraph_obj->plot_line(\@xvals, \@yvals);
+    $circlegraph_obj->plot_line(\@xvals, \@yvals, {color=>$j});
     $j++;
 }
 
