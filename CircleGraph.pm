@@ -249,10 +249,23 @@ sub plot_line {
     my $self = shift;
     my $arg1 = shift;
     my $arg2 = shift;
+	my $params = shift;
     my @x_vals = @$arg1;
     my @y_vals = @$arg2;
 
     my $p = $self->{ps_object};
+	my $color;
+	my $width = 1;
+
+    if (ref($params) eq "HASH") {
+        if (exists $params->{"color"}) {
+            $color = $params->{"color"};
+        }
+        if (exists $params->{"width"}) {
+            $width = $params->{"width"};
+        }
+    }
+
 
 	my $window_size = @x_vals[1]-@x_vals[0];
 	my $circle_size = @x_vals[(scalar @x_vals)-1] + $window_size;
@@ -263,6 +276,11 @@ sub plot_line {
     $last_x = @coords[0];
     $last_y = @coords[1];
     $last_angle = 0;
+
+    if (defined ($color)) {
+    	$self->set_color("$color");
+    }
+    $p->{pspages} .= "$width u setlinewidth\n";
     $p->{pspages} .= "@coords[0] @coords[1] newpath moveto\n";
     for (my $i = 0; $i < (scalar @x_vals); $i++) {
         $this_angle = (@x_vals[$i]/$circle_size) * 360;
@@ -293,7 +311,7 @@ sub plot_line {
             my $start_angle = @$sector[0];
             my $end_angle = @$sector[1];
 
-            $self->draw_filled_arc ($self->outer_radius, $start_angle, $end_angle, "light_grey");
+            $self->draw_filled_arc ($self->outer_radius, $start_angle, $end_angle, $color);
         }
     }
 
@@ -326,11 +344,19 @@ sub draw_filled_arc {
 	my $radius = shift;
 	my $start_angle = shift;
 	my $stop_angle = shift;
-	my $color = shift;
+	my $params = shift;
 
-    if ($color) {
-        $self->set_color($color);
+	my $color = "black";
+
+    if (ref($params) eq "HASH") {
+        if (exists $params->{"color"}) {
+            $color = $params->{"color"};
+        }
+    } else { # it's a deprecated color specification
+    	$color = $params;
     }
+
+    $self->set_color("$color");
     my $p = $self->{ps_object};
 
     $p->{pspages} .= "newpath\n";
