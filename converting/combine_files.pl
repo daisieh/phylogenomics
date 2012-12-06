@@ -1,5 +1,7 @@
 use File::Basename;
 use Getopt::Long;
+use Pod::Usage;
+
 require "subfuncs.pl";
 
 if (@ARGV == 0) {

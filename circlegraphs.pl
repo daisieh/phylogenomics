@@ -1,6 +1,4 @@
 use CircleGraph;
-use Bio::AlignIO;
-use Bio::SeqIO;
 
 =pod
 

@@ -113,9 +113,20 @@ sub perc_diff_partition {
 	my $start_pos = shift;
 	my $stop_pos = shift;
 	my $check_for_num_seqs = shift;
+	my $delete_gaps = shift;
 
 	if ($stop_pos < $aln->length()) {
 		my $aln_slice = $aln->slice($start_pos, $stop_pos);
+
+		# remove any sequences with gaps
+		if ($delete_gaps) {
+			foreach my $seq ($aln_slice->each_seq()) {
+				my $seqstr = $seq->seq();
+				if ($seqstr =~ /-|n|N|\?/) {
+					$aln_slice->remove_seq($seq);
+				}
+			}
+		}
 
 		# check to see if one of the sequences was excluded.
 		if ($aln->num_sequences != $aln_slice->num_sequences) {
@@ -126,7 +137,8 @@ sub perc_diff_partition {
                 my $p = $aln_slice->percentage_identity();
                 if ($check_for_num_seqs) {
                     # return the negative of the perc identity to denote that a seq was excluded
-                    return $p-100;
+#                     return -(100-$p);
+		return -20000;
                 } else {
                     return 100-$p;
                 }

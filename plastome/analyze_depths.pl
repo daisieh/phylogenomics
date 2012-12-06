@@ -12,10 +12,11 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($samplefile, $gb_file, $labelfile, $outfile, $min_coverage) = 0;
+my ($samplefile, $gb_file, $labelfile, $outfile) = 0;
 my $samplesize = 1000;
 my $keepfiles = 0;
 my $help = 0;
+my $min_coverage = 0;
 
 GetOptions ('samples|input=s' => \$samplefile,
             'outputfile=s' => \$outfile,
@@ -49,7 +50,25 @@ if ($samplefile =~ /(.+?)\.depth/) {
         }
     }
 }
+
 my $circle_size = 157033;
+
+# process the gb file
+if ($gb_file) {
+	if ($gb_file =~ /\.gb$/) {
+        my ($fh, $filename) = tempfile(UNLINK => 1);
+        my $gb_locs = get_locations_from_genbank_file($gb_file);
+		print $fh $gb_locs;
+		close $fh;
+	    $gb_file = "$filename";
+
+	    $gb_locs =~ /(.+)\n(.+?)$/;
+	    my $source = $2;
+	    $source =~ /.+?\t.+?\t(.+)$/;
+	    $circle_size = $1;
+	}
+}
+
 
 my $labels;
 if ($labelfile) {
@@ -68,6 +87,12 @@ foreach my $name (@names) {
     my $in_indel = 0;
     my $line = readline VCF_FH;
     my $curr_indel_start = 0;
+
+    #eat any header lines:
+    while ($line =~ /#/) {
+    	$line = readline VCF_FH;
+    }
+
 	$line =~ /\t(.*?)\t(.*?)\s/;
 	if ($2 == 0) {
 		$curr_indel_start = 1;
@@ -131,7 +156,7 @@ while (($key, $value) = each %samples) {
 
 print "drawing graphs...\n";
 my $circlegraph_obj = new CircleGraph();
-my $max=0;
+my $max=1;
 my %graphs;
 while (($key, $value) = each %samples) {
     # process each depths file
@@ -185,12 +210,6 @@ for (my $i = 1000; $i < $circle_size; $i=$i+1000) {
 
 # draw the gene map
 if ($gb_file) {
-	if ($gb_file =~ /\.gb$/) {
-        my ($fh, $filename) = tempfile(UNLINK => 1);
-		print $fh get_locations_from_genbank_file($gb_file);
-		close $fh;
-	    $gb_file = "$filename";
-	}
 	draw_gene_map ($gb_file, $circlegraph_obj);
 }
 
