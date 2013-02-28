@@ -11,11 +11,12 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($datafile, $outfile, $gb_file, $help) = 0;
+my ($datafile, $outfile, $gb_file, $help, $points) = 0;
 
 GetOptions ('datafile|inputfile=s' => \$datafile,
             'outputfile=s' => \$outfile,
             'genbank|gb_file:s' => \$gb_file,
+            'points!' => \$points,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -29,7 +30,14 @@ print "$datafile, $outfile\n";
     pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 }
 
-my $circlegraph_obj = draw_circle_graph($datafile);
+my $circlegraph_obj;
+
+if ($points) {
+	$circlegraph_obj = plots_around_circle($datafile);
+} else {
+	$circlegraph_obj = draw_circle_graph($datafile);
+}
+
 $circlegraph_obj->draw_legend_text ({"size"=>10, "height"=>15});
 
 if ($gb_file) {

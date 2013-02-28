@@ -317,12 +317,75 @@ sub plot_line {
 
 }
 
+sub plot_points {
+    my $self = shift;
+    my $arg1 = shift;
+    my $arg2 = shift;
+	my $params = shift;
+    my @x_vals = @$arg1;
+    my @y_vals = @$arg2;
+
+    my $p = $self->{ps_object};
+	my $color;
+	my $width = 1;
+	my $radius = $INNER_RADIUS;
+
+    if (ref($params) eq "HASH") {
+        if (exists $params->{"color"}) {
+            $color = $params->{"color"};
+        }
+        if (exists $params->{"width"}) {
+            $width = $params->{"width"};
+        }
+        if (exists $params->{"radius"}) {
+            $radius += $params->{"radius"};
+        }
+    }
+
+
+	my $window_size = @x_vals[1]-@x_vals[0];
+	my $circle_size = @x_vals[(scalar @x_vals)-1] + $window_size;
+
+    my @coords = $self->coords_on_circle(0,$radius);
+    my ($last_x, $last_y, $last_angle, $this_x, $this_y, $this_angle);
+    my @blank_sectors;
+    $last_x = @coords[0];
+    $last_y = @coords[1];
+    $last_angle = 0;
+
+    if (defined ($color)) {
+    	$self->set_color("$color");
+    }
+    $p->{pspages} .= "$width u setlinewidth\n";
+    for (my $i = 0; $i < (scalar @x_vals); $i++) {
+    	if (@y_vals[$i]) {
+			$this_angle = (@x_vals[$i]/$circle_size) * 360;
+			my $increment_angle = $this_angle + 0.1;
+			my @new_coords = $self->coords_on_circle($this_angle,$radius);
+			$this_x = @new_coords[0];
+			$this_y = @new_coords[1];
+			$p->{pspages} .= "$this_x $this_y newpath moveto\n";
+			@new_coords = $self->coords_on_circle($increment_angle,$radius);
+			$this_x = @new_coords[0];
+			$this_y = @new_coords[1];
+			$p->{pspages} .= "$this_x $this_y lineto\n";
+			$p->{pspages} .= "closepath\nstroke\n";
+		}
+    }
+}
+
+
 sub circle_label {
     my $self = shift;
     my $angle = shift;
     my $radius = shift;
     my $text = shift;
     my $align = shift;
+
+    if ($text eq "") {
+    	return;
+    }
+
     my @new_coords = $self->coords_on_circle($angle,$radius);
     if ($align) {
         $self->ps_object->text( {rotate => $angle, align => $align}, @new_coords[0], @new_coords[1], "$text");
