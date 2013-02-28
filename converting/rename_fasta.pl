@@ -5,8 +5,6 @@ my $labelfile = shift;
 
 my $fa_aln = make_aln_from_fasta_file ($fastafile, 0);
 
-print STDERR "boo " .  $fa_aln->length() . "\n";
-
 my $labels;
 $labels = make_label_lookup ($labelfile);
 
@@ -19,6 +17,3 @@ foreach my $seqio ($fa_aln->each_seq) {
 	print ">$label\n";
 	print $seqio->seq() . "\n";
 }
-
-
-
