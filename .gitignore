@@ -1,2 +1,6 @@
 
 .DS_Store
+
+parsing/remove_gaps.pl
+
+parsing/parse_gb.pl
