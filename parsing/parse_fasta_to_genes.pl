@@ -2,17 +2,20 @@ use Bio::SeqIO;
 use Bio::Align::Utilities qw(cat);
 use Pod::Usage;
 use File::Basename;
+use Getopt::Long;
+
 require "subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
-my ($fa_file, $gb_file, $out_file, $help) = 0;
+my ($fa_file, $gb_file, $out_file, $help, $multiple) = 0;
 GetOptions ('fasta=s' => \$fa_file,
             'genbank|gb_file=s' => \$gb_file,
             'outputfile=s' => \$out_file,
-            'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+            'help|?' => \$help,
+            'multiple!' => \$multiple) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
     pod2usage(-verbose => 1);
@@ -56,18 +59,30 @@ while (my $seq_object = $gb_seqio->next_seq) {
 		}
 	}
 }
-
-open my $gene_file, ">$out_file.fasta";
-
-foreach my $aln (@gene_alns) {
-	my $gene_name = $aln->description();
-	foreach my $seq ($aln->each_seq()) {
-		my $name = $seq->id() . "_$gene_name: " . $seq->length();
-		print $gene_file ">$name\n";
-		print $gene_file $seq->seq() . "\n";
+if ($multiple) {
+	foreach my $aln (@gene_alns) {
+		my $gene_name = $aln->description();
+		open my $gene_file, ">", "$out_file/$gene_name.fasta";
+		foreach my $seq ($aln->each_seq()) {
+			my $name = $seq->id() . ": " . $seq->length();
+			print $gene_file ">$name\n";
+			print $gene_file $seq->seq() . "\n";
+		}
+		close $gene_file;
 	}
+} else {
+	open my $gene_file, ">", "$out_file.fasta";
+
+	foreach my $aln (@gene_alns) {
+		my $gene_name = $aln->description();
+		foreach my $seq ($aln->each_seq()) {
+			my $name = $seq->id() . "_$gene_name: " . $seq->length();
+			print $gene_file ">$name\n";
+			print $gene_file $seq->seq() . "\n";
+		}
+	}
+	close $gene_file;
 }
-close $gene_file;
 
 __END__
 
@@ -77,13 +92,14 @@ parse_fasta_to_genes
 
 =head1 SYNOPSIS
 
-parse_fasta_to_genes [-fasta fa_file] [-genbank gb_file] [-outputfile output_file]
+parse_fasta_to_genes [-fasta fa_file] [-genbank gb_file] [-outputfile output_file] [-multiple]
 
 =head1 OPTIONS
 
   -fasta:           fasta file of aligned sequences
   -genbank|gb_file: genbank file with CDS coordinates
-  -outputfile:      prefix of output files
+  -outputfile:      name of either output file or directory name, if -multiple is specified
+  -multiple:		output separate fasta files for each CDS (-outputfile is directory name)
 
 =head1 DESCRIPTION
 
