@@ -44,11 +44,12 @@ if ($fastafile) {   # if we were given a fasta file, we should create the diffs 
     print FH "pos\t$fastafile\n";
     $val = perc_diff_partition ($curr_aln, $start_pos, $stop_pos);
     my $firstval = $val;
-    while ($val >= 0) {
+    $circle_size = $curr_aln->length();
+    while ($stop_pos < $circle_size) {
         my $gene_name = "$start_pos";
-        if ($val >= 0) {
+        #if ($val >= 0) {
             print FH "$start_pos\t$val\n";
-        }
+        #}
         $start_pos = $stop_pos;
         $stop_pos = $start_pos + $window_size;
         $val = perc_diff_partition ($curr_aln, $start_pos, $stop_pos, 1);
@@ -56,7 +57,6 @@ if ($fastafile) {   # if we were given a fasta file, we should create the diffs 
         	print "gaps were found for $start_pos to $stop_pos\n";
         }
     }
-    $circle_size = $curr_aln->length();
     print FH "$circle_size\t$firstval\n";
     close FH;
 }
