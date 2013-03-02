@@ -102,6 +102,68 @@ sub get_locations_from_genbank_file {
 
 =head1
 
+B<SimpleAlign @gene_alns parse_aln_into_genes ( SimpleAlign $aln, String $genbank_file, <optional> String $type )>
+
+Parses a SimpleAlign into an array of SimpleAligns, using a genbank-formatted file to determine gene positions.
+
+$genbank_file is the name of the genbank file to parse
+$type is the tag of interest (will be "gene" if this is not specified)
+
+=cut
+
+sub parse_aln_into_genes {
+	my $whole_aln = shift;
+    my $gb_file = shift;
+    my $type = shift;
+    my @gene_alns;
+
+    # default type is "gene"
+    unless ($type) { $type = "gene"; }
+
+    my $gb_seqio = Bio::SeqIO->new(-file => $gb_file);
+    my $start, $end;
+
+	while (my $seq_object = $gb_seqio->next_seq) {
+		for my $feat_object ($seq_object->get_SeqFeatures) {
+			if ($feat_object->primary_tag eq "gene") {
+				my $name = main_name_for_gb_feature($feat_object);
+				my @locations = $feat_object->location->each_Location;
+				my $cat_aln = 0;
+				my $strand = 0;
+				foreach $loc (@locations) {
+					$strand = $loc->strand;
+					my $start = $loc->start;
+					my $end = $loc->end;
+					my $curr_slice = $whole_aln->slice($start, $end);
+					if ($cat_aln == 0) {
+						$cat_aln = $curr_slice;
+					} else {
+						$cat_aln = cat($cat_aln, $curr_slice);
+					}
+				}
+				if ($strand < 0) {
+					# must flip each seq in the curr_slice
+					my $flipped_aln = Bio::SimpleAlign->new();
+					foreach $seq ( $cat_aln->each_seq() ) {
+						$seq = $seq->revcom();
+						$flipped_aln->add_seq($seq);
+					}
+					$cat_aln = $flipped_aln;
+				}
+
+				$cat_aln = $cat_aln->slice(1, $cat_aln->length()-3);
+				$cat_aln->description($name);
+				push @gene_alns, $cat_aln;
+			}
+		}
+	}
+    return \@gene_alns;
+}
+
+
+
+=head1
+
 B<Int $percent_diff perc_diff_partition ( SimpleAlign $aln, Int $start, Int $end )>
 
 Finds the overall percentage difference for the specified region of the SimpleAlign object.
