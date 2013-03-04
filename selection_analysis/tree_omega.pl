@@ -78,9 +78,6 @@ foreach my $aln (@gene_alns) {
     }
 	my %params = $paml_exec->get_parameters();
  	$paml_exec->outfile_name("$output_name"."_$name.mlc");
-# 	foreach my $k (keys %params) {
-# 		print $k . "=>" . $params{$k} . "\n";
-# 	}
  	my ($rc,$parser) = $paml_exec->run();
 	if ($rc == 0) {
 		my $t = $paml_exec->error_string();
