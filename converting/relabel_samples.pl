@@ -25,9 +25,10 @@ my @input_lines = <FH>;
 
 my $labels;
 $labels = make_label_lookup ($labelfile);
-
+my $i=0;
 foreach my $line (@input_lines) {
 	if ($line =~ /([\(\,]+)(.*?)([\:\,\)])(.*)/) {
+		print "newick\n";
 		# we're in a newick tree
 		my $templine = $line;
 		$line = "";
@@ -43,23 +44,26 @@ foreach my $line (@input_lines) {
 		$line .= "$templine\n";
 	} elsif ($line =~ /^(.+?)(\s+.+)$/) {
 		# it is a NEXUS/phylip-type line
+		print "nexus/phylip\n";
 		my $key = $1;
 		my $label = $key;
 		if (exists $labels->{$key}) {
 			$label = $labels->{$key};
 		}
 		$line = $label . $2 . "\n";
-	} elsif ($line =~ /^>(.+?)(\s*.*)$/) {
+	} elsif ($line =~ /^>(.+?)(\s+.*)$/) {
 		# it is a fasta-type line
+		print "fasta\n";
 		my $key = $1;
 		my $label = $key;
 		if (exists $labels->{$key}) {
 			$label = $labels->{$key};
 		}
-		$line = $label . $2 . "\n";
+		$line = ">$label" . $2 . "";
 	}
-
+	print "$i\n";
  	print $out_fh "$line";
+ 	$i++;
 }
 
 close $out_fh;

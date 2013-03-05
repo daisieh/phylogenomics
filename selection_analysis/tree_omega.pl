@@ -42,7 +42,7 @@ if ($analysis == 0) {
     $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1, 'fix_blength' => 1 });
 } elsif ($analysis == 3) {
 #	PAML with branch-site model A (model=2 NSSites=2)
-    $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 2, 'nssites' => 2});
+    $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 2, 'NSsites' => 2});
 } else { pod2usage(1); }
 
 $paml_exec->save_tempfiles(1);
