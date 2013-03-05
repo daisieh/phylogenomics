@@ -7,9 +7,6 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 
-my $usage = "perl " . basename($0);
-$usage .= " gb_file fa_file tree_file output_name analysis\n";
-
 my ($gb_file, $fa_file, $tree_file, $output_name, $analysis) = 0;
 GetOptions ('genbank|gb=s' => \$gb_file,
             'fasta=s' => \$fa_file,
@@ -43,7 +40,9 @@ if ($analysis == 0) {
 } elsif ($analysis == 2) {
 #	PAML with free omegas (model=1)
     $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1, 'fix_blength' => 1 });
-#				( -params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1 }, -branchlengths => 1);
+} elsif ($analysis == 3) {
+#	PAML with branch-site model A (model=2 NSSites=2)
+    $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 2, 'nssites' => 2});
 } else { pod2usage(1); }
 
 $paml_exec->save_tempfiles(1);
