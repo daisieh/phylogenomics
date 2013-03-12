@@ -90,6 +90,7 @@ foreach my $aln (@gene_alns) {
 			my $MLmatrix = $result->get_MLmatrix();
 			print $result->model() . "\n";
 		}
+		system ("cp " . $paml_exec->tempdir() . "/$output_name"."_$name.mlc" . " .");
 	}
 }
 
