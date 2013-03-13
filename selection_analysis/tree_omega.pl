@@ -7,6 +7,10 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
+
 my ($gb_file, $fa_file, $tree_file, $output_name, $analysis) = 0;
 GetOptions ('genbank|gb=s' => \$gb_file,
             'fasta=s' => \$fa_file,
@@ -114,6 +118,10 @@ tree_omega [options]
                     0:  PAML with single omega
                     1:  PAML with free omegas (corresponds to model=1)
                     2:  PAML with fixed omega = 1 (neutral)
+                    3:	PAML with branch-site model A (model=2 NSSites=2)
+                    4:	PAML with null model A1 (model = 2, NSsites = 2, fix_omega = 1, omega = 1)
+
+
 
 =head1 DESCRIPTION
 
