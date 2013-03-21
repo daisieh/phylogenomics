@@ -269,6 +269,7 @@ analyze_depths -samples -window -output [-genbank] [-labels]
   -genbank|gb:      optional: genbank file to generate a map along the graph
   -labels:          optional: tab-delimited list of samples and their corresponding labels
   -keepfiles:       optional: keep data files that are created (default is no)
+  -coverage:		optional: minimum level of coverage to call as missing.
 
 =head1 DESCRIPTION
 
