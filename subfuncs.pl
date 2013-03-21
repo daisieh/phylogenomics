@@ -125,7 +125,7 @@ sub parse_aln_into_genes {
 
 	while (my $seq_object = $gb_seqio->next_seq) {
 		for my $feat_object ($seq_object->get_SeqFeatures) {
-			if ($feat_object->primary_tag eq "gene") {
+			if ($feat_object->primary_tag eq $type) {
 				my $name = main_name_for_gb_feature($feat_object);
 				my @locations = $feat_object->location->each_Location;
 				my $cat_aln = 0;
