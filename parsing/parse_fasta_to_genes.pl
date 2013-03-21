@@ -22,14 +22,14 @@ if ($help) {
 }
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
-my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file)};
+my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file,"CDS")};
 
 if ($multiple) {
 	foreach my $aln (@gene_alns) {
 		my $gene_name = $aln->description();
 		open my $gene_file, ">", "$out_file/$gene_name.fasta";
 		foreach my $seq ($aln->each_seq()) {
-			my $name = $seq->id() . ": " . $seq->length();
+			my $name = $seq->id();
 			print $gene_file ">$name\n";
 			print $gene_file $seq->seq() . "\n";
 		}

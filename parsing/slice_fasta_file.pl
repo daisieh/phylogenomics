@@ -41,9 +41,9 @@ unless (($fastafile && $resultfile)) {
 
     pod2usage(-msg => $msg, -exitval => 2);
 }
+my $whole_aln = make_aln_from_fasta_file ($fastafile);
 
 if ($oneslice) {
-    my $whole_aln = make_aln_from_fasta_file ($fastafile);
 	my $curr_slice = $whole_aln->slice($start, $end);
 
 	open my $fh, ">", $resultfile;
@@ -53,18 +53,18 @@ if ($oneslice) {
 } elsif ($gb_file) {
     slice_fasta_to_exons ($fastafile, $gb_file, $resultfile);
 } elsif ($slice_list) {
-    my $seqio = Bio::SeqIO->new(-file => $fastafile, -format => "fasta");
-    my %seqhash;
-    while (my $seq = $seqio->next_seq()) {
-        $seqhash{$seq->id} = $seq;
-    }
     open FH, "<", $slice_list or die "Couldn't open slice list $slice_list";
-    print "hashed fasta file\n";
     my @slices = <FH>;
     close FH;
-    open FH, ">", $resultfile or die "Couldn't open output file $resultfile";
-    foreach my $slice (@slices) {
-        if ($slice =~ /(.+?)\t(.+?)\t(.+)$/) {
+    if (@slices[0] =~ /(.+?)\t(.+?)\t(.+)$/) {
+        my $seqio = Bio::SeqIO->new(-file => $fastafile, -format => "fasta");
+        my %seqhash;
+        while (my $seq = $seqio->next_seq()) {
+            $seqhash{$seq->id} = $seq;
+        }
+        open FH, ">", $resultfile or die "Couldn't open output file $resultfile";
+        foreach my $slice (@slices) {
+            $slice =~ /(.+?)\t(.+?)\t(.+)$/;
             my $name = $1;
             my $start = $2;
             my $end = $3;
@@ -73,6 +73,17 @@ if ($oneslice) {
             my $result = substr($seq->seq,$start,$end-$start);
             print FH ">$name:$start-$end\n$result\n";
         }
+    } elsif (@slices[0] =~ /^(.+?)-(.+)$/) {
+        my $result_aln = $whole_aln->slice($1, $2);
+        for (my $i=1;$i<@slices;$i++) {
+            @slices[$i] =~ /^(.+?)-(.+)$/;
+            my $curr_slice = $whole_aln->slice($1, $2);
+            $result_aln = cat($result_aln, $curr_slice);
+        }
+        open my $fh, ">", $resultfile;
+        my $aln_out = Bio::AlignIO->new(-fh => $fh, -format => "fasta");
+        $aln_out->write_aln($result_aln);
+        close $fh;
     }
 } else {
     pod2usage(-msg => "Must specify either a genbank file or a start and end point", -exitval => 2);
@@ -86,7 +97,7 @@ slice_fasta_file
 
 =head1 SYNOPSIS
 
-slice_fasta_file [-fasta fa_file] [-genbank gb_file | -start -end] [-outputfile output_file]
+slice_fasta_file [-fasta fa_file] [-genbank gb_file | -slices slice_file | -start -end] [-outputfile output_file]
 
 =head1 OPTIONS
 
