@@ -74,10 +74,10 @@ if ($oneslice) {
             print FH ">$name:$start-$end\n$result\n";
         }
     } elsif (@slices[0] =~ /^(.+?)-(.+)$/) {
-        my $result_aln = $whole_aln->slice($1, $2);
+        my $result_aln = $whole_aln->slice($1, $2, 1);
         for (my $i=1;$i<@slices;$i++) {
             @slices[$i] =~ /^(.+?)-(.+)$/;
-            my $curr_slice = $whole_aln->slice($1, $2);
+            my $curr_slice = $whole_aln->slice($1, $2, 1);
             $result_aln = cat($result_aln, $curr_slice);
         }
         open my $fh, ">", $resultfile;
