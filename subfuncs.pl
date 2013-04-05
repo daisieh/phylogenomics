@@ -460,7 +460,7 @@ sub make_label_lookup {
     my $labelfile = shift;
     my %labels;
     if ($labelfile) {
-        open FH, "<", "$labelfile";
+        open FH, "<", "$labelfile" or die "make_label_lookup died: couldn't open $labelfile\n";
         my @items = <FH>;
         close FH;
         foreach my $line (@items) {
