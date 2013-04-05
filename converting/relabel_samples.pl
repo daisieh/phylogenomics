@@ -28,23 +28,37 @@ $labels = make_label_lookup ($labelfile);
 my $i=0;
 foreach my $line (@input_lines) {
 	if ($line =~ /([\(\,]+)(.*?)([\:\,\)])(.*)/) {
-		print "newick\n";
 		# we're in a newick tree
 		my $templine = $line;
 		$line = "";
 		while ($templine =~ /^(.*?[\(\,]+)(.*?)([\:\,\)])(.*)/) {
-			my $key = $2;
+			my ($head, $key, $tail, $remainder) = ($1, $2, $3, $4);
 			my $label = $key;
 			if (exists $labels->{$key}) {
 				$label = $labels->{$key};
 			}
-			$line .= $1 . "$label" . $3;
-			$templine = $4;
+			$line .= "$head$label$tail";
+			$templine = $remainder;
+		}
+		$line .= "$templine\n";
+		$templine = $line;
+		$line = "";
+		while ($templine =~ /^(.+?[\(\,]+.*?\,)(.*?)([\:\)])(.*)/) {
+			my ($head, $key, $tail, $remainder) = ($1, $2, $3, $4);
+			if ($key =~ /(\(.+\,)(.+)/) {
+				$head = $head . $1;
+				$key = $2;
+			}
+			my $label = $key;
+			if (exists $labels->{$key}) {
+				$label = $labels->{$key};
+			}
+			$line .= "$head$label$tail";
+			$templine = $remainder;
 		}
 		$line .= "$templine\n";
 	} elsif ($line =~ /^(.+?)(\s+.+)$/) {
 		# it is a NEXUS/phylip-type line
-		print "nexus/phylip\n";
 		my $key = $1;
 		my $label = $key;
 		if (exists $labels->{$key}) {
@@ -53,7 +67,6 @@ foreach my $line (@input_lines) {
 		$line = $label . $2 . "\n";
 	} elsif ($line =~ /^>(.+?)(\s+.*)$/) {
 		# it is a fasta-type line
-		print "fasta\n";
 		my $key = $1;
 		my $label = $key;
 		if (exists $labels->{$key}) {
@@ -61,7 +74,6 @@ foreach my $line (@input_lines) {
 		}
 		$line = ">$label" . $2 . "";
 	}
-	print "$i\n";
  	print $out_fh "$line";
  	$i++;
 }
