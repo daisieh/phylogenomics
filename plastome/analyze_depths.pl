@@ -27,7 +27,7 @@ GetOptions ('samples|input=s' => \$samplefile,
             'genbank|gb:s' => \$gb_file,
             'keepfiles!' => \$keepfiles,
             'coverage:i' => \$min_coverage,
-            'size=i' => \$circle_size,
+            'size:i' => \$circle_size,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
