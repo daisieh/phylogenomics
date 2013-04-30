@@ -17,6 +17,8 @@ my $samplesize = 1000;
 my $keepfiles = 0;
 my $help = 0;
 my $min_coverage = 0;
+my $circle_size = 157033;
+
 
 GetOptions ('samples|input=s' => \$samplefile,
             'outputfile=s' => \$outfile,
@@ -25,6 +27,7 @@ GetOptions ('samples|input=s' => \$samplefile,
             'genbank|gb:s' => \$gb_file,
             'keepfiles!' => \$keepfiles,
             'coverage:i' => \$min_coverage,
+            'size=i' => \$circle_size,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -51,7 +54,6 @@ if ($samplefile =~ /(.+?)\.depth/) {
     }
 }
 
-my $circle_size = 157033;
 
 # process the gb file
 if ($gb_file) {
