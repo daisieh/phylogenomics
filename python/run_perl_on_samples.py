@@ -8,6 +8,7 @@ scriptname = "";
 def assign_script( script ):
 	global scriptname
 	scriptname = script;
+	print("scriptname is %s\n" % scriptname);
 
 def stop_err( msg ):
     sys.stderr.write( "%s\n" % msg )
