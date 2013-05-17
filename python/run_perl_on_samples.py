@@ -37,7 +37,7 @@ def __main__():
     except TypeError, e:
         stop_err("Script file not found:\n" + str(e))
 
-	assignscriptname(options.script)
+	assign_script(options.script)
 
     pool = Pool(processes=10)
 
