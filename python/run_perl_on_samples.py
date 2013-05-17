@@ -14,7 +14,7 @@ def stop_err( msg ):
     sys.exit()
 
 def runscript(sample_string):
-    cmd = "perl %s -input %s.vcf" % (scriptname,sample_string)
+    cmd = "perl %s -input %s" % (scriptname,sample_string)
     print(cmd)
     os.system(cmd)
 
