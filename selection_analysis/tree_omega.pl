@@ -116,8 +116,8 @@ tree_omega [options]
     -output         output file name
     -model|analysis CodeML analysis to perform:
                     0:  PAML with single omega
-                    1:  PAML with free omegas (corresponds to model=1)
-                    2:  PAML with fixed omega = 1 (neutral)
+                    1:  PAML with fixed omega = 1 (neutral)
+                    2:  PAML with free omegas (corresponds to model=1)
                     3:	PAML with branch-site model A (model=2 NSSites=2)
                     4:	PAML with null model A1 (model = 2, NSsites = 2, fix_omega = 1, omega = 1)
 
