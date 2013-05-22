@@ -23,7 +23,7 @@ def __main__():
     #Parse Command Line
     parser = optparse.OptionParser()
     parser.add_option("-i", "--input", default=None, dest="input",
-                      help="The input location file")
+                      help="A list of files to run script on")
     parser.add_option("-s", "--script", default=None, dest="script",
                       help="The script to batch")
     (options, args) = parser.parse_args()
