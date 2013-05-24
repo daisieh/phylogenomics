@@ -43,7 +43,7 @@ def __main__():
     print ("options.script\n")
     assign_script(options.script)
 
-    pool = Pool(processes=options.processes)
+    pool = Pool(processes=int(options.processes))
 
     #read the location file
     handle = open(options.input, "r")
