@@ -40,6 +40,8 @@ def __main__():
                       help="A list of files to run script on")
     parser.add_option("-r", "--reference", default=None, dest="ref",
                       help="The reference genome")
+    parser.add_option("-p", "--processes", default=None, dest="processes",
+                      help="Number of processes to use")
     (options, args) = parser.parse_args()
 
     try:
@@ -55,7 +57,7 @@ def __main__():
     print ("options.ref\n")
     assign_ref(options.ref)
 
-    pool = Pool(processes=10)
+    pool = Pool(processes=options.processes)
 
     #read the location file
     handle = open(options.input, "r")
