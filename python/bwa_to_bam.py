@@ -57,7 +57,7 @@ def __main__():
     print ("options.ref\n")
     assign_ref(options.ref)
 
-    pool = Pool(processes=options.processes)
+    pool = Pool(processes=int(options.processes))
 
     #read the location file
     handle = open(options.input, "r")
