@@ -134,7 +134,7 @@ sub parse_aln_into_genes {
 					$strand = $loc->strand;
 					my $start = $loc->start;
 					my $end = $loc->end;
-					my $curr_slice = $whole_aln->slice($start, $end);
+					my $curr_slice = $whole_aln->slice($start, $end,1);
 					if ($cat_aln == 0) {
 						$cat_aln = $curr_slice;
 					} else {
@@ -151,7 +151,7 @@ sub parse_aln_into_genes {
 					$cat_aln = $flipped_aln;
 				}
 
-				$cat_aln = $cat_aln->slice(1, $cat_aln->length()-3);
+				$cat_aln = $cat_aln->slice(1, $cat_aln->length()-3,1);
 				$cat_aln->description($name);
 				push @gene_alns, $cat_aln;
 			}
