@@ -31,7 +31,8 @@ unless ($gb_file && $fa_file && $tree_file && $output_name) {
 
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
-my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file)};
+my @gene_alns;
+	@gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file, 1)};
 
 my $paml_exec;
 

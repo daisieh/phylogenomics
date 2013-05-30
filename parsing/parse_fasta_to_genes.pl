@@ -22,7 +22,7 @@ if ($help) {
 }
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
-my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file,"CDS")};
+my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file)};
 
 if ($multiple) {
 	foreach my $aln (@gene_alns) {
@@ -64,7 +64,7 @@ parse_fasta_to_genes [-fasta fa_file] [-genbank gb_file] [-outputfile output_fil
   -fasta:           fasta file of aligned sequences
   -genbank|gb_file: genbank file with CDS coordinates
   -outputfile:      name of either output file or directory name, if -multiple is specified
-  -multiple:		output separate fasta files for each CDS (-outputfile is directory name)
+  -multiple:		output separate fasta files for each gene (-outputfile is directory name)
 
 =head1 DESCRIPTION
 

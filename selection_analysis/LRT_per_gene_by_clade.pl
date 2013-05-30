@@ -23,7 +23,7 @@ my $output_name = abs_path( $output_name_as_entered );
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
 
-my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file)};
+my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file, 1)};
 
 my $treeio = Bio::TreeIO->new(-format => "nexus", -file => "$tree_file");
 #read in all of the trees

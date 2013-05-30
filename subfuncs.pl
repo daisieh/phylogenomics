@@ -105,6 +105,7 @@ sub get_locations_from_genbank_file {
 B<SimpleAlign @gene_alns parse_aln_into_genes ( SimpleAlign $aln, String $genbank_file, <optional> String $type )>
 
 Parses a SimpleAlign into an array of SimpleAligns, using a genbank-formatted file to determine gene positions.
+The exons will be rev-comped if necessary.
 
 $genbank_file is the name of the genbank file to parse
 $type is the tag of interest (will be "gene" if this is not specified)
@@ -114,11 +115,11 @@ $type is the tag of interest (will be "gene" if this is not specified)
 sub parse_aln_into_genes {
 	my $whole_aln = shift;
     my $gb_file = shift;
-    my $type = shift;
+    my $remove_stop = shift;
+
     my @gene_alns;
 
-    # default type is "gene"
-    unless ($type) { $type = "gene"; }
+    my $type = "gene";
 
     my $gb_seqio = Bio::SeqIO->new(-file => $gb_file);
     my $start, $end;
@@ -150,8 +151,9 @@ sub parse_aln_into_genes {
 					}
 					$cat_aln = $flipped_aln;
 				}
-
-				$cat_aln = $cat_aln->slice(1, $cat_aln->length()-3,1);
+				if ($remove_stop) {
+					$cat_aln = $cat_aln->slice(1, $cat_aln->length()-3,1);
+				}
 				$cat_aln->description($name);
 				push @gene_alns, $cat_aln;
 			}

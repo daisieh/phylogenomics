@@ -14,7 +14,7 @@ my $fa_file = shift or die $usage;
 my $output_name = shift or die $usage;
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
-my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file)};
+my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file, 1)};
 
 open my $total_file, ">$output_name.total";
 truncate $total_file, 0;
