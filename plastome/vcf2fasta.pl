@@ -10,10 +10,11 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($vcf_file, $alt_thresh, $outfile) = 0;
+my ($vcf_file, $outfile) = 0;
 my $keepfiles = 0;
 my $help = 0;
 my $cov_thresh = 1000;
+my $alt_thresh = 0.8;
 
 GetOptions ('samples|input|vcf=s' => \$vcf_file,
             'outputfile:s' => \$outfile,
@@ -34,7 +35,6 @@ my $seqname = $1;
 unless ($outfile) {
 	$outfile = $seqname;
 }
-
 # eat header:
 my $line = readline VCF_FH;
 while ($line =~ m/^#/) {
@@ -80,12 +80,12 @@ for (my $i=0;$i<@positions; $i++) {
 	my $ref_depth = @this_pos[3];
 	my $alt_depth = @this_pos[4];
 	if ($depth > $cov_thresh) {
-		if ($alt_depth/($alt_depth+$ref_depth) > 0.8) {
+		if ($alt_depth/($alt_depth+$ref_depth) > $alt_thresh) {
 			if ($alt =~ /\.|,/) {
 				$alt = "-";
 			}
 			$seq .= $alt;
-		} elsif ($ref_depth/($alt_depth+$ref_depth) > 0.8) {
+		} elsif ($ref_depth/($alt_depth+$ref_depth) > $alt_thresh) {
 			$seq .= $ref;
 		} else {
 			$seq .= "-";
@@ -112,9 +112,11 @@ vcf2fasta -vcf_file -output [-threshold] [--keepfiles]
 =head1 OPTIONS
 
   -samples|input|vcf:   vcf file to convert
-  -outputfile:      prefix of output fasta file
+  -outputfile:      optional: prefix of output fasta file
   -keepfiles:       optional: keep data files that are created (default is no)
-  -threshold:		optional: threshold value to accept alternate allele
+  -threshold:		optional: threshold ratio to accept alternate allele (default is 0.8)
+  -min|coverage:    optional: coverage required to call base (default is 1000)
+
 =head1 DESCRIPTION
 
 Graphs coverage depths using depth data generated from samtools mpileup.
