@@ -14,13 +14,16 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($fastafile, $resultfile, $gb_file, $start, $end, $oneslice, $help, $slice_list) = 0;
+my ($fastafile, $resultfile, $gb_file, $start, $end, $oneslice, $help, $slice_list, $concat) = 0;
+my $type = "CDS";
 GetOptions ('fasta=s' => \$fastafile,
             'outputfile=s' => \$resultfile,
             'genbank|gb_file:s' => \$gb_file,
             'slices|slicelist:s' => \$slice_list,
             'start:i' => \$start,
             'end:i' => \$end,
+            'concatenate' => \$concat,
+            'locus|type:s' => \$type,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -43,51 +46,73 @@ unless (($fastafile && $resultfile)) {
 }
 my $whole_aln = make_aln_from_fasta_file ($fastafile);
 
-if ($oneslice) {
-	my $curr_slice = $whole_aln->slice($start, $end);
+my @alns = ();
+my $gene_alns = \@alns;
 
-	open my $fh, ">", $resultfile;
-	my $aln_out = Bio::AlignIO->new(-fh => $fh, -format => "fasta");
-	$aln_out->write_aln($curr_slice);
-	close $fh;
+if ($oneslice) {
+	my $curr_slice = $whole_aln->slice($start, $end, 1);
+    push @alns, $curr_slice;
 } elsif ($gb_file) {
-    slice_fasta_to_exons ($fastafile, $gb_file, $resultfile);
+    $gene_alns = slice_fasta_from_genbank_file ($fastafile, $gb_file, $type);
 } elsif ($slice_list) {
     open FH, "<", $slice_list or die "Couldn't open slice list $slice_list";
     my @slices = <FH>;
     close FH;
-    if (@slices[0] =~ /(.+?)\t(.+?)\t(.+)$/) {
-        my $seqio = Bio::SeqIO->new(-file => $fastafile, -format => "fasta");
-        my %seqhash;
-        while (my $seq = $seqio->next_seq()) {
-            $seqhash{$seq->id} = $seq;
-        }
-        open FH, ">", $resultfile or die "Couldn't open output file $resultfile";
-        foreach my $slice (@slices) {
-            $slice =~ /(.+?)\t(.+?)\t(.+)$/;
+
+    foreach my $slice (@slices) {
+        if ($slice =~ /(.+?)\t(.+?)\t(.+)$/) {
             my $name = $1;
             my $start = $2;
             my $end = $3;
-            my $seq = $seqhash{$name};
-            bless $seq, "Bio::Seq";
-            my $result = substr($seq->seq,$start,$end-$start);
-            print FH ">$name:$start-$end\n$result\n";
-        }
-    } elsif (@slices[0] =~ /^(.+?)-(.+)$/) {
-        my $result_aln = $whole_aln->slice($1, $2, 1);
-        for (my $i=1;$i<@slices;$i++) {
-            @slices[$i] =~ /^(.+?)-(.+)$/;
+            my $curr_slice = $whole_aln->slice($start, $end, 1);
+            $curr_slice->description($name);
+            push @alns, $curr_slice;
+        } elsif ($slice =~ /^(.+?)-(.+)$/) {
             my $curr_slice = $whole_aln->slice($1, $2, 1);
-            $result_aln = cat($result_aln, $curr_slice);
+            push @alns, $curr_slice;
+        } else {
+            pod2usage(-msg => "Slice file improperly specified.", -exitval => 2);
         }
-        open my $fh, ">", $resultfile;
-        my $aln_out = Bio::AlignIO->new(-fh => $fh, -format => "fasta");
-        $aln_out->write_aln($result_aln);
-        close $fh;
     }
 } else {
     pod2usage(-msg => "Must specify either a genbank file or a start and end point", -exitval => 2);
 }
+
+if ($concat) {
+    # construct a new SimpleAlign by going seq by seq through gene_alns and adding it to the new concatenated SimpleAlign
+    my $concat_aln = new Bio::SimpleAlign();
+    my @seqs = @$gene_alns[0]->each_seq();
+    for (my $i=0;$i<@seqs;$i++) {
+        my $concat_seq = "";
+        foreach my $aln (@$gene_alns) {
+            $concat_seq .= $aln->get_seq_by_pos($i+1)->seq();
+        }
+        $concat_aln->add_seq(new Bio::LocatableSeq(-seq => $concat_seq, -id  => $seqs[$i]->id()));
+    }
+    open FH, ">", $resultfile;
+    foreach my $seq ($concat_aln->each_seq()) {
+        my $name = $seq->id();
+        print FH ">$name\n";
+        print FH $seq->seq() . "\n";
+    }
+	close FH;
+} else {
+    open FH, ">", $resultfile or die "Couldn't open output file $resultfile";
+    foreach my $aln (@$gene_alns) {
+        my $gene_name = $aln->description();
+        if ($gene_name) {
+            $gene_name = "_".$gene_name;
+        }
+        foreach my $seq ($aln->each_seq()) {
+            my $name = $seq->id() . "$gene_name";
+            print FH ">$name\n";
+            print FH $seq->seq() . "\n";
+        }
+    }
+    close FH;
+}
+
+
 
 __END__
 
@@ -97,15 +122,18 @@ slice_fasta_file
 
 =head1 SYNOPSIS
 
-slice_fasta_file [-fasta fa_file] [-genbank gb_file | -slices slice_file | -start -end] [-outputfile output_file]
+slice_fasta_file [-fasta fa_file] [-genbank gb_file [-locus locus_type] | -slices slice_file | -start -end] [-outputfile output_file] [-concatenate]
 
 =head1 OPTIONS
 
-  -fasta:           fasta file of aligned sequences
-  -genbank|gb_file: genbank file with CDS coordinates
-  -start:           start position of single slice
-  -end:             end position of single slice
-  -outputfile:      output file name
+  -fasta:            fasta file of aligned sequences
+  -genbank|gb_file:  genbank file with CDS coordinates
+  -slices|slicelist: tab-delimited file with CDS coordinates
+  -start:            start position of single slice
+  -end:              end position of single slice
+  -outputfile:       output file name
+  -locus|type:       [optional] if present, specifies the type of genbank tag to slice
+  -concatenate:      if flag is present, concatenate the slices into one long alignment
 
 =head1 DESCRIPTION
 
