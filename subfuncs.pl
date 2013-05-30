@@ -395,27 +395,46 @@ sub combine_files {
 
 =head1
 
-B<slice_fasta_to_exons ( String $fa_file, String $gb_file, String $out_file )>
+B<@SimpleAlign slice_fasta_to_exons ( String $fa_file, String $gb_file )>
 
 Given a fasta file of aligned sequences and a corresponding genbank file
-with the CDS coordinates, will create a fasta file with each
-CDS corresponding to a separate sequence block.
+with the CDS coordinates, returns an array of SimpleAligns corresponding to each CDS.
 
 $fa_file:   fasta file of aligned sequences
 $gb_file:   genbank file with CDS coordinates
-$out_file:  prefix of output files
 
 =cut
 
 sub slice_fasta_to_exons {
     my $fa_file = shift;
     my $gb_file = shift;
-    my $out_file = shift;
+    return slice_fasta_from_genbank_file ($fa_file, $gb_file, "CDS");
+}
+
+=head1
+
+B<@SimpleAlign slice_fasta_from_genbank_file ( String $fa_file, String $gb_file, String $type )>
+
+Given a fasta file of aligned sequences and a corresponding genbank file
+with locus coordinates, returns an array of SimpleAligns corresponding to each locus.
+
+$fa_file:   fasta file of aligned sequences
+$gb_file:   genbank file with locus coordinates
+$type:  locus type from genbank file (default is "gene")
+
+=cut
+
+sub slice_fasta_from_genbank_file {
+    my $fa_file = shift;
+    my $gb_file = shift;
+    my $type = shift;
+
+    unless ($type) { $type = "gene"; }
 
     my $whole_aln = make_aln_from_fasta_file ($fa_file);
     my @gene_alns;
 
-    my $result_str = get_locations_from_genbank_file ($gb_file, "CDS");
+    my $result_str = get_locations_from_genbank_file ($gb_file, $type);
     my @exons = split (/\n/,$result_str);
 
     # we don't need the last line; it just says the size of the gb source sequence
@@ -427,22 +446,12 @@ sub slice_fasta_to_exons {
         my $name = $1;
         my $start = $2;
         my $end = $3;
-        my $curr_slice = $whole_aln->slice($start, $end);
+        my $curr_slice = $whole_aln->slice($start, $end, 1);
         $curr_slice->description($name);
         push @gene_alns, $curr_slice;
     }
 
-    open my $gene_file, ">$out_file.fasta";
-
-    foreach my $aln (@gene_alns) {
-        my $gene_name = $aln->description();
-        foreach my $seq ($aln->each_seq()) {
-            my $name = $seq->id() . "_$gene_name: " . $seq->length();
-            print $gene_file ">$name\n";
-            print $gene_file $seq->seq() . "\n";
-        }
-    }
-    close $gene_file;
+	return \@gene_alns;
 }
 
 =head1
