@@ -10,29 +10,43 @@ my $usage  = "process_tree_omega.pl gb_file result_dir result_prefix\n";
 
 my $gb_file = shift or die $usage;
 my $result_dir = shift or die $usage;
-my $result_prefix = shift or die $usage;
+my $result_prefix = shift;
 
-my $output_name = "$result_dir/$result_prefix";
+my $output_name = "$result_dir/";
+if ($result_prefix) {
+	$output_name .= "$result_prefix"."_";
+}
 
 my @genes;
 
-my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
-my $seq_object = $seqio_object->next_seq;
+if ($gb_file =~ /\.gb/) {
+	my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
+	my $seq_object = $seqio_object->next_seq;
 
-while ($seq_object) {
-	for my $feat_object ($seq_object->get_SeqFeatures) {
-		if ($feat_object->primary_tag eq "CDS") {
-			my $name = main_name_for_gb_feature($feat_object);
-			if ($name eq "") { next; }
-			my @locations = $feat_object->location->each_Location;
-			my $strand = 0;
-			push @genes, $name;
+	while ($seq_object) {
+		for my $feat_object ($seq_object->get_SeqFeatures) {
+			if ($feat_object->primary_tag eq "CDS") {
+				my $name = main_name_for_gb_feature($feat_object);
+				if ($name eq "") { next; }
+				my @locations = $feat_object->location->each_Location;
+				my $strand = 0;
+				push @genes, $name;
+			}
 		}
+		$seq_object = $seqio_object->next_seq;
 	}
-	$seq_object = $seqio_object->next_seq;
+} else {
+	open FH, "<", $gb_file;
+	my $line = readline FH;
+	while ($line) {
+		chomp $line;
+		push @genes, $line;
+		$line = readline FH;
+	}
+	close FH;
 }
 
-my $outfilename = "$output_name" . "_summary.txt";
+my $outfilename = "$output_name" . "summary.txt";
 open my $summaryfile, ">$outfilename";
 print $summaryfile "gene\tnumparams\tlog-likelihood\n";
 
@@ -45,7 +59,7 @@ my %branch_omegas = ();
 my @actual_genes;
 foreach my $name (@genes) {
 	my $resultstr = $name;
-	my $filename = "$output_name"."_$name.mlc";
+	my $filename = "$output_name"."$name.mlc";
 	my $x = (-e $filename); # check to see if the file exists; if not, skip to next.
 	if ($x != 1) {
 		print "missing $filename\n";
@@ -86,9 +100,9 @@ foreach my $name (@genes) {
 close $summaryfile;
 
 #print output
-$outfilename = "$output_name" . "_omegas.txt";
+$outfilename = "$output_name" . "omegas.txt";
 open my $outfile, ">$outfilename";
-$outfilename = "$output_name" . "_lengths.txt";
+$outfilename = "$output_name" . "lengths.txt";
 open my $outfile2, ">$outfilename";
 
 print $outfile "node\t";
@@ -120,7 +134,7 @@ close $outfile;
 close $outfile2;
 
 #rewrite tree file into nexus format:
-$outfilename = "$output_name" . "_trees.tre";
+$outfilename = "$output_name" . "trees.tre";
 open my $outtreefile, ">$outfilename";
 
 my @trees = split (/;/,$treestr);

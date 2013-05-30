@@ -11,14 +11,15 @@ if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
-my ($gb_file, $fa_file, $tree_file, $output_name, $analysis) = 0;
-GetOptions ('genbank|gb=s' => \$gb_file,
+my ($gb_file, $fa_file, $tree_file, $output_name, $analysis, $cleandata) = 0;
+GetOptions ('genbank|gb:s' => \$gb_file,
             'fasta=s' => \$fa_file,
             'treefile=s' => \$tree_file,
-            'output=s' => \$output_name,
+            'output:s' => \$output_name,
+            'cleandata' => \$cleandata,
             'analysis|model=i' => \$analysis) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
-unless ($gb_file && $fa_file && $tree_file && $output_name) {
+unless ($fa_file && $tree_file) {
     my $msg = qq{Error: an option was mis-specified:
     genbank = $gb_file
     fasta = $fa_file
@@ -32,26 +33,67 @@ unless ($gb_file && $fa_file && $tree_file && $output_name) {
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
 my @gene_alns;
+if ($gb_file != 0) {
 	@gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file, 1)};
+} else {
+	@gene_alns = ();
+	my $temp_aln = make_aln_from_fasta_file($fa_file);
+	$fa_file =~ /(.*?)\.fa.*/;
+	$temp_aln->description("$1");
+	push @gene_alns, $temp_aln;
+}
 
 my $paml_exec;
 
+my %paramset = ();
+$paramset{'runmode'} = 0;
+$paramset{'seqtype'} = 1;
+
+if ($cleandata) {
+	$paramset{'cleandata'} = 1;
+}
+
+my $analysis_name = "";
+
 if ($analysis == 0) {
-#   PAML with single omega value (model=0 designates single omega)
-    $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 0 });
+#   PAML with single omega value
+#     $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 0 });
+	$analysis_name = "single_omega";
+	$paramset{'model'} = 0;
 } elsif ($analysis == 1) {
-#	PAML with fixed omega value (model=0 designates single omega)
-    $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 0, 'fix_omega' => 1, 'omega' => 1 });
+#	PAML with fixed omega value of 1
+#     $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 0, 'fix_omega' => 1, 'omega' => 1 });
+	$analysis_name = "fixed_omega";
+	$paramset{'model'} = 0;
+	$paramset{'fix_omega'} = 1;
+	$paramset{'omega'} = 1;
 } elsif ($analysis == 2) {
 #	PAML with free omegas (model=1)
-    $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1, 'fix_blength' => 1 });
+#     $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1, 'fix_blength' => 1 });
+	$analysis_name = "free_omega";
+	$paramset{'model'} = 1;
+	$paramset{'fix_blength'} = 1;
 } elsif ($analysis == 3) {
 #	PAML with branch-site model A (model=2 NSSites=2)
-    $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 2, 'NSsites' => 2});
+#     $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 2, 'NSsites' => 2});
+	$analysis_name = "branch_site_A";
+	$paramset{'model'} = 2;
+	$paramset{'NSsites'} = 2;
 } elsif ($analysis == 4) {
 #	PAML with null model A1 (model = 2, NSsites = 2, fix_omega = 1, omega = 1)
-    $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 2, 'NSsites' => 2, 'fix_omega' => 1, 'omega' => 1 });
+#     $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 2, 'NSsites' => 2, 'fix_omega' => 1, 'omega' => 1 });
+	$analysis_name = "branch_site_A1";
+	$paramset{'model'} = 2;
+	$paramset{'fix_omega'} = 1;
+	$paramset{'omega'} = 1;
 } else { pod2usage(1); }
+
+if ($output_name == 0) {
+	$output_name = "$analysis_name";
+}
+
+$paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => \%paramset);
+#     $paml_exec =	Bio::Tools::Run::Phylo::PAML::Codeml->new(-params => { 'runmode' => 0, 'seqtype' => 1, 'model' => 1, 'fix_blength' => 1 , 'cleandata' => 1});
 
 $paml_exec->save_tempfiles(1);
 print $paml_exec->tempdir() . "\n";
@@ -63,6 +105,7 @@ my $tree = $treeio->next_tree;
 my $firsttree = $tree;
 
 while ($tree) {
+	print "tree\n";
 	$trees{$tree->id()} = $tree;
 	$tree = $treeio->next_tree;
 }
@@ -84,7 +127,7 @@ foreach my $aln (@gene_alns) {
         $paml_exec->tree($tree, {'branchLengths' => 0 }); # initialize with this first tree
     }
 	my %params = $paml_exec->get_parameters();
- 	$paml_exec->outfile_name("$output_name"."_$name.mlc");
+ 	$paml_exec->outfile_name("$name.mlc");
  	my ($rc,$parser) = $paml_exec->run();
 	if ($rc == 0) {
 		my $t = $paml_exec->error_string();
@@ -95,7 +138,8 @@ foreach my $aln (@gene_alns) {
 			my $MLmatrix = $result->get_MLmatrix();
 			print $result->model() . "\n";
 		}
-		system ("cp " . $paml_exec->tempdir() . "/$output_name"."_$name.mlc" . " .");
+		system ("mkdir $output_name");
+		system ("cp " . $paml_exec->tempdir() . "/$name.mlc" . " $output_name");
 	}
 }
 
