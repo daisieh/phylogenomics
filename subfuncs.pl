@@ -82,7 +82,7 @@ sub get_locations_from_genbank_file {
                 $source_end = @locations[0]->end;
             }
             if ($feat_object->primary_tag eq $type) {
-                my $name = main_name_for_gb_feature($feat_object);
+                my $name = main_name_for_gb_feature($feat_object, 0);
                 my @locations = $feat_object->location->each_Location;
                 my $exon = 1;
                 foreach my $loc (@locations) {
@@ -271,19 +271,20 @@ Finds the main name for the given SeqFeatureI from a BioPerl-parsed Genbank obje
 
 sub main_name_for_gb_feature {
 	my $feat = shift;
+	my $search_others = shift;
 	my @names;
-	my $curr_name = "n/a";
-
-	if ($feat->has_tag('locus_tag')) {
-        @names = $feat->get_tag_values('locus_tag');
-		$curr_name = @names[0];
-	}
+	my $curr_name = "";
 
 	if ($feat->has_tag('gene')) {
         @names = $feat->get_tag_values('gene');
 		$curr_name = @names[0];
 	}
-
+	if ($search_others) {
+		if ($feat->has_tag('locus_tag')) {
+			@names = $feat->get_tag_values('locus_tag');
+			$curr_name = @names[0];
+		}
+	}
 	return $curr_name;
 }
 
