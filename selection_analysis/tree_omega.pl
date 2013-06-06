@@ -33,7 +33,8 @@ unless ($fa_file && $tree_file) {
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
 my @gene_alns;
-if ($gb_file != 0) {
+if ($gb_file) {
+	print "parsing whole fasta file into genes...\n";
 	@gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file, 1)};
 } else {
 	@gene_alns = ();
