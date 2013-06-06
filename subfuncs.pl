@@ -180,7 +180,7 @@ sub perc_diff_partition {
 	my $delete_gaps = shift;
 
 	if ($stop_pos < $aln->length()) {
-		my $aln_slice = $aln->slice($start_pos, $stop_pos);
+		my $aln_slice = $aln->slice($start_pos, $stop_pos, 1);
 
 		# remove any sequences with gaps
 		if ($delete_gaps) {
@@ -254,7 +254,7 @@ sub make_aln_from_fasta_file {
 	}
 
 	if ($flush) {
-		my $flush_aln = $newaln->slice(1,$min_length);
+		my $flush_aln = $newaln->slice(1,$min_length,1);
 		return $flush_aln;
 	}
 	return $newaln;
@@ -482,6 +482,43 @@ sub make_label_lookup {
     }
     return \%labels;
 }
+
+=head1
+
+B<@String sample_list ( String $samplefile )>
+
+Given a list of samples in a file, return the samples in an array. If there
+are file extensions, they are removed.
+
+$samplefile:   samples listed in a file
+
+=cut
+
+sub sample_list {
+    my $samplefile = shift;
+    my @samples = ();
+    if ($samplefile) {
+    	if (-e $samplefile) {
+			open FH, "<", "$samplefile" or die "sample_list died: couldn't open $samplefile\n";
+			my @items = <FH>;
+			close FH;
+			foreach my $line (@items) {
+				chomp $line;
+				if ($line =~ /(.*)\.(.*?)$/) {
+					if (length($2) < 5) { # only chop off file extensions if they're less than 5 chars long
+						$line = $1;
+					}
+				}
+				push @samples, $line;
+			}
+		} else {
+			$samplefile =~ s/\..*?$//;
+			push @samples, $samplefile;
+		}
+    }
+    return \@samples;
+}
+
 
 # must return 1 for the file overall.
 1;
