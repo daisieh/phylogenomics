@@ -158,6 +158,7 @@ while (($key, $value) = each %samples) {
 
 print "drawing graphs...\n";
 my $circlegraph_obj = new CircleGraph();
+$circlegraph_obj->inner_radius($circlegraph_obj->inner_radius - 100);
 my $max=1;
 my %graphs;
 while (($key, $value) = each %samples) {
@@ -191,6 +192,13 @@ while (($key, $value) = each %samples) {
 
 my $j = 0;
 
+# draw the gene map
+if ($gb_file) {
+	draw_gene_map ($gb_file, $circlegraph_obj, "OUT");
+}
+
+
+
 # draw the coverage maps
 my @xvals = @{$graphs{"x"}};
 while (($key, $value) = each %samples) {
@@ -203,16 +211,10 @@ $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
 $circlegraph_obj->draw_circle($circlegraph_obj->outer_radius);
 $circlegraph_obj->set_font("Helvetica", 6, "black");
 for (my $i = 1000; $i < $circle_size; $i=$i+1000) {
-# for (my $i = 0; $i < @xvals; $i++) {
     my $angle = ($i/$circle_size) * 360;
     my $radius = $circlegraph_obj->outer_radius + 10;
     my $label = $i;
-    $circlegraph_obj->circle_label($angle, $radius, "$label");
-}
-
-# draw the gene map
-if ($gb_file) {
-	draw_gene_map ($gb_file, $circlegraph_obj);
+#     $circlegraph_obj->circle_label($angle, $radius, "$label");
 }
 
 print "drawing reference mismatch maps...\n";
@@ -233,12 +235,12 @@ while (($key, $value) = each %samples) {
     if (exists $labels->{$key}) {
         $label = $labels->{$key};
     }
-    $circlegraph_obj->append_to_legend($label,$j);
+    #$circlegraph_obj->append_to_legend($label,$j);
     $j++;
 }
 
 $circlegraph_obj->append_to_legend("Maximum coverage was $max, scaled to 1");
-$circlegraph_obj->append_to_legend("Minimum coverage for mismatches was $min_coverage");
+$circlegraph_obj->append_to_legend("Minimum coverage was $min_coverage");
 $circlegraph_obj->append_to_legend("Sampling frequency was $samplesize");
 $circlegraph_obj->draw_legend_text({size => 10, height => 15});
 
