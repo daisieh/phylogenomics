@@ -211,6 +211,8 @@ of an inner circle and the names plotted inside the circle.
 sub draw_gene_map {
     my $gene_file = shift;
     my $circlegraph_obj = shift;
+    my $direction = shift;
+
     unless ($circlegraph_obj) {
         $circlegraph_obj = new CircleGraph();
     }
@@ -241,6 +243,9 @@ sub draw_gene_map {
         my $start_angle = ($start/$circle_size) * 360;
         my $stop_angle = ($stop/$circle_size) * 360;
         my $radius = $circlegraph_obj->inner_radius;
+        if ($direction eq "OUT") {
+        	$radius = $circlegraph_obj->outer_radius + 5;
+        }
 
         $circlegraph_obj->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"tardis"});
 
@@ -248,14 +253,23 @@ sub draw_gene_map {
         my $center_angle = ($start_angle + $stop_angle) / 2;
         push @labels, "$label\t$center_angle";
     }
-
-    $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius - 5, {filled => 1, color => "white"});
-    $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
-    $circlegraph_obj->set_font("Helvetica", 6, "black");
-    foreach my $line (@labels) {
-        $line =~ /(.+?)\t(.+?)$/;
-        $circlegraph_obj->circle_label($2, $circlegraph_obj->inner_radius - 5, $1, "right");
-    }
+	if ($direction eq "OUT") {
+		$circlegraph_obj->draw_circle($circlegraph_obj->outer_radius, {filled => 1, color => "white"});
+		$circlegraph_obj->draw_circle($circlegraph_obj->outer_radius);
+		$circlegraph_obj->set_font("Helvetica", 8, "black");
+		foreach my $line (@labels) {
+			$line =~ /(.+?)\t(.+?)$/;
+			$circlegraph_obj->circle_label($2, $circlegraph_obj->outer_radius + 10, $1, "left");
+		}
+	} else {
+		$circlegraph_obj->draw_circle($circlegraph_obj->inner_radius - 5, {filled => 1, color => "white"});
+		$circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
+		$circlegraph_obj->set_font("Helvetica", 6, "black");
+		foreach my $line (@labels) {
+			$line =~ /(.+?)\t(.+?)$/;
+			$circlegraph_obj->circle_label($2, $circlegraph_obj->inner_radius - 5, $1, "right");
+		}
+	}
     return $circlegraph_obj;
 }
 
