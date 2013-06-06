@@ -195,6 +195,14 @@ my $j = 0;
 # draw the gene map
 if ($gb_file) {
 	draw_gene_map ($gb_file, $circlegraph_obj, "OUT");
+} else {
+	$circlegraph_obj->set_font("Helvetica", 6, "black");
+	for (my $i = 1000; $i < $circle_size; $i=$i+1000) {
+		my $angle = ($i/$circle_size) * 360;
+		my $radius = $circlegraph_obj->outer_radius + 10;
+		my $label = $i;
+		 $circlegraph_obj->circle_label($angle, $radius, "$label");
+	}
 }
 
 
@@ -209,13 +217,6 @@ while (($key, $value) = each %samples) {
 
 $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
 $circlegraph_obj->draw_circle($circlegraph_obj->outer_radius);
-$circlegraph_obj->set_font("Helvetica", 6, "black");
-for (my $i = 1000; $i < $circle_size; $i=$i+1000) {
-    my $angle = ($i/$circle_size) * 360;
-    my $radius = $circlegraph_obj->outer_radius + 10;
-    my $label = $i;
-#     $circlegraph_obj->circle_label($angle, $radius, "$label");
-}
 
 print "drawing reference mismatch maps...\n";
 # draw the indel maps
