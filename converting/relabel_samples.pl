@@ -10,7 +10,7 @@ GetOptions ('input|samples=s' => \$inputfile,
 			'outfile=s' => \$outfile) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 unless ($inputfile && $labelfile) {
-    pod2usage(-msg => "Error: an option was mis-specified\n", -exitval => 2);
+    pod2usage(-msg => "Error: an option was misspecified\n", -exitval => 2);
 }
 
 
@@ -79,3 +79,27 @@ foreach my $line (@input_lines) {
 }
 
 close $out_fh;
+
+__END__
+
+=head1 NAME
+
+slice_fasta_file
+
+=head1 SYNOPSIS
+
+relabel_samples -input input_file -labels label_file [-outfile output_file]
+
+=head1 OPTIONS
+
+  -input|samples:    file containing names to replace
+  -labels|names:     tab-delimited lookup file of names and their replacements
+  -outfile:          output file name
+
+=head1 DESCRIPTION
+
+Given a fasta file of aligned sequences and a corresponding genbank file
+with the CDS coordinates, will create a fasta file with each
+CDS corresponding to a separate sequence block.
+
+=cut
