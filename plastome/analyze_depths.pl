@@ -50,7 +50,8 @@ if ($samplefile =~ /(.+?)\.depth/) {
     foreach my $name (@rawnames) {
         $name =~ s/\n//;
         if ($name !~ /^\s*$/) {
-            push @names, $name;
+            my $samplename = basename($name);
+            push @names, $samplename;
         }
     }
 }
@@ -83,9 +84,9 @@ if ($labelfile) {
 }
 
 my %samples;
-foreach my $name (@names) {
-    my $depthfile = "$name".".depth";
-    my $samplename = basename($name);
+my @sample_list;
+foreach my $samplename (@names) {
+    my $depthfile = "$samplename".".depth";
     print "processing $samplename\n";
     open VCF_FH, "<", "$depthfile" or die "couldn't open $depthfile";
     my @depths = ();
@@ -195,8 +196,6 @@ while (($key, $value) = each %samples) {
     }
 }
 
-my $j = 0;
-
 # draw the gene map
 if ($gb_file) {
 	draw_gene_map ($gb_file, $circlegraph_obj, "OUT");
@@ -210,40 +209,38 @@ if ($gb_file) {
 	}
 }
 
+# if the minimum coverage is specified as > 0, draw a threshold bar for that.
+if ($min_coverage > 0) {
+	my $threshold = (($min_coverage/$max)*($circlegraph_obj->outer_radius - $circlegraph_obj->inner_radius)) + $circlegraph_obj->inner_radius;
+	$circlegraph_obj->draw_circle($threshold, {filled=>1, color=>"light_grey"});
+	$circlegraph_obj->draw_circle($circlegraph_obj->inner_radius, {filled=>1, color=>"white"});
+}
 
-
-# draw the coverage maps
+# draw the maps
+my $j = 0;
 my @xvals = @{$graphs{"x"}};
-while (($key, $value) = each %samples) {
+for ($j=0; $j< keys(%samples); $j++) {
+	$key = $names[$j];
     my @yvals = @{$graphs{$key}};
+    # plot the coverage map
     $circlegraph_obj->plot_line(\@xvals, \@yvals, {color=>$j});
-    $j++;
+
+    # plot the indel map
+    $circlegraph_obj = draw_regions ( "$outfile"."_$key"."_indels.txt", $circlegraph_obj, $j, $circlegraph_obj->inner_radius + ($j*5) -150);
 }
 
 $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
 $circlegraph_obj->draw_circle($circlegraph_obj->outer_radius);
-
-print "drawing reference mismatch maps...\n";
-# draw the indel maps
-$j = 0;
-$circlegraph_obj->inner_radius($circlegraph_obj->inner_radius - 150);
-while (($key, $value) = each %samples) {
-    $circlegraph_obj = draw_regions ( "$outfile"."_$key"."_indels.txt", $circlegraph_obj, $j, $circlegraph_obj->inner_radius + ($j*5));
-    $j++;
-}
-
-$circlegraph_obj->draw_circle($circlegraph_obj->inner_radius-5);
+$circlegraph_obj->draw_circle($circlegraph_obj->inner_radius-155);
 
 # draw the labels
 if ($label_samples) {
-	$j = 0;
-	while (($key, $value) = each %samples) {
-		my $label = $key;
-		if (exists $labels->{$key}) {
-			$label = $labels->{$key};
+	for ($j=0; $j< keys(%samples); $j++) {
+		my $label = $names[$j];
+		if (exists $labels->{$names[$j]}) {
+			$label = $labels->{$names[$j]};
 		}
 		$circlegraph_obj->append_to_legend($label,$j);
-		$j++;
 	}
 }
 
