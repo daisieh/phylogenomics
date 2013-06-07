@@ -12,12 +12,12 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($samplefile, $gb_file, $labelfile, $outfile) = 0;
+my ($samplefile, $gb_file, $labelfile, $outfile, $label_samples) = 0;
 my $samplesize = 1000;
 my $keepfiles = 0;
 my $help = 0;
 my $min_coverage = 0;
-my $circle_size = 157033;
+my $circle_size = 0;
 
 
 GetOptions ('samples|input=s' => \$samplefile,
@@ -28,6 +28,7 @@ GetOptions ('samples|input=s' => \$samplefile,
             'keepfiles!' => \$keepfiles,
             'coverage:i' => \$min_coverage,
             'size:i' => \$circle_size,
+            'legend' => \$label_samples,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -68,6 +69,10 @@ if ($gb_file) {
 	    my $source = $2;
 	    $source =~ /.+?\t.+?\t(.+)$/;
 	    $circle_size = $1;
+	}
+} else {
+	if ($circle_size == 0) {
+		die "No genbank file was provided: must specify circle size in base pairs.\n";
 	}
 }
 
@@ -230,14 +235,16 @@ while (($key, $value) = each %samples) {
 $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius-5);
 
 # draw the labels
-$j = 0;
-while (($key, $value) = each %samples) {
-    my $label = $key;
-    if (exists $labels->{$key}) {
-        $label = $labels->{$key};
-    }
-    #$circlegraph_obj->append_to_legend($label,$j);
-    $j++;
+if ($label_samples) {
+	$j = 0;
+	while (($key, $value) = each %samples) {
+		my $label = $key;
+		if (exists $labels->{$key}) {
+			$label = $labels->{$key};
+		}
+		$circlegraph_obj->append_to_legend($label,$j);
+		$j++;
+	}
 }
 
 $circlegraph_obj->append_to_legend("Maximum coverage was $max, scaled to 1");
@@ -274,7 +281,8 @@ analyze_depths -samples -window -output [-genbank] [-labels]
   -genbank|gb:      optional: genbank file to generate a map along the graph
   -labels:          optional: tab-delimited list of samples and their corresponding labels
   -keepfiles:       optional: keep data files that are created (default is no)
-  -coverage:		optional: minimum level of coverage to call as missing.
+  -coverage:		optional: minimum level of coverage to call as missing
+  -legend:			optional: if present, include list of samples in the legend
 
 =head1 DESCRIPTION
 
