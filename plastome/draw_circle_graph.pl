@@ -30,15 +30,9 @@ print "$datafile, $outfile\n";
     pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 }
 
-my $circlegraph_obj;
-
-if ($points) {
-	$circlegraph_obj = plots_around_circle($datafile);
-} else {
-	$circlegraph_obj = draw_circle_graph($datafile);
-}
-
-$circlegraph_obj->draw_legend_text ({"size"=>10, "height"=>15});
+my $circlegraph_obj = new CircleGraph;
+$circlegraph_obj->inner_radius($circlegraph_obj->inner_radius - 100);
+$circlegraph_obj->outer_radius($circlegraph_obj->outer_radius - 100);
 
 if ($gb_file) {
 	if ($gb_file =~ /\.gb$/) {
@@ -47,8 +41,18 @@ if ($gb_file) {
 		close FH;
 	    $gb_file = "$outfile.genes";
 	}
-	draw_gene_map ($gb_file, $circlegraph_obj);
+	$circlegraph_obj = draw_gene_map ($gb_file, $circlegraph_obj, {direction=>"OUT", width=>15});
 }
+
+
+if ($points) {
+	$circlegraph_obj = plots_around_circle($datafile, $circlegraph_obj);
+} else {
+	$circlegraph_obj = draw_circle_graph($datafile, $circlegraph_obj);
+}
+
+$circlegraph_obj->draw_legend_text ({"size"=>10, "height"=>15});
+
 
 open OUT, ">", "$outfile.ps" or die "couldn't make output file $outfile.ps";
 print OUT $circlegraph_obj->output_ps . "\n";

@@ -100,11 +100,10 @@ sub draw_circle_graph {
 
 =pod
 
-CircleGraph $circlegraph_obj draw_circle_graph ( String $datafile, CircleGraph $circlegraph_obj )
+CircleGraph $circlegraph_obj plots_around_circle ( String $datafile, CircleGraph $circlegraph_obj )
 
 $datafile is a tab-delimited file:
-    -   the first column contains positions around a circle,
-        scaled to the size of the last row's value
+    -   the first column contains positions around a circle
     -   each subsequent column contains the values to graph, one graph per column
     -   the first row contains the names of the columns
 $circlegraph_obj is an optional parameter for an existing CircleGraph.
@@ -171,22 +170,8 @@ sub plots_around_circle {
 
     # draw graphs
     for (my $j=0; $j<@graphs; $j++) {
-        $circlegraph_obj->plot_points(\@positions, $graphs[$j], {color=>$j,radius=>(($j+1)*10),width=>5});
+        $circlegraph_obj->plot_points(\@positions, $graphs[$j], {color=>$j,radius=>((($j+1)*15)-5),width=>10,angle=>0.3});
         $circlegraph_obj->append_to_legend("@labels[$j]", "$j");
-    }
-
-    # draw labels around the edge
-    $circlegraph_obj->set_font("Helvetica", 6, "black");
-    if ($circle_size eq "") {
-		$circle_size = @positions[@positions-1];
-	}
-
-    for (my $i = 0; $i < $total_elems; $i++) {
-        my $angle = (@positions[$i]/$circle_size) * 360;
-        my $radius = $circlegraph_obj->outer_radius + 10;
-        my $label = @positions[$i];
-        if (($label % 1000)!=0) { $label = ""; }
-        $circlegraph_obj->circle_label($angle, $radius, "$label");
     }
 
     $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius, {'filled'=>1, 'color'=>"white"} );
@@ -211,11 +196,24 @@ of an inner circle and the names plotted inside the circle.
 sub draw_gene_map {
     my $gene_file = shift;
     my $circlegraph_obj = shift;
-    my $direction = shift;
+    my $params = shift;
 
     unless ($circlegraph_obj) {
         $circlegraph_obj = new CircleGraph();
     }
+
+    my $direction = "IN";
+	my $width = 5;
+	my $transparent = 0;
+    if (ref($params) eq "HASH") {
+        if (exists $params->{"direction"}) {
+            $direction = $params->{"direction"};
+        }
+        if (exists $params->{"width"}) {
+            $width = $params->{"width"};
+        }
+    }
+
 
     open INPUTFILE, "<$gene_file" or die "$gene_file failed to open\n";
     my @inputs = <INPUTFILE>;
@@ -244,7 +242,7 @@ sub draw_gene_map {
         my $stop_angle = ($stop/$circle_size) * 360;
         my $radius = $circlegraph_obj->inner_radius;
         if ($direction eq "OUT") {
-        	$radius = $circlegraph_obj->outer_radius + 5;
+        	$radius = $circlegraph_obj->outer_radius + $width;
         }
 
         $circlegraph_obj->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"tardis"});
@@ -259,15 +257,15 @@ sub draw_gene_map {
 		$circlegraph_obj->set_font("Helvetica", 8, "black");
 		foreach my $line (@labels) {
 			$line =~ /(.+?)\t(.+?)$/;
-			$circlegraph_obj->circle_label($2, $circlegraph_obj->outer_radius + 10, $1, "left");
+			$circlegraph_obj->circle_label($2, $circlegraph_obj->outer_radius + 5 + $width, $1, "left");
 		}
 	} else {
-		$circlegraph_obj->draw_circle($circlegraph_obj->inner_radius - 5, {filled => 1, color => "white"});
+		$circlegraph_obj->draw_circle($circlegraph_obj->inner_radius - $width, {filled => 1, color => "white"});
 		$circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
 		$circlegraph_obj->set_font("Helvetica", 6, "black");
 		foreach my $line (@labels) {
 			$line =~ /(.+?)\t(.+?)$/;
-			$circlegraph_obj->circle_label($2, $circlegraph_obj->inner_radius - 5, $1, "right");
+			$circlegraph_obj->circle_label($2, $circlegraph_obj->inner_radius - 5 - $width, $1, "right");
 		}
 	}
     return $circlegraph_obj;
@@ -279,9 +277,6 @@ CircleGraph $circlegraph_obj draw_regions ( String $region_file, CircleGraph $ci
 
 $region_file is a tab-delimited file of region locations, with the size of the circle as the last entry.
 $circlegraph_obj is an optional parameter for an existing CircleGraph.
-
-The function returns a CircleGraph object with the gene locations plotted around the edge
-of an inner circle and the names plotted inside the circle.
 
 =cut
 
