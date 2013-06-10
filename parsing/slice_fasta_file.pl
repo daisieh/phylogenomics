@@ -14,7 +14,7 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($fastafile, $resultfile, $gb_file, $start, $end, $oneslice, $help, $slice_list, $concat) = 0;
+my ($fastafile, $resultfile, $gb_file, $start, $end, $oneslice, $help, $slice_list, $concat, $multiple) = 0;
 my $type = "CDS";
 GetOptions ('fasta=s' => \$fastafile,
             'outputfile=s' => \$resultfile,
@@ -24,6 +24,7 @@ GetOptions ('fasta=s' => \$fastafile,
             'end:i' => \$end,
             'concatenate' => \$concat,
             'locus|type:s' => \$type,
+            'multiple' => \$multiple,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -96,6 +97,28 @@ if ($concat) {
         print FH $seq->seq() . "\n";
     }
 	close FH;
+} elsif ($multiple) {
+    my $i = 1;
+    foreach my $aln (@$gene_alns) {
+        my $gene_name = $aln->description();
+        unless ($gene_name) {
+            $gene_name = $i;
+            $i++;
+        }
+        my $filename;
+        if (-d $resultfile) {
+            $filename = $resultfile . $gene_name . ".fasta";
+        } else {
+            $filename = $resultfile . "_" . $gene_name . ".fasta";
+        }
+        open FH, ">", $filename or die "Couldn't open output file $filename";
+        foreach my $seq ($aln->each_seq()) {
+            my $name = $seq->id();
+            print FH ">$name\n";
+            print FH $seq->seq() . "\n";
+        }
+        close FH;
+    }
 } else {
     open FH, ">", $resultfile or die "Couldn't open output file $resultfile";
     foreach my $aln (@$gene_alns) {
@@ -134,6 +157,7 @@ slice_fasta_file [-fasta fa_file] [-genbank gb_file [-locus locus_type] | -slice
   -outputfile:       output file name
   -locus|type:       [optional] if present, specifies the type of genbank tag to slice
   -concatenate:      if flag is present, concatenate the slices into one long alignment
+  -multiple:         if flag is present, save each slice as a separate file
 
 =head1 DESCRIPTION
 
