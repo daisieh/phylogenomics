@@ -159,18 +159,20 @@ sub set_color {
     my $self = shift;
     my $arg = shift;
     my @color = (0,0,0);
-    my @colors_by_name = qw(red green blue yellow magenta cyan orange fuchsia dark_green violet grey brown slate pink gold tardis teal brick);
+    my @colors_by_name = qw(blue orange dark_green red green yellow magenta cyan fuchsia violet grey brown slate pink gold tardis teal brick);
 
     my %colors = (
+#         blue => [0,0,1],
+#         orange => [1,0.4,0],
+        blue => [0.04,0.33,0.63],
+        orange => [1,0.57,0.12],
+        dark_green => [0,0.5,0.08],
         red => [1,0,0],
         green => [0,1,0],
-        blue => [0,0,1],
         yellow => [0.8,0.8,0],
         magenta => [1,0,1],
         cyan => [0,1,1],
-        orange => [1,0.4,0],
         fuchsia => [0.8,0.2,0.8],
-        dark_green => [0.27,0.3,0],
         violet => [0.4,0,1],
         white => [1,1,1],
         black => [0,0,0],
@@ -329,6 +331,7 @@ sub plot_points {
 	my $color;
 	my $width = 1;
 	my $radius = $INNER_RADIUS;
+	my $angle_size = 0.1;
 
     if (ref($params) eq "HASH") {
         if (exists $params->{"color"}) {
@@ -339,6 +342,9 @@ sub plot_points {
         }
         if (exists $params->{"radius"}) {
             $radius += $params->{"radius"};
+        }
+        if (exists $params->{"angle"}) {
+            $angle_size = $params->{"angle"};
         }
     }
 
@@ -360,7 +366,7 @@ sub plot_points {
     for (my $i = 0; $i < (scalar @x_vals); $i++) {
     	if (@y_vals[$i]) {
 			$this_angle = (@x_vals[$i]/$circle_size) * 360;
-			my $increment_angle = $this_angle + 0.1;
+			my $increment_angle = $this_angle + $angle_size;
 			my @new_coords = $self->coords_on_circle($this_angle,$radius);
 			$this_x = @new_coords[0];
 			$this_y = @new_coords[1];
