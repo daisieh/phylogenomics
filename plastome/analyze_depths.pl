@@ -198,7 +198,7 @@ while (($key, $value) = each %samples) {
 
 # draw the gene map
 if ($gb_file) {
-	draw_gene_map ($gb_file, $circlegraph_obj, "OUT");
+	draw_gene_map ($gb_file, $circlegraph_obj, {direction=>"OUT"});
 } else {
 	$circlegraph_obj->set_font("Helvetica", 6, "black");
 	for (my $i = 1000; $i < $circle_size; $i=$i+1000) {
