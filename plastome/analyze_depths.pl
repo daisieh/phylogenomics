@@ -198,14 +198,27 @@ while (($key, $value) = each %samples) {
 
 # draw the gene map
 if ($gb_file) {
-	draw_gene_map ($gb_file, $circlegraph_obj, {direction=>"OUT"});
+	draw_gene_map ($gb_file, $circlegraph_obj, {direction=>"OUT",width=>15});
 } else {
 	$circlegraph_obj->set_font("Helvetica", 6, "black");
-	for (my $i = 1000; $i < $circle_size; $i=$i+1000) {
+	my $radius = $circlegraph_obj->outer_radius + 10;
+	# whatever the size, probably should draw about 100 labels around the perimeter.
+	my $ideal_interval = $circle_size/100;
+	my $factor = 5;
+	for (my $i=1;$i < (log($ideal_interval)/log(10)); $i++) {
+		$factor = $factor * 10;
+	}
+	my $interval = 0;
+	while ($interval < $ideal_interval) {
+		$interval += $factor;
+	}
+	for (my $i = 0; $i < $circle_size; $i=$i+($interval/5)) {
 		my $angle = ($i/$circle_size) * 360;
-		my $radius = $circlegraph_obj->outer_radius + 10;
-		my $label = $i;
-		 $circlegraph_obj->circle_label($angle, $radius, "$label");
+		if (($i % $interval) == 0) {
+			$circlegraph_obj->circle_label($angle, $radius, "$i");
+		} else {
+			$circlegraph_obj->circle_label($angle, $radius, "-");
+		}
 	}
 }
 

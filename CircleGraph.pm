@@ -159,7 +159,7 @@ sub set_color {
     my $self = shift;
     my $arg = shift;
     my @color = (0,0,0);
-    my @colors_by_name = qw(blue orange dark_green red green yellow magenta cyan fuchsia violet grey brown slate pink gold tardis teal brick);
+    my @colors_by_name = qw(orange dark_green blue yellow red green magenta cyan fuchsia violet grey brown slate pink gold tardis teal brick);
 
     my %colors = (
 #         blue => [0,0,1],
