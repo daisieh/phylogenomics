@@ -204,13 +204,16 @@ sub draw_gene_map {
 
     my $direction = "IN";
 	my $width = 5;
-	my $transparent = 0;
+	my $color = "tardis";
     if (ref($params) eq "HASH") {
         if (exists $params->{"direction"}) {
             $direction = $params->{"direction"};
         }
         if (exists $params->{"width"}) {
             $width = $params->{"width"};
+        }
+        if (exists $params->{"color"}) {
+            $width = $params->{"color"};
         }
     }
 
@@ -245,7 +248,7 @@ sub draw_gene_map {
         	$radius = $circlegraph_obj->outer_radius + $width;
         }
 
-        $circlegraph_obj->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"tardis"});
+        $circlegraph_obj->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>$color});
 
         # label this element
         my $center_angle = ($start_angle + $stop_angle) / 2;

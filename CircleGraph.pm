@@ -162,8 +162,6 @@ sub set_color {
     my @colors_by_name = qw(orange dark_green blue yellow red green magenta cyan fuchsia violet grey brown slate pink gold tardis teal brick);
 
     my %colors = (
-#         blue => [0,0,1],
-#         orange => [1,0.4,0],
         blue => [0.04,0.33,0.63],
         orange => [1,0.57,0.12],
         dark_green => [0,0.5,0.08],
