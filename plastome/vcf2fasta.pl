@@ -31,6 +31,9 @@ if ($help) {
 print $runline;
 
 my @samples = @{sample_list ($samplefile)};
+if ($samplefile =~ /(.*?)\.vcf$/) {
+	@samples = ($1);
+}
 
 if (@samples == 1) {
 	unless ($outfile) {
