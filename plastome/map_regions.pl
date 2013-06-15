@@ -59,11 +59,10 @@ if ($gb_file) {
 		close $fh;
 	    $gb_file = "$filename";
 	}
-	$circlegraph_obj->inner_radius($circlegraph_obj->inner_radius + 50);
-	draw_gene_map ($gb_file, $circlegraph_obj);
+	draw_gene_map ($gb_file, $circlegraph_obj,{direction=>"OUT"});
 }
 
-my $radius = 60;
+my $radius = $circlegraph_obj->outer_radius - 20;
 my $i=0;
 @sortedlines[0] =~ /(.*?)\t/;
 my $currname = $1;
@@ -77,13 +76,13 @@ foreach my $line (@sortedlines) {
         print "$i $currname\n";
         $i++;
         push @radii, $currname;
-        $circlegraph_obj->draw_circle($radius + ($i*15)-3);
+        $circlegraph_obj->draw_circle($radius - ($i*15)-3);
         $j=0;
     }
     my @temp = ();
     push @temp, $line;
     print "\t".($j%10)." $line\n";
-    draw_region (\@temp,$circlegraph_obj,$i,$radius + ($i*15)+($j%10),$circle_size);
+    draw_region (\@temp,$circlegraph_obj,$i,$radius - ($i*15)+($j%10),$circle_size);
     $j++;
 }
 
@@ -166,7 +165,7 @@ GetOptions ('input=s' => \$infile,
   -outputfile:      prefix of output files
   -genbank|gb:      optional: genbank file to generate a map along the graph
   -labels:          optional: tab-delimited list of samples and their corresponding labels
-  --keepfiles:      optional: keep temporary files (default is no)
+  -keepfiles:      optional: keep temporary files (default is no)
 
 =head1 DESCRIPTION
 
