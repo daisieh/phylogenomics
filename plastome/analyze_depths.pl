@@ -87,6 +87,7 @@ my %samples;
 my @sample_list;
 foreach my $samplename (@names) {
     my $depthfile = "$samplename".".depth";
+    $samplename = basename($samplename);
     print "processing $samplename\n";
     open VCF_FH, "<", "$depthfile" or die "couldn't open $depthfile";
     my @depths = ();

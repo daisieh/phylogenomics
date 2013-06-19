@@ -3,7 +3,6 @@
 package CircleGraph;
 
 use strict;
-use Carp;
 use PostScript::Simple;
 
 use constant PI 	=> 3.1415926535897932384626433832795;
@@ -281,7 +280,7 @@ sub plot_line {
     	$self->set_color("$color");
     }
     $p->{pspages} .= "$width u setlinewidth\n";
-    $p->{pspages} .= "@coords[0] @coords[1] newpath moveto\n";
+    $p->{pspages} .= "$last_x $last_y newpath moveto\n";
     for (my $i = 0; $i < (scalar @x_vals); $i++) {
         $this_angle = (@x_vals[$i]/$circle_size) * 360;
         $this_radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@y_vals[$i]));
@@ -403,7 +402,12 @@ sub coords_on_circle {
 	my $angle = shift;
 	my $radius = shift;
 
-	return ( CENTER_X + ($radius*cos(($angle * PI)/180)), CENTER_Y + ($radius*sin(($angle * PI)/180)));
+	my $x = CENTER_X + ($radius*cos(($angle * PI)/180));
+	my $y = CENTER_Y + ($radius*sin(($angle * PI)/180));
+
+	$x =~ s/(\.\d{6}).*/$1/;
+	$y =~ s/(\.\d{6}).*/$1/;
+	return ($x, $y);
 }
 
 sub draw_filled_arc {
@@ -455,6 +459,14 @@ sub draw_arc {
     $self->set_color("$color");
     my $p = $self->{ps_object};
 
+    $start_angle =~ s/(\.\d\d).*/$1/;
+    $stop_angle =~ s/(\.\d\d).*/$1/;
+
+    # 0.2 is the smallest renderable angle.
+    if (($stop_angle - $start_angle) < 0.2) {
+    	$stop_angle = $start_angle + 0.2;
+    }
+
     $p->{pspages} .= "newpath\n";
     $p->{pspages} .= "$width u setlinewidth\n";
     $p->{pspages} .= CENTER_X . " ux " . CENTER_Y . " uy $radius $start_angle $stop_angle arc\n";
@@ -464,10 +476,10 @@ sub draw_arc {
 
 sub set_color_by_percent {
     my $self = shift;
-	my $percent_red = shift;
+	my $percent = shift;
 	my $zero_color = shift;
 	my $full_color = shift;
-	my $scaling = ($percent_red/100);
+	my $scaling = ($percent/100);
 
     # red is the default color
 	my @zero_red = (255,240,240);

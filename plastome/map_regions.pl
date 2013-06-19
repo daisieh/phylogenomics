@@ -51,6 +51,8 @@ my @files = ();
 print "drawing graphs...\n";
 my $circlegraph_obj = new CircleGraph();
 
+$circlegraph_obj->outer_radius( $circlegraph_obj->outer_radius - 100);
+
 # draw the gene map
 if ($gb_file) {
 	if ($gb_file =~ /\.gb$/) {
@@ -61,14 +63,13 @@ if ($gb_file) {
 	}
 	draw_gene_map ($gb_file, $circlegraph_obj,{direction=>"OUT"});
 }
-
 my $radius = $circlegraph_obj->outer_radius - 20;
 my $i=0;
 @sortedlines[0] =~ /(.*?)\t/;
 my $currname = $1;
 my @radii = ($currname);
 my $j=0;
-$circlegraph_obj->draw_circle($radius + ($i*15)-3);
+# $circlegraph_obj->draw_circle($radius + ($i*15)-3);
 foreach my $line (@sortedlines) {
     $line =~ /(.*?)\t/;
     if ($1 ne $currname) {
@@ -76,13 +77,13 @@ foreach my $line (@sortedlines) {
         print "$i $currname\n";
         $i++;
         push @radii, $currname;
-        $circlegraph_obj->draw_circle($radius - ($i*15)-3);
+#         $circlegraph_obj->draw_circle($radius - ($i*15)-3);
         $j=0;
     }
     my @temp = ();
     push @temp, $line;
     print "\t".($j%10)." $line\n";
-    draw_region (\@temp,$circlegraph_obj,$i,$radius - ($i*15)+($j%10),$circle_size);
+    draw_region (\@temp,$circlegraph_obj,$i,$radius - ($i)+($j%10),$circle_size);
     $j++;
 }
 
