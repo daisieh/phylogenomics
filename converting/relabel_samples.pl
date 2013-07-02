@@ -4,9 +4,10 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 
-my ($inputfile, $labelfile, $outfile) = 0;
+my ($inputfile, $labelfile, $outfile, $simplename) = 0;
 GetOptions ('input|samples=s' => \$inputfile,
             'labels|names=s' => \$labelfile,
+            'simple' => \$simplename,
 			'outfile=s' => \$outfile) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 unless ($inputfile && $labelfile) {
@@ -15,13 +16,16 @@ unless ($inputfile && $labelfile) {
 
 
 open FH, "<", $inputfile;
+my @input_lines = <FH>;
+close FH;
+
 my $out_fh;
 if ($outfile) {
-	open $out_fh, ">", $outfile;
+	print "opening $outfile...\n";
+	open $out_fh, ">", $outfile or die "couldn't open $outfile\n";
 } else {
 	$out_fh = STDOUT;
 }
-my @input_lines = <FH>;
 
 my $labels;
 $labels = make_label_lookup ($labelfile);
@@ -57,22 +61,41 @@ foreach my $line (@input_lines) {
 			$templine = $remainder;
 		}
 		$line .= "$templine\n";
-	} elsif ($line =~ /^(.+?)(\s+.+)$/) {
-		# it is a NEXUS/phylip-type line
-		my $key = $1;
-		my $label = $key;
-		if (exists $labels->{$key}) {
-			$label = $labels->{$key};
-		}
-		$line = $label . $2 . "\n";
-	} elsif ($line =~ /^>(.+?)(\s+.*)$/) {
+	} elsif ($line =~ /^>(.+?)(\s.*|$)/) {
 		# it is a fasta-type line
 		my $key = $1;
+		my $remainder = $2;
 		my $label = $key;
 		if (exists $labels->{$key}) {
 			$label = $labels->{$key};
 		}
-		$line = ">$label" . $2 . "";
+		chomp $remainder;
+		if ($simplename) {
+			$remainder = "";
+		}
+		$line = ">$label$remainder\n";
+	} elsif ($line =~ /^(\s*\d+\s+)(.+?)(,*)$/) {
+		# it is a TRANSLATE-type line (numbered list of taxa)
+		print "translate $line";
+		my $beginning = $1;
+		my $key = $2;
+		my $remainder = $3;
+		my $label = $key;
+		if (exists $labels->{$key}) {
+			$label = $labels->{$key};
+		}
+		chomp $remainder;
+		$line = "$beginning$label$remainder\n";
+	} elsif ($line =~ /^(.+?)(\s+.+)$/) {
+		# it is a generic NEXUS/phylip-type line
+		my $key = $1;
+		my $remainder = $2;
+		my $label = $key;
+		if (exists $labels->{$key}) {
+			$label = $labels->{$key};
+		}
+		chomp $remainder;
+		$line = "$label$remainder\n";
 	}
  	print $out_fh "$line";
  	$i++;
