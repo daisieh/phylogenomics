@@ -10,10 +10,11 @@ if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
-my ($fastafile, $out_file, $help, $consensus) = 0;
+my ($fastafile, $out_file, $help, $consensus, $iupac) = 0;
 GetOptions ('fasta=s' => \$fastafile,
             'outputfile=s' => \$out_file,
             'help|?' => \$help,
+            'iupac' => \$iupac,
             'consensus!' => \$consensus) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -37,17 +38,21 @@ if ($consensus) {
 		$str =~ s/^(.)//;
 		my $char = $1;
 		if ($char !~ m/[agctAGCT-]/) {
-			$char =~ s/M/A\/C/i;
-			$char =~ s/R/A\/G/i;
-			$char =~ s/W/A\/T/i;
-			$char =~ s/S/C\/G/i;
-			$char =~ s/Y/C\/T/i;
-			$char =~ s/K/G\/T/i;
-			$char =~ s/V/A\/C\/G/i;
-			$char =~ s/H/A\/C\/T/i;
-			$char =~ s/D/A\/G\/T/i;
-			$char =~ s/B/C\/G\/T/i;
-			$char =~ s/N/A\/C\/G\/T/i;
+			if ($iupac) {
+
+			} else {
+				$char =~ s/M/A\/C/i;
+				$char =~ s/R/A\/G/i;
+				$char =~ s/W/A\/T/i;
+				$char =~ s/S/C\/G/i;
+				$char =~ s/Y/C\/T/i;
+				$char =~ s/K/G\/T/i;
+				$char =~ s/V/A\/C\/G/i;
+				$char =~ s/H/A\/C\/T/i;
+				$char =~ s/D/A\/G\/T/i;
+				$char =~ s/B/C\/G\/T/i;
+				$char =~ s/N/A\/C\/G\/T/i;
+			}
 		} else {
 			$char = "";
 		}
