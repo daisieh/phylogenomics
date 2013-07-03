@@ -149,6 +149,7 @@ sub draw_center_text {
     my $size = 24;
     my $height = 32;
     my $numlines = ($text =~ tr/\n//) + 1;
+    my $color = "";
 	my $center_y = CENTER_Y + ($numlines*$height/2);
 
     if (ref($params) eq "HASH") {
@@ -161,9 +162,13 @@ sub draw_center_text {
         if ($params->{"height"}) {
             $height = $params->{"height"};
         }
+        if ($params->{"color"}) {
+            $color = $params->{"color"};
+        }
+
     }
 
-    $self->set_font($font, $size);
+    $self->set_font($font, $size, $color);
     while ($text =~ /(.*?)\n(.*)/) {
     	$self->{ps_object}->text( {align => "centre"}, CENTER_X,$center_y, "$1");
     	$center_y -= $height;
