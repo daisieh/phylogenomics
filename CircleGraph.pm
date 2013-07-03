@@ -140,6 +140,39 @@ sub draw_legend_text {
     }
 }
 
+sub draw_center_text {
+    my $self = shift;
+    my $text = shift;
+    my $params = shift;
+
+    my $font = "Helvetica";
+    my $size = 24;
+    my $height = 32;
+    my $numlines = ($text =~ tr/\n//) + 1;
+	my $center_y = CENTER_Y + ($numlines*$height/2);
+
+    if (ref($params) eq "HASH") {
+        if ($params->{"font"}) {
+            $font = $params->{"font"};
+        }
+        if ($params->{"size"}) {
+            $size = $params->{"size"};
+        }
+        if ($params->{"height"}) {
+            $height = $params->{"height"};
+        }
+    }
+
+    $self->set_font($font, $size);
+    while ($text =~ /(.*?)\n(.*)/) {
+    	$self->{ps_object}->text( {align => "centre"}, CENTER_X,$center_y, "$1");
+    	$center_y -= $height;
+    	$text = $2;
+    }
+    $self->{ps_object}->text( {align => "centre"}, CENTER_X,$center_y, "$text");
+}
+
+
 sub output_ps {
     my $self = shift;
     my $output_string = "";
@@ -187,11 +220,13 @@ sub set_color {
 
     if (ref($arg) =~ /ARRAY/) {
         @color = @$arg;
-        if ((@color[0]>1) && (@color[1]>1) && (@color[2]>1)) {
+        if ((@color[0]>1) or (@color[1]>1) or (@color[2]>1)) {
             @color[0] = @color[0]/255;
             @color[1] = @color[1]/255;
             @color[2] = @color[2]/255;
         }
+    } elsif ($arg eq "") {
+		return;
     } elsif (ref($arg) eq "") {
         if (exists $colors{$arg}) {
             @color = @{$colors{$arg}};
@@ -201,6 +236,31 @@ sub set_color {
         }
     }
     $self->{ps_object}->{pspages} .= "@color[0] @color[1] @color[2] setrgbcolor\n";
+}
+
+sub set_color_by_percent {
+    my $self = shift;
+	my $percent = shift;
+	my $zero_color = shift;
+	my $full_color = shift;
+	my $scaling = ($percent/100);
+
+    # red is the default color
+	my @zero_red = (255,240,240);
+	my @full_red = (204,0,0);
+
+    if (ref($zero_color) eq "ARRAY") {
+        @zero_red = @$zero_color;
+    }
+    if (ref($full_color) eq "ARRAY") {
+        @full_red = @$full_color;
+    }
+
+	my $r = int(((@full_red[0]-@zero_red[0])*$scaling) + @zero_red[0]);
+	my $g = int(((@full_red[1]-@zero_red[1])*$scaling) + @zero_red[1]);
+	my $b = int(((@full_red[2]-@zero_red[2])*$scaling) + @zero_red[2]);
+	$self->set_color([$r, $g, $b]);
+	return [$r, $g, $b];
 }
 
 sub set_font {
@@ -417,7 +477,7 @@ sub draw_filled_arc {
 	my $stop_angle = shift;
 	my $params = shift;
 
-	my $color = "black";
+	my $color = "";
 
     if (ref($params) eq "HASH") {
         if (exists $params->{"color"}) {
@@ -473,30 +533,5 @@ sub draw_arc {
     $p->{pspages} .= "stroke\n";
 
 }
-
-sub set_color_by_percent {
-    my $self = shift;
-	my $percent = shift;
-	my $zero_color = shift;
-	my $full_color = shift;
-	my $scaling = ($percent/100);
-
-    # red is the default color
-	my @zero_red = (255,240,240);
-	my @full_red = (204,0,0);
-
-    if (ref($zero_color) eq "ARRAY") {
-        @zero_red = @$zero_color;
-    }
-    if (ref($full_color) eq "ARRAY") {
-        @full_red = @$full_color;
-    }
-
-	my $r = int(((@full_red[0]-@zero_red[0])*$scaling) + @zero_red[0]);
-	my $g = int(((@full_red[1]-@zero_red[1])*$scaling) + @zero_red[1]);
-	my $b = int(((@full_red[2]-@zero_red[2])*$scaling) + @zero_red[2]);
-	$self->{ps_object}->setcolour($r, $g, $b);
-}
-
 
 1;
