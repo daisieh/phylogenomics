@@ -17,14 +17,17 @@ my ($gb_file, $out_file) = 0;
 my $datafile = 0;
 my $plastid_name = "";
 my $help = 0;
-my $min_coverage = 0;
 my $circle_size = 0;
+my $ira = "";
+my $irb = "";
 
 
-GetOptions ('locations:s' => \$datafile,
+my $result = GetOptions ('fasta:s' => \$datafile,
             'outputfile=s' => \$out_file,
-            'genbank|gb:s' => \$gb_file,
-            'name' => \$plastid_name,
+            'circlesize|size=i' => \$circle_size,
+            'ira=s' => \$ira,
+            'irb=s' => \$irb,
+            'name:s' => \$plastid_name,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -32,115 +35,173 @@ if ($help) {
 }
 
 print $runline;
-unless ($datafile) {
-	# process the gb file
-	if ($gb_file) {
-		if ($gb_file =~ /\.gb$/) {
-			my ($fh, $filename) = tempfile(UNLINK => 1);
-			my $gb_locs = get_locations_from_genbank_file($gb_file);
-			print $fh $gb_locs;
-			close $fh;
-			$datafile = "$filename";
 
-			$gb_locs =~ /(.+)\n(.+?)$/;
-			my $source = $2;
-			$source =~ /.+?\t.+?\t(.+)$/;
-			$circle_size = $1;
-		}
-	} else {
-		pod2usage (-msg => "Need to specify either a locations file or a genbank file.", -exitval => 2);
-	}
-}
-
-open INPUTFILE, "<$datafile" or die "$datafile failed to open\n";
-my @inputs = <INPUTFILE>;
-close INPUTFILE;
-
-while (@inputs[0] !~ /\t/) { #there's some sort of header
-    shift @inputs;
-    if (@inputs == 0) {
-        die "no data in input file.";
-    }
-}
-
-my @sorted = sort (@differences);
-my $diff_len = @sorted;
-my $max_diffs = @sorted[@sorted-1];
-(undef, undef, my $circle_size, undef) = split /\t/, pop @inputs;
-$circle_size =~ s/\n//;
-
+my @inputs = ();
 my @fwd_strand = ();
 my @rev_strand = ();
-for (my $i = 0; $i < @inputs; $i++) {
-	my $line = @inputs[$i];
+
+open FH, "<", $datafile;
+my $line = readline FH;
+
+while ($line) {
+	$line =~ m/>(.*?): (.*)$/;
+	my $label = $1;
+	my $location = $2;
+	if ($location =~ /,/) { #we have exons.
+		my $start, $stop = 0;
+		my @exon_block = ();
+		while ($location =~ /.*?(\d+)-(\d+)(.*)/) {
+			if ($start == 0) {
+				$start = $1;
+			}
+			push @exon_block, "$label\t$1\t$2";
+			$location = $3;
+			$stop = $2;
+		}
+		push @inputs, "exons $label\t$start\t$stop";
+		push @inputs, @exon_block;
+
+	} else {
+		$location =~ /.*?(\d+)-(\d+).*/;
+		$location = "$1\t$2";
+		push @inputs, "$label\t$location";
+	}
+	$line = readline FH;
+	while ($line !~ m/>(.*)$/) {
+		chomp $line;
+		$line = readline FH;
+		unless ($line) { last; }
+	}
+}
+close FH;
+
+foreach my $line (@inputs) {
 	my ($label, $start, $stop) = split /\t/, $line;
 	chomp $stop;
-	if ($start > $stop) {
-		push @rev_strand,  "$label\t$stop\t$start\n";
+	if ($label =~ /(.*) \(reverse strand\)/) {
+		$label = $1;
+		push @rev_strand,  "$label\t$start\t$stop\n";
 	} else {
 		push @fwd_strand, "$label\t$start\t$stop\n";
 	}
 }
 
 my $x = new CircleGraph();
+my $radius = $x->inner_radius + 20;
+my @fwd_strand_labels = ();
 
 #draw forward strand along the outside
-for (my $i = 0; $i < @fwd_strand; $i++) {
-	my $line = @fwd_strand[$i];
+while (@fwd_strand > 0) {
+	$line = shift @fwd_strand;
 	my ($label, $start, $stop) = split /\t/, $line;
 	chomp $stop;
 
-	my $start_angle = ($start/$circle_size) * 360;
-	my $stop_angle = ($stop/$circle_size) * 360;
- 	my $radius = $x->inner_radius + 20;
+	if ($label =~ /exons (.+)$/) {
+		$label = $1;
+		my $start_angle = ($start/$circle_size) * 360;
+		my $stop_angle = ($stop/$circle_size) * 360;
 
-	$x->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"red", width=>5});
-	print "$label\t$start_angle\t$stop_angle\n";
+		$x->set_color_by_percent (30);
+		$x->draw_filled_arc ($radius, $start_angle, $stop_angle, {width=>5});
+		# label this element
+		my $center_angle = ($start_angle + $stop_angle) / 2;
+		push @fwd_strand_labels, "$label\t$center_angle";
+		while ($line =~ /$label/) {
+			$line = shift @fwd_strand;
+			my (undef, $start, $stop) = split /\t/, $line;
+			my $start_angle = ($start/$circle_size) * 360;
+			my $stop_angle = ($stop/$circle_size) * 360;
+			$x->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"red", width=>5});
+		}
+		unshift @fwd_strand, $line;
+	} else {
+		my $start_angle = ($start/$circle_size) * 360;
+		my $stop_angle = ($stop/$circle_size) * 360;
+		$x->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"red", width=>5});
 
-	# label this element
-	my $center_angle = ($start_angle + $stop_angle) / 2;
-    $x->set_font("Helvetica", 10, "black");
+		# label this element
+		my $center_angle = ($start_angle + $stop_angle) / 2;
+		push @fwd_strand_labels, "$label\t$center_angle";
+	}
+}
+
+#label fwd strand along the inside
+$x->set_font("Helvetica", 10, "black");
+for (my $i = 0; $i < @fwd_strand_labels; $i++) {
+	my $line = @fwd_strand_labels[$i];
+	my ($label, $center_angle) = split /\t/, $line;
+	chomp $center_angle;
+
  	$x->circle_label($center_angle, $x->inner_radius + 22, $label);
 
 }
 
-$x->draw_circle($x->inner_radius, {filled => 1, color => "white"});
-# $x->draw_circle($x->inner_radius);
 
+$x->draw_circle($x->inner_radius, {filled => 1, color => "white"});
+
+my @rev_strand_labels = ();
 #draw reverse strand along the inside
-for (my $i = 0; $i < @rev_strand; $i++) {
-	my $line = @rev_strand[$i];
+$radius = $x->inner_radius;
+
+while (@rev_strand > 0) {
+	$line = shift @rev_strand;
 	my ($label, $start, $stop) = split /\t/, $line;
 	chomp $stop;
 
-	my $start_angle = ($start/$circle_size) * 360;
-	my $stop_angle = ($stop/$circle_size) * 360;
- 	my $radius = $x->inner_radius;
+	if ($label =~ /exons (.+)$/) {
+		$label = $1;
+		my $start_angle = ($start/$circle_size) * 360;
+		my $stop_angle = ($stop/$circle_size) * 360;
 
-	$x->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"red", width=>5});
-	print "$label\t$start_angle\t$stop_angle\n";
+		$x->set_color_by_percent (30);
+		$x->draw_filled_arc ($radius, $start_angle, $stop_angle, {width=>5});
+		# label this element
+		my $center_angle = ($start_angle + $stop_angle) / 2;
+		push @rev_strand_labels, "$label\t$center_angle";
+		while ($line =~ /$label/) {
+			$line = shift @rev_strand;
+			my (undef, $start, $stop) = split /\t/, $line;
+			my $start_angle = ($start/$circle_size) * 360;
+			my $stop_angle = ($stop/$circle_size) * 360;
+			$x->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"red", width=>5});
+		}
+		unshift @rev_strand, $line;
+	} else {
+		my $start_angle = ($start/$circle_size) * 360;
+		my $stop_angle = ($stop/$circle_size) * 360;
+		$x->draw_filled_arc ($radius, $start_angle, $stop_angle, {color=>"red", width=>5});
 
+		# label this element
+		my $center_angle = ($start_angle + $stop_angle) / 2;
+		push @rev_strand_labels, "$label\t$center_angle";
+	}
 }
+
 $x->draw_circle($x->inner_radius - 20, {filled => 1, color => "white"});
 
 #label reverse strand along the inside
-for (my $i = 0; $i < @rev_strand; $i++) {
-	my $line = @rev_strand[$i];
-	my ($label, $start, $stop) = split /\t/, $line;
-	chomp $stop;
+$x->set_font("Helvetica", 10, "black");
+for (my $i = 0; $i < @rev_strand_labels; $i++) {
+	my $line = @rev_strand_labels[$i];
+	my ($label, $center_angle) = split /\t/, $line;
+	chomp $center_angle;
 
-	my $start_angle = ($start/$circle_size) * 360;
-	my $stop_angle = ($stop/$circle_size) * 360;
-
-	# label this element
-	my $center_angle = ($start_angle + $stop_angle) / 2;
-    $x->set_font("Helvetica", 10, "black");
  	$x->circle_label($center_angle, $x->inner_radius - 22, $label, "right");
 
 }
 
 $x->draw_circle($x->inner_radius);
 
+$ira =~ /(\d+)-(\d+)/;
+my $start_angle = ($1/$circle_size) * 360;
+my $stop_angle = ($2/$circle_size) * 360;
+$x->draw_arc($x->inner_radius, $start_angle, $stop_angle, {width=>5, color=>"black"});
+$irb =~ /(\d+)-(\d+)/;
+my $start_angle = ($1/$circle_size) * 360;
+my $stop_angle = ($2/$circle_size) * 360;
+$x->draw_arc($x->inner_radius, $start_angle, $stop_angle, {width=>5, color=>"black"});
+
+$x->draw_center_text("$plastid_name\n$circle_size base pairs");
 
 $x->output_ps();
 open OUT, ">", "$out_file.ps";
