@@ -195,9 +195,19 @@ sub output_ps {
 sub set_color {
     my $self = shift;
     my $arg = shift;
-    my @color = (0,0,0);
-    my @colors_by_name = qw(orange dark_green blue yellow red green magenta cyan fuchsia violet grey brown slate pink gold tardis teal brick);
+    if ($arg eq "") {
+    	return;
+    }
+    my @color = @{$self->get_color($arg)};
+    $self->{ps_object}->{pspages} .= "@color[0] @color[1] @color[2] setrgbcolor\n";
+}
 
+sub get_color {
+    my $self = shift;
+    my $arg = shift;
+    my @color = (0,0,0);
+
+    my @colors_by_name = qw(orange dark_green blue yellow red green magenta cyan fuchsia violet grey brown slate pink gold tardis teal brick);
     my %colors = (
         blue => [0.04,0.33,0.63],
         orange => [1,0.57,0.12],
@@ -222,7 +232,6 @@ sub set_color {
         teal => [0.2,0.75,0.75],
         brick => [0.6,0.05,0.05],
     );
-
     if (ref($arg) =~ /ARRAY/) {
         @color = @$arg;
         if ((@color[0]>1) or (@color[1]>1) or (@color[2]>1)) {
@@ -230,6 +239,7 @@ sub set_color {
             @color[1] = @color[1]/255;
             @color[2] = @color[2]/255;
         }
+
     } elsif ($arg eq "") {
 		return;
     } elsif (ref($arg) eq "") {
@@ -238,34 +248,35 @@ sub set_color {
         } elsif ($arg =~ /\d+/) {
             $arg = $arg % @colors_by_name;
             @color = @{$colors{@colors_by_name[$arg]}};
+        } else {
+        	return;
         }
     }
-    $self->{ps_object}->{pspages} .= "@color[0] @color[1] @color[2] setrgbcolor\n";
+    return \@color;
 }
+
 
 sub set_color_by_percent {
     my $self = shift;
 	my $percent = shift;
-	my $zero_color = shift;
-	my $full_color = shift;
+    my $params = shift;
+
+	my @zero_color = (1,1,1); 	# white
+	my @full_color = (0.8,0,0); # red is the default color
+
+    if (ref($params) eq "HASH") {
+        if ($params->{"zero_color"}) {
+			@zero_color = @{$self->get_color($params->{"zero_color"})};
+        }
+        if ($params->{"full_color"}) {
+        	@full_color = @{$self->get_color($params->{"full_color"})};
+        }
+    }
 	my $scaling = ($percent/100);
-
-    # red is the default color
-	my @zero_red = (255,240,240);
-	my @full_red = (204,0,0);
-
-    if (ref($zero_color) eq "ARRAY") {
-        @zero_red = @$zero_color;
-    }
-    if (ref($full_color) eq "ARRAY") {
-        @full_red = @$full_color;
-    }
-
-	my $r = int(((@full_red[0]-@zero_red[0])*$scaling) + @zero_red[0]);
-	my $g = int(((@full_red[1]-@zero_red[1])*$scaling) + @zero_red[1]);
-	my $b = int(((@full_red[2]-@zero_red[2])*$scaling) + @zero_red[2]);
+	my $r = (((@full_color[0]-@zero_color[0])*$scaling) + @zero_color[0]);
+	my $g = (((@full_color[1]-@zero_color[1])*$scaling) + @zero_color[1]);
+	my $b = (((@full_color[2]-@zero_color[2])*$scaling) + @zero_color[2]);
 	$self->set_color([$r, $g, $b]);
-	return [$r, $g, $b];
 }
 
 sub set_font {
