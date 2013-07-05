@@ -3,6 +3,7 @@ use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
+require "bioperl_subfuncs.pl";
 require "subfuncs.pl";
 require "circlegraphs.pl";
 

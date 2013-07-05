@@ -1,10 +1,8 @@
-use Bio::SeqIO;
-use Bio::Align::Utilities qw(cat);
 use Pod::Usage;
 use File::Basename;
 use Getopt::Long;
 
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -25,7 +23,7 @@ if ($help) {
     pod2usage(-verbose => 1);
 }
 
-if ($gb_file == 0) {
+if ($gb_file eq "") {
 	if ($start==$end) {
 		pod2usage(-msg => "Need to specify either a valid start and end position or a genbank file.", -exitval => 2);
 	}
@@ -148,12 +146,6 @@ translate_fasta.pl [-fasta fa_file] [-genbank gb_file] [-outputfile output_file]
 
 =head1 OPTIONS
 
-'fasta=s' => \$fa_file,
-            'genbank|gb_file=s' => \$gb_file,
-            'outputfile=s' => \$out_file,
-            'help|?' => \$help,
-            'indexed!' => \$indexed,
-            'multiple!
   -fasta:           fasta file of aligned sequences
   -genbank|gb_file: genbank file with CDS coordinates
   -outputfile:      prefix of output files

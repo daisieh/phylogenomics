@@ -1,10 +1,9 @@
-#!/usr/bin/perl
 use strict;
 use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -81,7 +80,7 @@ __END__
 
 =head1 NAME
 
-pairwise_circle_graphs
+trim_to_ref
 
 =head1 SYNOPSIS
 

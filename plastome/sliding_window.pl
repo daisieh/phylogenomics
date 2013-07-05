@@ -2,7 +2,7 @@ use CircleGraph;
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 require "circlegraphs.pl";
 
 if (@ARGV == 0) {

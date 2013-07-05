@@ -1,10 +1,9 @@
-use Bio::SeqIO;
-use Bio::Align::Utilities qw(cat);
+use strict;
 use Pod::Usage;
 use File::Basename;
 use Getopt::Long;
 
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);

@@ -1,10 +1,7 @@
-use Bio::SeqIO;
-use Bio::Align::Utilities qw(cat);
-use Pod::Usage;
-use File::Basename;
+use strict;
 use Getopt::Long;
 
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -21,7 +18,7 @@ if ($help) {
     pod2usage(-verbose => 1);
 }
 
-my $out_fh = STDOUT;
+my $out_fh = \*STDOUT;
 if ($out_file) {
 	open $out_fh, ">", $out_file;
 }
