@@ -88,7 +88,9 @@ for (my $i=0; $i<@matrixnames; $i++) {
 
 #now, for each matrix, concatenate them to the corresponding entry in mastertaxa
 my $l = 0;
-foreach my $key ( keys %matrices ) {
+# foreach my $key ( keys %matrices ) {
+for (my $i=0; $i<@matrixnames; $i++) {
+	my $key = @matrixnames[$i];
 	my $ref = $matrices{$key};
 	$l = $l + $ref->{"length"};
 	foreach my $k (keys %{$ref}) {
