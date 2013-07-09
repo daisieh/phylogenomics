@@ -3,7 +3,7 @@ use Bio::Seq::RichSeq;
 use Bio::Align::Utilities qw(cat);
 use Bio::AlignIO;
 
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 my $usage  = "convert_file.pl in_file out_file\n";
 my $in_file   = shift or die $usage;
