@@ -168,6 +168,46 @@ sub sample_list {
     return \@samples;
 }
 
+sub get_iupac_code {
+	my $arg = shift;
+
+	my $charstr = $arg;
+	if (ref($arg) =~ /ARRAY/) {
+		$charstr = join ("",@$arg);
+	}
+	$charstr =~ s/\W//g;
+	$charstr =~ s/_//g;
+	$charstr =~ s/\s//g;
+	$charstr = uc($charstr);
+	$charstr = join ("",sort(split('',$charstr)));
+
+	if ($charstr eq "AC") {
+		return "M";
+	} elsif ($charstr eq "AG") {
+		return "R";
+	} elsif ($charstr eq "AT") {
+		return "W";
+	} elsif ($charstr eq "CG") {
+		return "S";
+	} elsif ($charstr eq "CT") {
+		return "Y";
+	} elsif ($charstr eq "GT") {
+		return "K";
+	} elsif ($charstr eq "ACG") {
+		return "V";
+	} elsif ($charstr eq "ACT") {
+		return "H";
+	} elsif ($charstr eq "AGT") {
+		return "D";
+	} elsif ($charstr eq "CGT") {
+		return "B";
+	} elsif ($charstr eq "ACGT") {
+		return "N";
+	} else {
+		return $charstr;
+	}
+}
+
 
 # must return 1 for the file overall.
 1;
