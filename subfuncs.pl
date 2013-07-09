@@ -208,6 +208,94 @@ sub get_iupac_code {
 	}
 }
 
+sub parse_fasta {
+	my $inputfile = shift(@_);
+
+	my %taxa = ();
+	open (fileIN, "$inputfile") or die "no file named $inputfile";
+
+	my $input = readline fileIN;
+	my $length = 0;
+	my $taxonlabel = "";
+	my $sequence = "";
+	while ($input ne "") {
+		if ($input =~ /^>(.+)\s*$/) {
+			$taxonlabel = $1;
+			if ($length > 0) {
+				# we are at the next taxon; push the last one onto the taxon array.
+				$taxa {"length"} = $length;
+				$length = 0;
+			}
+		} else {
+			$input =~ /^\s*(.+)\s*$/;
+			$taxa {$taxonlabel} .= $1;
+			$length += length($1);
+		}
+		$input = readline fileIN;
+	}
+
+	close (fileIN);
+	return \%taxa;
+}
+
+sub parse_nexus {
+	my $inputfile = shift(@_);
+	open (fileIN, "$inputfile") or die "no file named $inputfile";
+	my @inputs = <fileIN>;
+
+	my $input = "";
+	if ($inputs[1] eq "") {
+		$input = $inputs[0];
+		$input =~ s/\r/\n/gs;
+	} else {
+		foreach my $line (@inputs) {
+			$input .= "$line";
+		}
+	}
+	close (fileIN);
+
+	#remove comment blocks
+	$input =~ s/\[.*?\]//sg;
+
+	$input =~ /Format(.*?)\;/ig;
+	my $format = "$1";
+	$format =~ /gap=(.)/;
+	my $gapchar = $1;
+
+	#parse nexus block
+	$input =~ /Matrix(.*?)\;/isg;
+	my $matrix = "$1";
+
+	$matrix =~ /\s*?(\S+?)\s+/s;
+	my $firsttaxon = "$1";
+	my %taxa = ();
+
+	my @sections = split /$firsttaxon/, $matrix;
+	my @taxonlabels;
+	foreach my $section (@sections) {
+		$section =~ s/\s+$//s;
+		if ($section eq "") { next; }
+		$section = "$firsttaxon$section";
+		$section =~ s/\s+$/\n/s;
+		$section =~ s/\t//sg;
+		my $numtaxa = ($section =~ s/\n/\n/sg);
+
+		@taxonlabels = split /\n/, $section;
+
+		foreach my $taxonlabel (@taxonlabels) {
+			$taxonlabel =~ s/\s+(.+?)$//;
+			my $taxondata = $1;
+			$taxondata =~ s/$gapchar/-/g;
+			$taxa{ $taxonlabel } = $taxa{ $taxonlabel } . $taxondata;
+		}
+	}
+
+	my $length = length $taxa{ $taxonlabels[0] };
+	$taxa{ "length" } = $length;
+
+	return \%taxa;
+}
+
 
 # must return 1 for the file overall.
 1;
