@@ -1,12 +1,38 @@
 use strict;
 use Bio::LocatableSeq;
 use File::Temp qw/ tempfile tempdir /;
+use Getopt::Long;
+use Pod::Usage;
+use File::Basename;
 
-#take in a reference fasta file and an aligned sequence file
+require "subfuncs.pl";
 
-my $ref_file = shift @ARGV;
-my $align_file = shift @ARGV;
-my $out_file = shift @ARGV;
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
+
+my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
+
+my $ref_file = 0;
+my $align_file = 0;
+my $out_file = 0;
+my $help = 0;
+
+GetOptions ('fasta|input=s' => \$align_file,
+            'outputfile=s' => \$out_file,
+            'reference=s' => \$ref_file,
+            'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+if ($help) {
+    pod2usage(-verbose => 1);
+}
+
+unless($ref_file and $align_file and $out_file) {
+	print "hi\n";
+    pod2usage(-msg => "Must specify all options.");
+}
+
+print $runline;
 
 my @references = ();
 
@@ -88,7 +114,7 @@ sub blast_to_ref {
 	my @lines = <BLAST_FH>;
 	close BLAST_FH;
 
-	my ($query_start, $query_end, $subject_start, $subject_end) = 0;
+	my ($query_end, $subject_end) = 0;
 	my $query_seq = "";
 	my ($curr_query_start, $curr_query_seq, $curr_query_end) = 0;
 
@@ -98,7 +124,7 @@ sub blast_to_ref {
 				$query_seq .= "n" x (length($refseq) - length($query_seq));
 			}
 			$result .= "$query_seq\n>$1\n";
-			($query_start, $query_end, $subject_start, $subject_end) = 0;
+			($query_end, $subject_end) = 0;
 			$query_seq = "";
 		} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
 			$curr_query_start = $1;
@@ -119,8 +145,7 @@ sub blast_to_ref {
 				$curr_query_seq =~ /(.{length($1)}).(.*)/;
 				$curr_query_seq = "$1$2";
 			}
-			if ($query_start == 0) {
-				$query_start = $curr_query_start;
+			if ($query_end == 0) {
 				$query_end = $curr_query_end;
 				$subject_end = $curr_subject_end;
 				$query_seq = "n" x ($curr_subject_start - 1);
@@ -177,19 +202,18 @@ sub blast_to_short_ref {
 	my @lines = <BLAST_FH>;
 	close BLAST_FH;
 
-	my ($query_start, $query_end, $subject_start, $subject_end) = 0;
+	my $query_end = 0;
 	my $query_seq = "";
-	my ($curr_query_start, $curr_query_seq, $curr_query_end) = 0;
+	my ($curr_query_seq, $curr_query_end) = 0;
 	while (my $line = shift @lines) {
 		if ($line =~ /Query=\s+(.*)$/) {
 			if ($query_end> 0) {
 				$query_seq .= "n" x (length($refseq) - length($query_seq));
 			}
 			$result .= "$query_seq\n>$1\n";
-			($query_start, $query_end, $subject_start, $subject_end) = 0;
+			$query_end = 0;
 			$query_seq = "";
 		} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
-			$curr_query_start = $1;
 			$curr_query_seq = $2;
 			$curr_query_end = $3;
 		} elsif ($line =~ /Sbjct\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
@@ -201,10 +225,8 @@ sub blast_to_short_ref {
 				$curr_query_seq =~ /(.{length($1)}).(.*)/;
 				$curr_query_seq = "$1$2";
 			}
-			if ($query_start == 0) {
-				$query_start = $curr_query_start;
+			if ($query_end == 0) {
 				$query_end = $curr_query_end;
-				$subject_end = $curr_subject_end;
  				$query_seq = "n" x ($curr_subject_start - 1);
 				$query_seq .= uc($curr_query_seq);
 			}
@@ -214,3 +236,28 @@ sub blast_to_short_ref {
 	$result .= "$query_seq\n";
 	return $result;
 }
+
+
+__END__
+
+=head1 NAME
+
+blast_to_ref
+
+=head1 SYNOPSIS
+
+blast_to_ref -fasta fastafile -reference reffile -output outputfile
+
+=head1 OPTIONS
+
+  -fasta|input:     fasta file of aligned sequences.
+  -reference:       fasta file with sequences of interest.
+  -outputfile:      output file name.
+
+=head1 DESCRIPTION
+
+Takes an aligned fasta file and finds aligned regions that match reference sequence(es).
+Uses BLASTN to find regions of similarity.
+
+=cut
+
