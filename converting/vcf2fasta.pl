@@ -10,7 +10,6 @@ if (@ARGV == 0) {
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
 my $samplefile = 0;
-my $keepfiles = 0;
 my $help = 0;
 my $cov_thresh = 10;
 my $alt_thresh = 0.8;
@@ -19,7 +18,6 @@ my $outfile = "result";
 
 GetOptions ('samples|input=s' => \$samplefile,
             'outputfile:s' => \$outfile,
-            'keepfiles!' => \$keepfiles,
             'threshold:i' => \$alt_thresh,
             'minimum|coverage:i' => \$cov_thresh,
             'iupac|ambiguity' => \$keep_ambig,
@@ -122,13 +120,12 @@ vcf2fasta
 
 =head1 SYNOPSIS
 
-vcf2fasta -samplefile -output [-threshold] [--keepfiles]
+vcf2fasta -samplefile -output [-threshold]
 
 =head1 OPTIONS
 
   -samples|input|vcf:   name of sample or list of samples to convert
   -outputfile:      optional: prefix of output fasta file
-  -keepfiles:       optional: keep data files that are created (default is no)
   -threshold:		optional: threshold ratio to accept alternate allele (default is 0.8)
   -min|coverage:    optional: coverage required to call base (default is 1000)
 
