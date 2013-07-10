@@ -1,7 +1,4 @@
 require "bioperl_subfuncs.pl";
-use Bio::SeqIO;
-use PostScript::Simple;
-use Bio::Align::Utilities qw(cat);
 use Bio::Tools::Run::Phylo::PAML::Codeml;
 use File::Basename;
 use Getopt::Long;
@@ -11,9 +8,10 @@ if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
-my ($gb_file, $fa_file, $output_name) = 0;
+my ($gb_file, $fa_file, $output_name, $keepfiles) = 0;
 GetOptions ('genbank|gb=s' => \$gb_file,
             'fasta=s' => \$fa_file,
+			'keepfiles' => \$keepfiles,
             'output=s' => \$output_name) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
@@ -21,6 +19,7 @@ my @gene_alns = ();
 if ($gb_file) {
 	@gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file, 1)};
 } else {
+	$whole_aln->description("gene");
 	push @gene_alns, $whole_aln;
 }
 
@@ -36,9 +35,11 @@ truncate $formatted_file, 0;
 my $paml_exec = Bio::Tools::Run::Phylo::PAML::Codeml->new
 			   ( -params => { 'runmode' => -2, 'seqtype' => 1, 'model' => 1} );
 
-$paml_exec->save_tempfiles(1);
-print $paml_exec->tempdir() . "\n";
-
+#$paml_exec->save_tempfiles(1);
+if ($keepfiles) {
+	$paml_exec->save_tempfiles(1);
+	print "temporary files are located in " . $paml_exec->tempdir() . "\n";
+}
 
 print $total_file scalar @gene_alns . " genes in the analysis\n";
 print $total_file $whole_aln->num_sequences() . " sequences in the analysis\n\n";
