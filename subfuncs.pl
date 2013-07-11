@@ -168,20 +168,58 @@ sub sample_list {
     return \@samples;
 }
 
-sub get_iupac_code {
+sub get_allele_str {
 	my $arg = shift;
 
 	my $charstr = $arg;
 	if (ref($arg) =~ /ARRAY/) {
 		$charstr = join ("",@$arg);
 	}
+	if (length($charstr) == 1) {
+		return $charstr;
+	}
 	$charstr =~ s/\W//g;
 	$charstr =~ s/_//g;
 	$charstr =~ s/\s//g;
 	$charstr = uc($charstr);
 	$charstr = join ("",sort(split('',$charstr)));
+	return $charstr;
+}
 
-	if ($charstr eq "AC") {
+#		Genotype ordering: Ref allele is index 0, alt alleles are indexed from there.
+#		For each combination j,k, the ordering is:
+#		F(j,k) = (k*(k+1)/2)+j
+
+sub get_ordered_genotypes {
+	my $charstr = shift;
+
+	my @alleles = split('',$charstr);
+	my @genotypes = ();
+	for(my $j=0;$j<@alleles;$j++) {
+		for (my $k=$j;$k<@alleles;$k++) {
+			my $order = ($k*($k+1)/2)+$j;
+			@genotypes[$order] = @alleles[$j] . @alleles[$k];
+		}
+	}
+	return \@genotypes;
+}
+
+sub get_iupac_code {
+	my $arg = shift;
+
+	my $charstr = get_allele_str ($arg);
+	if (length($charstr) == 1) {
+		return $charstr;
+	}
+	if ($charstr eq "AA") {
+		return "A";
+	} elsif ($charstr eq "CC") {
+		return "C";
+	} elsif ($charstr eq "TT") {
+		return "T";
+	} elsif ($charstr eq "GG") {
+		return "G";
+	} elsif ($charstr eq "AC") {
 		return "M";
 	} elsif ($charstr eq "AG") {
 		return "R";
@@ -296,6 +334,76 @@ sub parse_nexus {
 	return \%taxa;
 }
 
+sub meld_matrices {
+	my $arg = shift;
+	my @inputfiles = @$arg;
+
+	my %matrices = ();
+	my $currlength = 0;
+	my @matrixnames = ();
+
+	for (my $i=0; $i< scalar(@inputfiles); $i++) {
+		my $inputfile = @inputfiles[$i];
+		push @matrixnames, $inputfile;
+		if ($inputfile =~ /\.nex/) {
+			$matrices{ $inputfile } = parse_nexus ($inputfile);
+		} elsif ($inputfile =~/\.fa/) {
+			$matrices{ $inputfile } = parse_fasta ($inputfile);
+		} else {
+			print "Couldn't parse $inputfile: not nexus or fasta format\n";
+		}
+	}
+
+	foreach my $inputfile ( keys (%matrices) ) {
+		foreach my $taxon ( keys (%{$matrices{$inputfile}})) {
+			$mastertaxa {$taxon} = "";
+			my $seq = %{$matrices{$inputfile}}->{$taxon};
+		}
+	}
+
+	#for each matrix, make a mastertaxa matrix that has missing data for the taxa with no entries in this matrix.
+	#also, add another column to the regiontable hash
+	# foreach my $key ( keys %matrices ) {
+	for (my $i=0; $i<@matrixnames; $i++) {
+		my $key = @matrixnames[$i];
+		my $ref = $matrices{$key};
+		$regiontable{"regions"} = $regiontable{"regions"} . "$key\t";
+		my %expandedmatrix = %mastertaxa;
+		foreach my $k (keys %{$ref}) {
+			#add entries from this matrix into expandedmatrix
+			$expandedmatrix{ $k } = $ref->{ $k };
+			$regiontable{$k} = $regiontable{$k} . "x\t";
+		}
+		my $total = $expandedmatrix{'length'};
+		my $starts_at = $currlength + 1;
+		$currlength = $currlength + $total;
+		$regiontable{"exclusion-sets"} = $regiontable{"exclusion-sets"} . "$starts_at" . "-" . "$currlength\t";
+		my $replacement = "-" x $total;
+		foreach my $k (keys %expandedmatrix) {
+			my $l = length($expandedmatrix{$k});
+			if ($l == 0) {
+				#if the entry in expandedmatrix is empty, fill it with blanks
+				$expandedmatrix{ $k } = "$replacement";
+				$regiontable{$k} = $regiontable{$k} . "\t";
+			}
+			$l = length($expandedmatrix{$k});
+		}
+		$matrices{$key} = \%expandedmatrix;
+	}
+
+	#now, for each matrix, concatenate them to the corresponding entry in mastertaxa
+	my $l = 0;
+	for (my $i=0; $i<@matrixnames; $i++) {
+		my $key = @matrixnames[$i];
+		my $ref = $matrices{$key};
+		$l = $l + $ref->{"length"};
+		foreach my $k (keys %{$ref}) {
+			$mastertaxa{$k} = $mastertaxa{$k} . $ref->{$k};
+		}
+	}
+	$mastertaxa{"length"} = $l;
+	return (\%mastertaxa, \%regiontable);
+}
 
 # must return 1 for the file overall.
 1;

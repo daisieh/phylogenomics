@@ -1,106 +1,41 @@
-#!/usr/bin/perl
 use strict;
+use Getopt::Long;
+use Pod::Usage;
+use File::Basename;
 require "subfuncs.pl";
-my @inputfiles;
-push @inputfiles, @ARGV;
 
-my %matrices = ();
-my %mastertaxa = ();
-my %regiontable = ();
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
+
+my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
+
+my @inputfiles = ();
+my $outname = "melded";
+my $outformat = "nex";
+my $help = 0;
+
+GetOptions ('files|input=s{2,}' => \@inputfiles,
+            'outputfile=s' => \$outname,
+            'format=s' => \$outformat,
+            'help' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+if ($help) {
+    pod2usage(-verbose => 1);
+}
+
+print $runline;
+
+my ($res1, $res2) = meld_matrices(\@inputfiles);
+my %mastertaxa = %{$res1};
+my %regiontable = %{$res2};
+
+my $ntax = keys %mastertaxa;
+my $nchar = $mastertaxa{"length"};
+delete $mastertaxa{"length"};
+
 $regiontable{ "regions" } = "";
 $regiontable{ "exclusion-sets" } = "";
-my $currlength = 0;
-my $outname = "melded";
-my $outformat = "nexus";
-my @matrixnames = ();
-
-if ((@ARGV == 0) || (@ARGV[1] =~ /-h/) || (@ARGV[1] =~ /-u/)) {
-	print "meld.pl [-output outfile] [-format nex|fasta] inputfile1 inputfile2...\n";
-	print qq{
-Melds aligned sequence files of either fasta or nexus format.
-Sequences with the same names will be concatenated; sequences missing
-from any particular alignment will be concatenated as missing data.
-A tab-delimited table of the aligned regions and the sequences present
-in each will be output to outfile_regions.tab.
-
-The program defaults to output into melded.nex and melded_regions.tab.
-};
-	exit;
-}
-
-
-for (my $i=0; $i< scalar(@inputfiles); $i++) {
-	my $inputfile = @inputfiles[$i];
-	if ($inputfile eq "-output") {
-		$outname = @inputfiles[$i+1];
-		$i++;
-		next;
-	} elsif ($inputfile eq "-format") {
-		$outformat = @inputfiles[$i+1];
-		$i++;
-		next;
-	}
-
-	push @matrixnames, $inputfile;
-	if ($inputfile =~ /\.nex/) {
-		$matrices{ $inputfile } = parse_nexus $inputfile;
-	} elsif ($inputfile =~/\.fa/) {
-		$matrices{ $inputfile } = parse_fasta $inputfile;
-	} else {
-		print "Couldn't parse $inputfile: not nexus or fasta format\n";
-	}
-	while ( my ($key, $value) = each(%{$matrices{ $inputfile }}) ) {
-        $mastertaxa{ $key } = "";
-    }
-}
-
-#for each matrix, make a mastertaxa matrix that has missing data for the taxa with no entries in this matrix.
-#also, add another column to the regiontable hash
-# foreach my $key ( keys %matrices ) {
-for (my $i=0; $i<@matrixnames; $i++) {
-	my $key = @matrixnames[$i];
-	my $ref = $matrices{$key};
-	print "adding $key...\n";
-	$regiontable{"regions"} = $regiontable{"regions"} . "$key\t";
-	my %expandedmatrix = %mastertaxa;
-	foreach my $k (keys %{$ref}) {
-		#add entries from this matrix into expandedmatrix
-		$expandedmatrix{ $k } = $ref->{ $k };
-		$regiontable{$k} = $regiontable{$k} . "x\t";
-	}
-	my $total = $expandedmatrix{'length'};
-	my $starts_at = $currlength + 1;
-	$currlength = $currlength + $total;
-	$regiontable{"exclusion-sets"} = $regiontable{"exclusion-sets"} . "$starts_at" . "-" . "$currlength\t";
-	my $replacement = "-" x $total;
-	foreach my $k (keys %expandedmatrix) {
-		my $l = length($expandedmatrix{$k});
-		if ($l == 0) {
-			#if the entry in expandedmatrix is empty, fill it with blanks
-			$expandedmatrix{ $k } = "$replacement";
-			$regiontable{$k} = $regiontable{$k} . "\t";
-		}
-		$l = length($expandedmatrix{$k});
-	}
-	$matrices{$key} = \%expandedmatrix;
-}
-
-#now, for each matrix, concatenate them to the corresponding entry in mastertaxa
-my $l = 0;
-# foreach my $key ( keys %matrices ) {
-for (my $i=0; $i<@matrixnames; $i++) {
-	my $key = @matrixnames[$i];
-	my $ref = $matrices{$key};
-	$l = $l + $ref->{"length"};
-	foreach my $k (keys %{$ref}) {
-		$mastertaxa{$k} = $mastertaxa{$k} . $ref->{$k};
-	}
-}
-
-delete $mastertaxa{"length"};
-delete $regiontable{"length"};
-my $ntax = keys %mastertaxa;
-my $nchar = $l;
 
 open (fileOUT, ">$outname"."_regions.tab") or die "couldn't make $outname"."_regions.tab\n";
 truncate fileOUT, 0;
@@ -138,5 +73,34 @@ if ($outformat =~ /fa/) {
 
 print "Melded matrix is in $outname".".$outformat; summary of regions is in $outname"."_regions.tab\n";
 
+
+
+__END__
+
+=head1 NAME
+
+meld
+
+=head1 SYNOPSIS
+
+meld -input [at least two files to meld] [-output outfile] [-format nex|fasta]
+
+=head1 OPTIONS
+
+    -files|input:   list of files to meld
+	-output:        optional: name of output file, default is "melded"
+	-format:		optional: format of output, default is nexus.
+
+=head1 DESCRIPTION
+
+Melds aligned sequence files of either fasta or nexus format.
+Sequences with the same names will be concatenated; sequences missing
+from any particular alignment will be concatenated as missing data.
+A tab-delimited table of the aligned regions and the sequences present
+in each will be output to outfile_regions.tab.
+
+The program defaults to output into melded.nex and melded_regions.tab.
+
+=cut
 
 
