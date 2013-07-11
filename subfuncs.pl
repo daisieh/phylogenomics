@@ -357,7 +357,6 @@ sub meld_matrices {
 	foreach my $inputfile ( keys (%matrices) ) {
 		foreach my $taxon ( keys (%{$matrices{$inputfile}})) {
 			$mastertaxa {$taxon} = "";
-			my $seq = %{$matrices{$inputfile}}->{$taxon};
 		}
 	}
 
