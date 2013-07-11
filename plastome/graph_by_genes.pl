@@ -1,4 +1,4 @@
-require "subfuncs.pl";
+# require "bioperl_subfuncs.pl";
 
 use CircleGraph;
 
@@ -42,6 +42,7 @@ for (my $i = 0; $i < @inputs; $i++) {
  	my $radius = $x->inner_radius + 20;
 
  	$x->set_color_by_percent((1-$value)*100);
+
 	$x->draw_filled_arc ($radius, $start_angle, $stop_angle);
 
 	# label this element

@@ -3,7 +3,7 @@ use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 require "circlegraphs.pl";
 
 
@@ -154,14 +154,9 @@ map_regions
 =head1 SYNOPSIS
 
 map_regions -input -output [-genbank] [-labels] [--keepfiles]
-GetOptions ('input=s' => \$infile,
-            'outputfile=s' => \$outfile,
-            'genbank|gb:s' => \$gb_file,
-            'labels:s' => \$labelfile,
-            'keepfiles!' => \$keepfiles,
-            'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 =head1 OPTIONS
+
   -input:           list of chromosomes and regions to be mapped along the plastome
   -outputfile:      prefix of output files
   -genbank|gb:      optional: genbank file to generate a map along the graph

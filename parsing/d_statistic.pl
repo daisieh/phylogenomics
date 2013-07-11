@@ -1,14 +1,12 @@
-use Bio::SeqIO;
-use Bio::Align::Utilities qw(cat);
+use strict;
 use Pod::Usage;
 use File::Basename;
 use Getopt::Long;
 
-require "subfuncs.pl";
-
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
+my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
 my ($fastafile, $out_file, $help, $consensus, $iupac) = 0;
 GetOptions ('fasta=s' => \$fastafile,
@@ -20,8 +18,9 @@ GetOptions ('fasta=s' => \$fastafile,
 if ($help) {
     pod2usage(-verbose => 1);
 }
+print $runline;
 
-my $out_fh = STDOUT;
+my $out_fh = \*STDOUT;
 if ($out_file) {
 	open $out_fh, ">", $out_file;
 }
@@ -73,36 +72,3 @@ for (my $i=0; $i<$aln_length; $i++) {
 	}
 }
 	print $out_fh "abba = $abba, baba = $baba, compared = $compared\n";
-# my $fa_aln = make_aln_from_fasta_file ($fastafile, 0);
-
-# my $str = $fa_aln->consensus_iupac();
-
-# my $aln_length = $fa_aln->length();
-# for (my $i=1; $i<=$aln_length; $i++) {
-# 	$str =~ s/^(.)//;
-# 	my $char = $1;
-# 	if ($char !~ m/[agctAGCT-]/) {
-# 		if ($iupac) {
-#
-# 		} else {
-# 			$char =~ s/M/A\/C/i;
-# 			$char =~ s/R/A\/G/i;
-# 			$char =~ s/W/A\/T/i;
-# 			$char =~ s/S/C\/G/i;
-# 			$char =~ s/Y/C\/T/i;
-# 			$char =~ s/K/G\/T/i;
-# 			$char =~ s/V/A\/C\/G/i;
-# 			$char =~ s/H/A\/C\/T/i;
-# 			$char =~ s/D/A\/G\/T/i;
-# 			$char =~ s/B/C\/G\/T/i;
-# 			$char =~ s/N/A\/C\/G\/T/i;
-# 		}
-# 	} else {
-# 		$char = "";
-# 	}
-# 	print $out_fh "$i\t$char\n";
-# }
-#
-# if ($out_file) {
-# 	close $out_fh;
-# }

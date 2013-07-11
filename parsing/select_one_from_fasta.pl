@@ -1,12 +1,8 @@
-#!/usr/bin/perl
 use strict;
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
-use Bio::SeqIO;
-use Bio::Seq;
-use Bio::Align::Utilities qw(cat);
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -58,24 +54,20 @@ __END__
 
 =head1 NAME
 
-slice_fasta_file
+select_one_from_fasta
 
 =head1 SYNOPSIS
 
-slice_fasta_file [-fasta fa_file] [-genbank gb_file | -slices slice_file | -start -end] [-outputfile output_file]
+select_one_from_fasta [-fasta fa_file] [-outputfile output_file] [-sequence seq_name]
 
 =head1 OPTIONS
 
   -fasta:           fasta file of aligned sequences
-  -genbank|gb_file: genbank file with CDS coordinates
-  -start:           start position of single slice
-  -end:             end position of single slice
   -outputfile:      output file name
+  -sequence:        name of sequence to be selected.
 
 =head1 DESCRIPTION
 
-Given a fasta file of aligned sequences and a corresponding genbank file
-with the CDS coordinates, will create a fasta file with each
-CDS corresponding to a separate sequence block.
+Finds a single sequence from a fasta file and outputs to a separate file.
 
 =cut

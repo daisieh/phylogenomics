@@ -1,10 +1,8 @@
-use Bio::SeqIO;
-use Bio::Align::Utilities qw(cat);
-use Pod::Usage;
-use File::Basename;
+use strict;
 use Getopt::Long;
+use Pod::Usage;
 
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -21,7 +19,7 @@ if ($help) {
     pod2usage(-verbose => 1);
 }
 
-my $out_fh = STDOUT;
+my $out_fh = \*STDOUT;
 if ($out_file) {
 	open $out_fh, ">", $out_file;
 }
@@ -63,3 +61,29 @@ if ($consensus) {
 if ($out_file) {
 	close $out_fh;
 }
+
+__END__
+
+=head1 NAME
+
+find_polymorphisms
+
+=head1 SYNOPSIS
+
+find_polymorphisms -fasta fastafile [-output outputfile] [-iupac] [-consensus]
+
+=head1 OPTIONS
+
+  -fasta:       input aligned sequences
+  -outputfile:  output file name
+  -iupac:		optional: if present, use iupac ambiguity codes in output table
+  -consensus:   optional: if present, output as fasta-style consensus sequence.
+                    Otherwise, tab-delimited table.
+
+=head1 DESCRIPTION
+
+Generates either a fasta consensus sequence or a tab-delimited table of polymorphisms
+from an aligned fasta file.
+
+=cut
+

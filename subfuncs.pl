@@ -1,294 +1,3 @@
-use Bio::AlignIO;
-use Bio::SeqIO;
-use Bio::Align::Utilities qw(cat);
-
-=head1
-
-B<Arbitrary collection of helper subfunctions that don't have another home.>
-
-=cut
-
-
-=head1
-
-B<String $nexus_str convert_aln_to_nexus ( SimpleAlign $aln )>
-
-Takes a SimpleAlign object and returns a NEXUS-formatted string representing the alignment.
-
-=cut
-
-sub convert_aln_to_nexus {
-	my $aln = shift;
-	my $blocksize=2000;
-	my $nexblock = "";
-	my $result = "";
-	my $ntax = 0;
-	my $nchar = 1;
-	my $i = 1;
-	my $flag = 1;
-	my $len;
-	while ($flag) {
-		$ntax=0;
-		foreach my $seq ( $aln->each_seq()) {
-			$len = $seq->length;
-			if ($i > $len - $blocksize) { $flag = 0; $blocksize = $len - $i + 1;}
-			$nexblock .= "" . $seq->display_name . "\t";
-			$nchar = length($seq->seq());
-			my $seq_str = $seq->subseq($i, $i+$blocksize-1);
-			$nexblock .= "$seq_str\n";
-			$ntax++;
-		}
-		$nexblock .= "\n";
-		$i += $blocksize;
-	}
-	$result .= "#NEXUS\n\nBegin DATA;\nDimensions ntax=$ntax nchar=$nchar;\n";
-	$result .= "Format datatype=dna gap=- interleave=yes;\n";
- 	$result .= "Matrix\n$nexblock\n;\nEnd;\n";
-
-	return $result;
-}
-
-
-=head1
-
-B<String $genes_str get_locations_from_genbank_file ( String $genbank_file, <optional> String $type )>
-
-Takes a genbank-formatted file and returns a tab-delimited list of genes and positions.
-The final entry in the list will be the size of the source genbank file.
-
-$genbank_file is the name of the genbank file to parse
-$type is the tag of interest (will be "gene" if this is not specified)
-
-=cut
-
-sub get_locations_from_genbank_file {
-    my $gb_file = shift;
-    my $type = shift;
-    my @gene_alns;
-
-    # default type is "gene"
-    unless ($type) { $type = "gene"; }
-
-    my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
-    my $seq_object = $seqio_object->next_seq;
-    my $source_start, $source_end;
-
-    my $result_str = "";
-    while ($seq_object) {
-        for my $feat_object ($seq_object->get_SeqFeatures) {
-            if ($feat_object->primary_tag eq "source") {
-                my @locations = $feat_object->location->each_Location;
-                $source_start = @locations[0]->start;
-                $source_end = @locations[0]->end;
-            }
-            if ($feat_object->primary_tag eq $type) {
-                my $name = main_name_for_gb_feature($feat_object, 0);
-                my @locations = $feat_object->location->each_Location;
-                my $exon = 1;
-                foreach my $loc (@locations) {
-                    my $exon_name = $name . "_" . $exon++;
-                    my $start = $loc->start;
-                    my $end = $loc->end;
-                    if (@locations == 1) { $exon_name = $name; }
-                    $result_str .= "$exon_name\t$start\t$end\n";
-                }
-            }
-        }
-        $seq_object = $seqio_object->next_seq;
-    }
-    $result_str .= "source\t$source_start\t$source_end\n";
-    return "$result_str";
-}
-
-=head1
-
-B<SimpleAlign @gene_alns parse_aln_into_genes ( SimpleAlign $aln, String $genbank_file, <optional> String $type )>
-
-Parses a SimpleAlign into an array of SimpleAligns, using a genbank-formatted file to determine gene positions.
-The exons will be rev-comped if necessary.
-
-$genbank_file is the name of the genbank file to parse
-$type is the tag of interest (will be "gene" if this is not specified)
-
-=cut
-
-sub parse_aln_into_genes {
-	my $whole_aln = shift;
-    my $gb_file = shift;
-    my $remove_stop = shift;
-
-    my @gene_alns;
-
-    my $type = "gene";
-
-    my $gb_seqio = Bio::SeqIO->new(-file => $gb_file);
-    my $start, $end;
-
-	while (my $seq_object = $gb_seqio->next_seq) {
-		for my $feat_object ($seq_object->get_SeqFeatures) {
-			if ($feat_object->primary_tag eq $type) {
-				my $name = main_name_for_gb_feature($feat_object);
-				my @locations = $feat_object->location->each_Location;
-				my $cat_aln = 0;
-				my $strand = 0;
-				foreach $loc (@locations) {
-					$strand = $loc->strand;
-					my $start = $loc->start;
-					my $end = $loc->end;
-					my $curr_slice = $whole_aln->slice($start, $end,1);
-					if ($cat_aln == 0) {
-						$cat_aln = $curr_slice;
-					} else {
-						$cat_aln = cat($cat_aln, $curr_slice);
-					}
-				}
-				if ($strand < 0) {
-					# must flip each seq in the curr_slice
-					my $flipped_aln = Bio::SimpleAlign->new();
-					foreach $seq ( $cat_aln->each_seq() ) {
-						$seq = $seq->revcom();
-						$flipped_aln->add_seq($seq);
-					}
-					$cat_aln = $flipped_aln;
-				}
-				if ($remove_stop) {
-					$cat_aln = $cat_aln->slice(1, $cat_aln->length()-3,1);
-				}
-				$cat_aln->description($name);
-				push @gene_alns, $cat_aln;
-			}
-		}
-	}
-    return \@gene_alns;
-}
-
-
-
-=head1
-
-B<Int $percent_diff perc_diff_partition ( SimpleAlign $aln, Int $start, Int $end )>
-
-Finds the overall percentage difference for the specified region of the SimpleAlign object.
-
-=cut
-
-sub perc_diff_partition {
-	my $aln = shift;
-	my $start_pos = shift;
-	my $stop_pos = shift;
-	my $check_for_num_seqs = shift;
-	my $delete_gaps = shift;
-
-	if ($stop_pos < $aln->length()) {
-		my $aln_slice = $aln->slice($start_pos, $stop_pos, 1);
-
-		# remove any sequences with gaps
-		if ($delete_gaps) {
-			foreach my $seq ($aln_slice->each_seq()) {
-				my $seqstr = $seq->seq();
-				if ($seqstr =~ /-|n|N|\?/) {
-					$aln_slice->remove_seq($seq);
-				}
-			}
-		}
-
-		# check to see if one of the sequences was excluded.
-		if ($aln->num_sequences != $aln_slice->num_sequences) {
-            # if there were only two seqs in the first place, there won't be a valid number here.
-            if ($aln->num_sequences == 2) {
-                return -1;
-            } else {
-                my $p = $aln_slice->percentage_identity();
-                if ($check_for_num_seqs) {
-                    # return the negative of the perc identity to denote that a seq was excluded
-#                     return -(100-$p);
-		return -20000;
-                } else {
-                    return 100-$p;
-                }
-            }
-        } else {
-            my $p = $aln_slice->percentage_identity();
-            return 100-$p;
-        }
-	} else {
-		return -200;
-	}
-}
-
-
-=head1
-
-B<SimpleAlign $fa_aln make_aln_from_fasta_file ( String $fasta_file )>
-
-Takes a fasta-formatted file and returns a SimpleAlign object.
-The sequences in the fasta file must already be aligned.
-
-=cut
-
-sub make_aln_from_fasta_file {
-	my $fa_file = shift;
-	my $flush = shift;
-	my $min_length = 0;
-
-	if ($flush eq "") { # unless otherwise specified, return a flush alignment
-		$flush = 1;
-	}
-
-	my $inseq = Bio::SeqIO->new(-file => "<$fa_file", -format => "fasta");
-	my $newaln = Bio::SimpleAlign->new();
-
-	my $seq;
-	eval {$seq = $inseq->next_seq;} or die "file not in fasta format.\n";
-	$min_length = $seq->length();
-	while ($seq ne "") {
-		my $name = $seq->display_name;
-		#remove weird chars, file suffixes
-		$name =~ s/(.*?)\..*/$1/;
- 		my $outseq = Bio::LocatableSeq->new(-seq => $seq->seq(), -id => $name);
- 		$newaln->add_seq ($outseq);
- 		if ($min_length > $seq->length() ) {
- 			$min_length = $seq->length();
- 		}
- 		$seq = $inseq->next_seq;
-	}
-
-	if ($flush) {
-		my $flush_aln = $newaln->slice(1,$min_length,1);
-		return $flush_aln;
-	}
-	return $newaln;
-}
-
-
-=head1
-
-B<String $name main_name_for_gb_feature ( SeqFeatureI $feature )>
-
-Finds the main name for the given SeqFeatureI from a BioPerl-parsed Genbank object.
-
-=cut
-
-sub main_name_for_gb_feature {
-	my $feat = shift;
-	my $search_others = shift;
-	my @names;
-	my $curr_name = "";
-
-	if ($feat->has_tag('gene')) {
-        @names = $feat->get_tag_values('gene');
-		$curr_name = @names[0];
-	}
-	if ($search_others) {
-		if ($feat->has_tag('locus_tag')) {
-			@names = $feat->get_tag_values('locus_tag');
-			$curr_name = @names[0];
-		}
-	}
-	return $curr_name;
-}
-
-
 =head1
 
 B<(String $time, String $date) timestamp ()>
@@ -398,67 +107,6 @@ sub combine_files {
 
 =head1
 
-B<@SimpleAlign slice_fasta_to_exons ( String $fa_file, String $gb_file )>
-
-Given a fasta file of aligned sequences and a corresponding genbank file
-with the CDS coordinates, returns an array of SimpleAligns corresponding to each CDS.
-
-$fa_file:   fasta file of aligned sequences
-$gb_file:   genbank file with CDS coordinates
-
-=cut
-
-sub slice_fasta_to_exons {
-    my $fa_file = shift;
-    my $gb_file = shift;
-    return slice_fasta_from_genbank_file ($fa_file, $gb_file, "CDS");
-}
-
-=head1
-
-B<@SimpleAlign slice_fasta_from_genbank_file ( String $fa_file, String $gb_file, String $type )>
-
-Given a fasta file of aligned sequences and a corresponding genbank file
-with locus coordinates, returns an array of SimpleAligns corresponding to each locus.
-
-$fa_file:   fasta file of aligned sequences
-$gb_file:   genbank file with locus coordinates
-$type:  locus type from genbank file (default is "gene")
-
-=cut
-
-sub slice_fasta_from_genbank_file {
-    my $fa_file = shift;
-    my $gb_file = shift;
-    my $type = shift;
-
-    unless ($type) { $type = "gene"; }
-
-    my $whole_aln = make_aln_from_fasta_file ($fa_file);
-    my @gene_alns;
-
-    my $result_str = get_locations_from_genbank_file ($gb_file, $type);
-    my @exons = split (/\n/,$result_str);
-
-    # we don't need the last line; it just says the size of the gb source sequence
-    while ({pop @exons} =~ /source/) {
-    }
-
-    foreach my $exon (@exons) {
-        $exon =~ /(.+?)\t(.+?)\t(.+)\s*.*/;
-        my $name = $1;
-        my $start = $2;
-        my $end = $3;
-        my $curr_slice = $whole_aln->slice($start, $end, 1);
-        $curr_slice->description($name);
-        push @gene_alns, $curr_slice;
-    }
-
-	return \@gene_alns;
-}
-
-=head1
-
 B<Hashref make_label_lookup ( String $labelfile )>
 
 Given a tab-delimited file of sample ids and human-readable labels, returns
@@ -520,6 +168,241 @@ sub sample_list {
     return \@samples;
 }
 
+sub get_allele_str {
+	my $arg = shift;
+
+	my $charstr = $arg;
+	if (ref($arg) =~ /ARRAY/) {
+		$charstr = join ("",@$arg);
+	}
+	if (length($charstr) == 1) {
+		return $charstr;
+	}
+	$charstr =~ s/\W//g;
+	$charstr =~ s/_//g;
+	$charstr =~ s/\s//g;
+	$charstr = uc($charstr);
+	$charstr = join ("",sort(split('',$charstr)));
+	return $charstr;
+}
+
+#		Genotype ordering: Ref allele is index 0, alt alleles are indexed from there.
+#		For each combination j,k, the ordering is:
+#		F(j,k) = (k*(k+1)/2)+j
+
+sub get_ordered_genotypes {
+	my $charstr = shift;
+
+	my @alleles = split('',$charstr);
+	my @genotypes = ();
+	for(my $j=0;$j<@alleles;$j++) {
+		for (my $k=$j;$k<@alleles;$k++) {
+			my $order = ($k*($k+1)/2)+$j;
+			@genotypes[$order] = @alleles[$j] . @alleles[$k];
+		}
+	}
+	return \@genotypes;
+}
+
+sub get_iupac_code {
+	my $arg = shift;
+
+	my $charstr = get_allele_str ($arg);
+	if (length($charstr) == 1) {
+		return $charstr;
+	}
+	if ($charstr eq "AA") {
+		return "A";
+	} elsif ($charstr eq "CC") {
+		return "C";
+	} elsif ($charstr eq "TT") {
+		return "T";
+	} elsif ($charstr eq "GG") {
+		return "G";
+	} elsif ($charstr eq "AC") {
+		return "M";
+	} elsif ($charstr eq "AG") {
+		return "R";
+	} elsif ($charstr eq "AT") {
+		return "W";
+	} elsif ($charstr eq "CG") {
+		return "S";
+	} elsif ($charstr eq "CT") {
+		return "Y";
+	} elsif ($charstr eq "GT") {
+		return "K";
+	} elsif ($charstr eq "ACG") {
+		return "V";
+	} elsif ($charstr eq "ACT") {
+		return "H";
+	} elsif ($charstr eq "AGT") {
+		return "D";
+	} elsif ($charstr eq "CGT") {
+		return "B";
+	} elsif ($charstr eq "ACGT") {
+		return "N";
+	} else {
+		return $charstr;
+	}
+}
+
+sub parse_fasta {
+	my $inputfile = shift(@_);
+
+	my %taxa = ();
+	open (fileIN, "$inputfile") or die "no file named $inputfile";
+
+	my $input = readline fileIN;
+	my $length = 0;
+	my $taxonlabel = "";
+	my $sequence = "";
+	while ($input ne "") {
+		if ($input =~ /^>(.+)\s*$/) {
+			$taxonlabel = $1;
+			if ($length > 0) {
+				# we are at the next taxon; push the last one onto the taxon array.
+				$taxa {"length"} = $length;
+				$length = 0;
+			}
+		} else {
+			$input =~ /^\s*(.+)\s*$/;
+			$taxa {$taxonlabel} .= $1;
+			$length += length($1);
+		}
+		$input = readline fileIN;
+	}
+
+	close (fileIN);
+	return \%taxa;
+}
+
+sub parse_nexus {
+	my $inputfile = shift(@_);
+	open (fileIN, "$inputfile") or die "no file named $inputfile";
+	my @inputs = <fileIN>;
+
+	my $input = "";
+	if ($inputs[1] eq "") {
+		$input = $inputs[0];
+		$input =~ s/\r/\n/gs;
+	} else {
+		foreach my $line (@inputs) {
+			$input .= "$line";
+		}
+	}
+	close (fileIN);
+
+	#remove comment blocks
+	$input =~ s/\[.*?\]//sg;
+
+	$input =~ /Format(.*?)\;/ig;
+	my $format = "$1";
+	$format =~ /gap=(.)/;
+	my $gapchar = $1;
+
+	#parse nexus block
+	$input =~ /Matrix(.*?)\;/isg;
+	my $matrix = "$1";
+
+	$matrix =~ /\s*?(\S+?)\s+/s;
+	my $firsttaxon = "$1";
+	my %taxa = ();
+
+	my @sections = split /$firsttaxon/, $matrix;
+	my @taxonlabels;
+	foreach my $section (@sections) {
+		$section =~ s/\s+$//s;
+		if ($section eq "") { next; }
+		$section = "$firsttaxon$section";
+		$section =~ s/\s+$/\n/s;
+		$section =~ s/\t//sg;
+		my $numtaxa = ($section =~ s/\n/\n/sg);
+
+		@taxonlabels = split /\n/, $section;
+
+		foreach my $taxonlabel (@taxonlabels) {
+			$taxonlabel =~ s/\s+(.+?)$//;
+			my $taxondata = $1;
+			$taxondata =~ s/$gapchar/-/g;
+			$taxa{ $taxonlabel } = $taxa{ $taxonlabel } . $taxondata;
+		}
+	}
+
+	my $length = length $taxa{ $taxonlabels[0] };
+	$taxa{ "length" } = $length;
+
+	return \%taxa;
+}
+
+sub meld_matrices {
+	my $arg = shift;
+	my @inputfiles = @$arg;
+
+	my %matrices = ();
+	my $currlength = 0;
+	my @matrixnames = ();
+
+	for (my $i=0; $i< scalar(@inputfiles); $i++) {
+		my $inputfile = @inputfiles[$i];
+		push @matrixnames, $inputfile;
+		if ($inputfile =~ /\.nex/) {
+			$matrices{ $inputfile } = parse_nexus ($inputfile);
+		} elsif ($inputfile =~/\.fa/) {
+			$matrices{ $inputfile } = parse_fasta ($inputfile);
+		} else {
+			print "Couldn't parse $inputfile: not nexus or fasta format\n";
+		}
+	}
+
+	foreach my $inputfile ( keys (%matrices) ) {
+		foreach my $taxon ( keys (%{$matrices{$inputfile}})) {
+			$mastertaxa {$taxon} = "";
+		}
+	}
+
+	#for each matrix, make a mastertaxa matrix that has missing data for the taxa with no entries in this matrix.
+	#also, add another column to the regiontable hash
+	# foreach my $key ( keys %matrices ) {
+	for (my $i=0; $i<@matrixnames; $i++) {
+		my $key = @matrixnames[$i];
+		my $ref = $matrices{$key};
+		$regiontable{"regions"} = $regiontable{"regions"} . "$key\t";
+		my %expandedmatrix = %mastertaxa;
+		foreach my $k (keys %{$ref}) {
+			#add entries from this matrix into expandedmatrix
+			$expandedmatrix{ $k } = $ref->{ $k };
+			$regiontable{$k} = $regiontable{$k} . "x\t";
+		}
+		my $total = $expandedmatrix{'length'};
+		my $starts_at = $currlength + 1;
+		$currlength = $currlength + $total;
+		$regiontable{"exclusion-sets"} = $regiontable{"exclusion-sets"} . "$starts_at" . "-" . "$currlength\t";
+		my $replacement = "-" x $total;
+		foreach my $k (keys %expandedmatrix) {
+			my $l = length($expandedmatrix{$k});
+			if ($l == 0) {
+				#if the entry in expandedmatrix is empty, fill it with blanks
+				$expandedmatrix{ $k } = "$replacement";
+				$regiontable{$k} = $regiontable{$k} . "\t";
+			}
+			$l = length($expandedmatrix{$k});
+		}
+		$matrices{$key} = \%expandedmatrix;
+	}
+
+	#now, for each matrix, concatenate them to the corresponding entry in mastertaxa
+	my $l = 0;
+	for (my $i=0; $i<@matrixnames; $i++) {
+		my $key = @matrixnames[$i];
+		my $ref = $matrices{$key};
+		$l = $l + $ref->{"length"};
+		foreach my $k (keys %{$ref}) {
+			$mastertaxa{$k} = $mastertaxa{$k} . $ref->{$k};
+		}
+	}
+	$mastertaxa{"length"} = $l;
+	return (\%mastertaxa, \%regiontable);
+}
 
 # must return 1 for the file overall.
 1;

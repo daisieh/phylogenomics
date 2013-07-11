@@ -8,6 +8,8 @@ if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
+my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
+
 my $out_file = 0;
 my $datafile = 0;
 my $plastid_name = "";
@@ -35,7 +37,7 @@ if (($out_file eq "") or ($datafile eq "") or ($circle_size == 0)) {
     pod2usage(-msg => "Need to specify output file ($out_file), input file ($datafile), and plastome size ($circle_size).", -exitval => 2);
 }
 
-print "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
+print $runline;
 
 my @inputs = ();
 my @fwd_strand = ();

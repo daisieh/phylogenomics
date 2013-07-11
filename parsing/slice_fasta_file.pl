@@ -1,12 +1,8 @@
-#!/usr/bin/perl
 use strict;
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
-use Bio::SeqIO;
-use Bio::Seq;
-use Bio::Align::Utilities qw(cat);
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);

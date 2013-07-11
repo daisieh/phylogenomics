@@ -1,10 +1,8 @@
-#!/usr/bin/perl
 use strict;
 use File::Basename;
-use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
-require "subfuncs.pl";
+require "bioperl_subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -15,12 +13,10 @@ my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 my ($fastafile, $outfile, $reference, $ref_seq) = 0;
 my $window_size = 1000;
 my $help = 0;
-my $keepfiles = 0;
 
 GetOptions ('fasta:s' => \$fastafile,
             'outputfile=s' => \$outfile,
             'reference:s' => \$reference,
-            'keepfiles!' => \$keepfiles,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -81,17 +77,16 @@ __END__
 
 =head1 NAME
 
-pairwise_circle_graphs
+trim_to_ref
 
 =head1 SYNOPSIS
 
-trim_to_ref -fasta -output [-reference] [--keepfiles]
+trim_to_ref -fasta -output [-reference]
 
 =head1 OPTIONS
   -fasta:           fasta file of aligned sequences
   -outputfile:      prefix of output files
   -reference:       optional: name of sequence to be used as reference (default is first seq)
-  --keepfiles:		optional: keep temp files (default is no)
 
 =head1 DESCRIPTION
 

@@ -2,7 +2,6 @@ use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
-require "subfuncs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
