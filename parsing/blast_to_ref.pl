@@ -18,11 +18,13 @@ my $align_file = 0;
 my $out_file = 0;
 my $help = 0;
 my $blast_file = "";
+my $evalue = 10;
 
 GetOptions ('fasta|input=s' => \$align_file,
             'outputfile=s' => \$out_file,
             'reference=s' => \$ref_file,
             'blastfile=s' => \$blast_file,
+            'evalue=f' => \$evalue,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -62,7 +64,7 @@ my @result_files = ();
 foreach my $refseq (@references) {
 	my ($fh, $ref_result_file) = tempfile(UNLINK => 1, SUFFIX => ".fasta");
 	print $fh ">$refid\n$refseq";
-	print $fh blast_to_ref($align_file, $refseq, $blast_file);
+	print $fh blast_to_ref($align_file, $refseq, $blast_file, $evalue);
 	close $fh;
 	push @result_files, $ref_result_file;
 }
@@ -94,10 +96,11 @@ sub blast_to_ref {
 	my $align_file = shift;
 	my $refseq = shift;
 	my $blastfile = shift;
+	my $evalue = shift;
 
-	my $blast_task = "";
+	my $blast_task = "-evalue $evalue ";
 	if (length ($refseq) < 50) {
-		$blast_task = "-task blastn-short";
+		$blast_task .= "-task blastn-short";
 	}
 
 	my (undef, $tempreffile) = tempfile(UNLINK => 1);
@@ -137,10 +140,36 @@ sub blast_to_ref {
 	my ($query_end, $subject_end) = 0;
 	my ($curr_query_start, $curr_query_seq, $curr_query_end) = 0;
 
-	if ($blast_task eq "") {
+	if ($blast_task =~ /-task blastn-short/) {
 		while (my $line = shift @lines) {
 			if ($line =~ /Query=\s+(.*)$/) {
-				if ($query_end> 0) {
+				if ($query_seq ne "") {
+					$query_seq .= "n" x (length($refseq) - length($query_seq));
+				}
+				$result .= "$query_seq\n>$1\n";
+				$query_seq = "";
+			} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
+				$curr_query_seq = $2;
+				$curr_query_end = $3;
+			} elsif ($line =~ /Sbjct\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
+				my $curr_subject_start = $1;
+				my $curr_subject_seq = $2;
+				my $curr_subject_end = $3;
+				while ($curr_subject_seq =~ /(.*)-(.*)/) {
+					$curr_subject_seq = "$1$2";
+					$curr_query_seq =~ /(.{length($1)}).(.*)/;
+					$curr_query_seq = "$1$2";
+				}
+				if ($query_seq eq "") {
+					$query_seq = "n" x ($curr_subject_start - 1);
+					$query_seq .= uc($curr_query_seq);
+				}
+			}
+		}
+	} else {
+		while (my $line = shift @lines) {
+			if ($line =~ /Query=\s+(.*)$/) {
+				if ($query_seq ne "") {
 					$query_seq .= "n" x (length($refseq) - length($query_seq));
 				}
 				$result .= "$query_seq\n>$1\n";
@@ -165,49 +194,17 @@ sub blast_to_ref {
 					$curr_query_seq =~ /(.{length($1)}).(.*)/;
 					$curr_query_seq = "$1$2";
 				}
-				if ($query_end == 0) {
-					$query_end = $curr_query_end;
-					$subject_end = $curr_subject_end;
+				if ($query_seq eq "") {
 					$query_seq = "n" x ($curr_subject_start - 1);
 					$query_seq .= uc($curr_query_seq);
 				} elsif (($query_end + 1) == $curr_query_start) {
-					$query_end = $curr_query_end;
-					$subject_end = $curr_subject_end;
 					$query_seq .= uc($curr_query_seq);
 				} else {
 					$query_seq .= "n" x ($curr_subject_start - $subject_end - 1);
 					$query_seq .= uc($curr_query_seq);
-					$query_end = $curr_query_end;
-					$subject_end = $curr_subject_end;
 				}
-			}
-		}
-	} elsif ($blast_task =~ /-task blastn-short/) {
-		while (my $line = shift @lines) {
-			if ($line =~ /Query=\s+(.*)$/) {
-				if ($query_end> 0) {
-					$query_seq .= "n" x (length($refseq) - length($query_seq));
-				}
-				$result .= "$query_seq\n>$1\n";
-				$query_end = 0;
-				$query_seq = "";
-			} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
-				$curr_query_seq = $2;
-				$curr_query_end = $3;
-			} elsif ($line =~ /Sbjct\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
-				my $curr_subject_start = $1;
-				my $curr_subject_seq = $2;
-				my $curr_subject_end = $3;
-				while ($curr_subject_seq =~ /(.*)-(.*)/) {
-					$curr_subject_seq = "$1$2";
-					$curr_query_seq =~ /(.{length($1)}).(.*)/;
-					$curr_query_seq = "$1$2";
-				}
-				if ($query_end == 0) {
-					$query_end = $curr_query_end;
-					$query_seq = "n" x ($curr_subject_start - 1);
-					$query_seq .= uc($curr_query_seq);
-				}
+				$subject_end = $curr_subject_end;
+				$query_end = $curr_query_end;
 			}
 		}
 	}
@@ -233,7 +230,8 @@ blast_to_ref -fasta fastafile -reference reffile -output outputfile
   -fasta|input:     fasta file of aligned sequences.
   -reference:       fasta file with sequences of interest.
   -outputfile:      output file name.
-  -blastfile:		optional: if specified, put BLASTN output in this file.
+  -blastfile:	    optional: if specified, put BLASTN output in this file.
+  -evalue:	        optional: if specified, sets evalue threshold for BLASTN hits.
 
 =head1 DESCRIPTION
 
