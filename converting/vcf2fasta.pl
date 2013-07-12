@@ -98,13 +98,13 @@ foreach my $sample (@samples) {
 
 		if ($depth > $cov_thresh) {
 			if ($pl =~ /,/) {
-				$alt = "N";
 				my @pls = split(/,/, $pl);
 				my $alleles = get_allele_str([$ref, $alt]);
 				my @genotypes = @{get_ordered_genotypes($alleles)};
-				foreach (my $i=0;$i<@pls;$i++) {
-					if ($pls[$i] <= $pl_thresh) {
-						$alt = get_iupac_code($genotypes[$i]);
+				$alt = "N";
+				foreach (my $g=0;$g<@pls;$g++) {
+					if ($pls[$g] <= $pl_thresh) {
+						$alt = get_iupac_code($genotypes[$g]);
 					}
 				}
 				$seq .= $alt;
