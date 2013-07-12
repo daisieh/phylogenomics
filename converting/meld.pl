@@ -26,19 +26,17 @@ if ($help) {
 
 print $runline;
 
-my ($res1, $res2) = meld_matrices(\@inputfiles);
+my ($res1, $res2) = meld_sequence_files(\@inputfiles);
 my %mastertaxa = %{$res1};
 my %regiontable = %{$res2};
 
 my $ntax = keys %mastertaxa;
-my $nchar = $mastertaxa{"length"};
-delete $mastertaxa{"length"};
+my $nchar = delete $mastertaxa{"length"};
 
 $regiontable{ "regions" } = "";
 $regiontable{ "exclusion-sets" } = "";
 
 open (fileOUT, ">$outname"."_regions.tab") or die "couldn't make $outname"."_regions.tab\n";
-truncate fileOUT, 0;
 print fileOUT "regions\t$regiontable{'regions'}\n";
 print fileOUT "exclusion_sets\t$regiontable{'exclusion-sets'}\n";
 delete $regiontable{"regions"};
