@@ -168,27 +168,19 @@ sub sample_list {
     return \@samples;
 }
 
-sub get_allele_str {
-	my $arg = shift;
+=head1
 
-	my $charstr = $arg;
-	if (ref($arg) =~ /ARRAY/) {
-		$charstr = join ("",@$arg);
-	}
-	if (length($charstr) == 1) {
-		return $charstr;
-	}
-	$charstr =~ s/\W//g;
-	$charstr =~ s/_//g;
-	$charstr =~ s/\s//g;
-	$charstr = uc($charstr);
-	$charstr = join ("",sort(split('',$charstr)));
-	return $charstr;
-}
+B<@String get_ordered_genotypes ( String $charstr )>
 
-#		Genotype ordering: Ref allele is index 0, alt alleles are indexed from there.
-#		For each combination j,k, the ordering is:
-#		F(j,k) = (k*(k+1)/2)+j
+Returns the ordered list of diploid genotypes possible given the allele string provided.
+Genotype ordering: Ref allele is index 0, alt alleles are indexed from there.
+For each combination j,k, the ordering is:
+F(j,k) = (k*(k+1)/2)+j
+
+$charstr:   string or array of alleles to order into genotypes
+
+=cut
+
 
 sub get_ordered_genotypes {
 	my $charstr = shift;
@@ -204,52 +196,122 @@ sub get_ordered_genotypes {
 	return \@genotypes;
 }
 
-sub get_iupac_code {
+=head1
+
+B<String get_allele_str ( String/Array $charstr )>
+
+Convenience function to stringify a list or a string of alleles with extra characters.
+Returns the string in alphabetical order and in all caps.
+
+$charstr:   string or array of alleles to stringify
+
+=cut
+
+
+sub get_allele_str {
 	my $arg = shift;
 
-	my $charstr = get_allele_str ($arg);
+	my $charstr = $arg;
+	if (ref($arg) =~ /ARRAY/) {
+		$charstr = join ("",@$arg);
+	}
 	if (length($charstr) == 1) {
 		return $charstr;
 	}
-	if ($charstr eq "AA") {
-		return "A";
-	} elsif ($charstr eq "CC") {
-		return "C";
-	} elsif ($charstr eq "TT") {
-		return "T";
-	} elsif ($charstr eq "GG") {
-		return "G";
-	} elsif ($charstr eq "AC") {
-		return "M";
-	} elsif ($charstr eq "AG") {
-		return "R";
-	} elsif ($charstr eq "AT") {
-		return "W";
-	} elsif ($charstr eq "CG") {
-		return "S";
-	} elsif ($charstr eq "CT") {
-		return "Y";
-	} elsif ($charstr eq "GT") {
-		return "K";
-	} elsif ($charstr eq "ACG") {
-		return "V";
-	} elsif ($charstr eq "ACT") {
-		return "H";
-	} elsif ($charstr eq "AGT") {
-		return "D";
-	} elsif ($charstr eq "CGT") {
-		return "B";
-	} elsif ($charstr eq "ACGT") {
-		return "N";
-	} else {
-		return $charstr;
-	}
+	$charstr = uc($charstr);
+	$charstr =~ s/\W//g;
+	$charstr =~ s/_//g;
+	$charstr =~ s/\s//g;
+	$charstr =~ tr/[A-Z]//c;
+	$charstr =~ tr/UX/TN/;
+	$charstr =~ tr/ABCDGHMNRSTVWY//c;
+
+	$charstr = join ("",sort(split('',$charstr)));
+	return "$charstr";
 }
 
+
+=head1
+
+B<String get_iupac_code ( String/Array $charstr )>
+
+Convenience function to return the iupac ambiguity code for whatever alleles are inputted.
+
+$charstr:   string or array of alleles.
+
+=cut
+
+sub get_iupac_code {
+	my $arg = shift;
+
+	# regularize the input first, so that it's an alphabetical, no-dups, sorted uc string
+	my $charstr = get_allele_str ($arg);
+	$charstr =~ tr/A-Z//s;
+
+	if (length($charstr) == 1) {
+		return $charstr;
+	}
+
+	while (length ($charstr) > 1) {
+		if ($charstr =~ /N/) {
+			 return "N";
+		}
+		$charstr =~ s/ACGT/N/g;
+		$charstr =~ s/AC/M/g;
+		$charstr =~ s/AG/R/g;
+		$charstr =~ s/AT/W/g;
+		$charstr =~ s/CG/S/g;
+		$charstr =~ s/CT/Y/g;
+		$charstr =~ s/GT/K/g;
+		$charstr =~ s/MG/V/g;
+		$charstr =~ s/MT/H/g;
+		$charstr =~ s/RT/D/g;
+		$charstr =~ s/ST/B/g;
+		$charstr =~ s/MK/N/g;
+	}
+	return $charstr;
+}
+
+=head1
+
+B<String reverse_complement ( String $charstr )>
+
+Convenience function to return the reverse complement of a sequence.
+
+$charstr:   sequence to revcomp.
+
+=cut
+
+
+sub reverse_complement {
+	my $charstr = shift;
+
+	# reverse the DNA sequence
+	my $revcomp = reverse($charstr);
+
+	# complement the reversed DNA sequence
+	$revcomp =~ tr/ABCDGHMNRSTUVWXYabcdghmnrstuvwxy/TVGHCDKNYSAABWXRtvghcdknysaabwxr/;
+	return $revcomp;
+}
+
+
+=head1
+
+B<(\%taxa, \@taxanames) parse_fasta ( Filehandle $inputfile )>
+
+Given a fasta file as input, returns a hash containing all the sequences, keyed by the
+values of the taxanames array.
+
+$inputfile:   fasta file to parse.
+
+=cut
+
+
 sub parse_fasta {
-	my $inputfile = shift(@_);
+	my $inputfile = shift;
 
 	my %taxa = ();
+	my @taxanames = ();
 	open (fileIN, "$inputfile") or die "no file named $inputfile";
 
 	my $input = readline fileIN;
@@ -259,6 +321,7 @@ sub parse_fasta {
 	while ($input ne "") {
 		if ($input =~ /^>(.+)\s*$/) {
 			$taxonlabel = $1;
+			push @taxanames, $taxonlabel;
 			if ($length > 0) {
 				# we are at the next taxon; push the last one onto the taxon array.
 				$taxa {"length"} = $length;
@@ -273,11 +336,27 @@ sub parse_fasta {
 	}
 
 	close (fileIN);
-	return \%taxa;
+	return \%taxa, \@taxanames;
 }
 
+=head1
+
+B<(\%taxa, \@taxanames) parse_nexus ( Filehandle $inputfile )>
+
+Given a NEXUS file as input, returns a hash containing all the sequences, keyed by the
+values of the taxanames array.
+
+$inputfile:   NEXUS file to parse.
+
+=cut
+
+
+
 sub parse_nexus {
-	my $inputfile = shift(@_);
+	my $inputfile = shift;
+
+	my %taxa = ();
+	my @taxonlabels = ();
 	open (fileIN, "$inputfile") or die "no file named $inputfile";
 	my @inputs = <fileIN>;
 
@@ -306,10 +385,8 @@ sub parse_nexus {
 
 	$matrix =~ /\s*?(\S+?)\s+/s;
 	my $firsttaxon = "$1";
-	my %taxa = ();
 
 	my @sections = split /$firsttaxon/, $matrix;
-	my @taxonlabels;
 	foreach my $section (@sections) {
 		$section =~ s/\s+$//s;
 		if ($section eq "") { next; }
@@ -331,29 +408,28 @@ sub parse_nexus {
 	my $length = length $taxa{ $taxonlabels[0] };
 	$taxa{ "length" } = $length;
 
-	return \%taxa;
+	return \%taxa, \@taxonlabels;
 }
 
+=head1
+
+B<(\%mastertaxa, \%regiontable) meld_matrices ( @matrixnames, %matrices )>
+
+Given a hash of sequence matrices indexed by the values of @matrixnames, melds them into
+a single hash of concatenated sequences. The regiontable hash contains the information about
+which taxa contained which sequences and where they are in the concatenated supermatrix.
+
+@matrixnames:   Names of the matrices used as keys to the hash.
+%matrices       The sequence matrices to be concatenated, indexed by the values of @matrixnames.
+
+=cut
+
 sub meld_matrices {
-	my $arg = shift;
-	my @inputfiles = @$arg;
+	my $arg1 = shift;
+	my $arg2 = shift;
 
-	my %matrices = ();
-	my $currlength = 0;
-	my @matrixnames = ();
-
-	for (my $i=0; $i< scalar(@inputfiles); $i++) {
-		my $inputfile = @inputfiles[$i];
-		push @matrixnames, $inputfile;
-		if ($inputfile =~ /\.nex/) {
-			$matrices{ $inputfile } = parse_nexus ($inputfile);
-		} elsif ($inputfile =~/\.fa/) {
-			$matrices{ $inputfile } = parse_fasta ($inputfile);
-		} else {
-			print "Couldn't parse $inputfile: not nexus or fasta format\n";
-		}
-	}
-
+	my @matrixnames = @$arg1;
+	my %matrices = %$arg2;
 	foreach my $inputfile ( keys (%matrices) ) {
 		foreach my $taxon ( keys (%{$matrices{$inputfile}})) {
 			$mastertaxa {$taxon} = "";
@@ -402,6 +478,41 @@ sub meld_matrices {
 	}
 	$mastertaxa{"length"} = $l;
 	return (\%mastertaxa, \%regiontable);
+}
+
+=head1
+
+B<(\%mastertaxa, \%regiontable) meld_matrices ( @inputfiles )>
+
+Given a list of sequence files, melds them into a single hash of concatenated sequences.
+The regiontable hash contains the information about which taxa contained which sequences
+and where they are in the concatenated supermatrix.
+
+@inputfiles:    An array of file names.
+
+=cut
+
+sub meld_sequence_files {
+	my $arg = shift;
+	my @inputfiles = @$arg;
+
+	my %matrices = ();
+	my $currlength = 0;
+	my @matrixnames = ();
+
+	for (my $i=0; $i< scalar(@inputfiles); $i++) {
+		my $inputfile = @inputfiles[$i];
+		push @matrixnames, $inputfile;
+		if ($inputfile =~ /\.nex/) {
+			($matrices{ $inputfile }, undef) = parse_nexus ($inputfile);
+		} elsif ($inputfile =~/\.fa/) {
+			($matrices{ $inputfile }, undef) = parse_fasta ($inputfile);
+		} else {
+			print "Couldn't parse $inputfile: not nexus or fasta format\n";
+		}
+	}
+
+	return meld_matrices (\@matrixnames, \%matrices);
 }
 
 # must return 1 for the file overall.
