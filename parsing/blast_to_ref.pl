@@ -1,5 +1,4 @@
 use strict;
-use Bio::LocatableSeq;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
@@ -38,40 +37,51 @@ unless($ref_file and $align_file and $out_file) {
 print $runline;
 
 my @references = ();
-
+my @refids = ();
 open refFH, "<", $ref_file;
-my $line = readline refFH;
-$line =~ />(.+)/;
-my $refid = $1;
 my $refseq = "";
+my $refid = "";
 
-while ($line = readline refFH) {
-	if ($line !~ />(.+)/) {
-		chomp $line;
-		$refseq .= $line;
+while (my $line = readline refFH) {
+	if ($line =~ />(.+)/) {
+		$refid = $1;
+		push @refids, $refid;
+		if ($refseq ne "") {
+			push @references, "$refseq";
+			$refseq = "";
+		}
 	} else {
-		push @references, "$refseq";
-		$line =~ />(.+)/;
-		$refid .= "+$1";
-		$refseq = "";
+ 		chomp $line;
+		$refseq .= $line;
 	}
 }
+
 push @references, "$refseq";
 
 close refFH;
 
-my @result_files = ();
-foreach my $refseq (@references) {
-	my ($fh, $ref_result_file) = tempfile(UNLINK => 1, SUFFIX => ".fasta");
-	print $fh ">$refid\n$refseq";
-	print $fh blast_to_ref($align_file, $refseq, $blast_file, $evalue);
-	close $fh;
-	push @result_files, $ref_result_file;
+my (undef, $taxa_names) = parse_fasta($align_file);
+
+my %result_matrices = ();
+my $result_matrix;
+
+for (my $i=0;$i<@refids;$i++) {
+	print "blasting $refids[$i]...\n";
+	$result_matrix = blast_to_ref($align_file, $references[$i], $blast_file, $evalue);
+	$result_matrix->{'reference'} = $references[$i];
+	$result_matrices{$refids[$i]} = $result_matrix;
 }
 
-my ($res1, $res2) = meld_matrices(\@result_files);
+$refid = join ("+", @refids);
+foreach my $key (keys %result_matrices) {
+	$result_matrices{$key}->{$refid} = delete ($result_matrices{$key}->{'reference'});
+}
+push @refids, $refid;
+
+my ($res1, $res2) = meld_matrices(\@refids, \%result_matrices);
 my %mastertaxa = %{$res1};
 my %regiontable = %{$res2};
+
 open (fileOUT, ">", $out_file);
 
 my $value = $mastertaxa{$refid};
@@ -105,7 +115,6 @@ sub blast_to_ref {
 
 	my (undef, $tempreffile) = tempfile(UNLINK => 1);
 	open refFH, ">", $tempreffile;
-	my $ref_seq = new Bio::LocatableSeq(-seq => $refseq);
 	print refFH ">reference\n$refseq\n";
 	close refFH;
 
@@ -118,24 +127,29 @@ sub blast_to_ref {
 	my @lines = <BLAST_FH>;
 	close BLAST_FH;
 
+	my $revcomp = "";
+
 	foreach my $line (@lines) {
 		if ($line =~ /Strand=Plus\/Plus/) {
 			last;
 		} elsif ($line =~ /Strand=Plus\/Minus/) {
-			$refseq = $ref_seq->revcom()->seq;
+			$revcomp = reverse_complement ($refseq);
 			open refFH, ">", $tempreffile;
-			print refFH ">$refid\n$refseq\n";
+			print refFH ">$refid\n$revcomp\n";
 			close refFH;
 			system ("blastn $blast_task -query $align_file -subject $tempreffile > $blastfile");
 			last;
 		}
 	}
 
+	my @seqids = ();
+	my @seqs = ();
 	open BLAST_FH, "<", $blastfile;
 	my @lines = <BLAST_FH>;
 	close BLAST_FH;
 
-	my $result = "";
+	my %result_matrix = ();
+	my $curr_query_id = "";
 	my $query_seq = "";
 	my ($query_end, $subject_end) = 0;
 	my ($curr_query_start, $curr_query_seq, $curr_query_end) = 0;
@@ -145,8 +159,10 @@ sub blast_to_ref {
 			if ($line =~ /Query=\s+(.*)$/) {
 				if ($query_seq ne "") {
 					$query_seq .= "n" x (length($refseq) - length($query_seq));
+					$result_matrix{$curr_query_id} = $query_seq;
 				}
-				$result .= "$query_seq\n>$1\n";
+				$curr_query_id = $1;
+				push @seqids, $curr_query_id;
 				$query_seq = "";
 			} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
 				$curr_query_seq = $2;
@@ -171,8 +187,9 @@ sub blast_to_ref {
 			if ($line =~ /Query=\s+(.*)$/) {
 				if ($query_seq ne "") {
 					$query_seq .= "n" x (length($refseq) - length($query_seq));
+					$result_matrix{$curr_query_id} = $query_seq;
 				}
-				$result .= "$query_seq\n>$1\n";
+				$curr_query_id = $1;
 				($query_end, $subject_end) = 0;
 				$query_seq = "";
 			} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
@@ -209,9 +226,15 @@ sub blast_to_ref {
 		}
 	}
 	$query_seq .= "n" x (length($refseq) - length($query_seq));
-	$result .= "$query_seq\n";
+	$result_matrix{$curr_query_id} = $query_seq;
 
-	return $result;
+	# flip the seqs if we did the blast for the revcomp
+	if ($revcomp ne "") {
+		foreach my $id (keys %result_matrix) {
+			$result_matrix{$id} = reverse_complement ($result_matrix{$id});
+		}
+	}
+	return \%result_matrix;
 }
 
 
