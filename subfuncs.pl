@@ -430,53 +430,41 @@ sub meld_matrices {
 
 	my @matrixnames = @$arg1;
 	my %matrices = %$arg2;
+	my $currlength = 0;
+
+	# start the master matrix: for every taxon in every input file, make a blank entry.
+	my %mastertaxa = ();
 	foreach my $inputfile ( keys (%matrices) ) {
 		foreach my $taxon ( keys (%{$matrices{$inputfile}})) {
 			$mastertaxa {$taxon} = "";
 		}
 	}
 
-	#for each matrix, make a mastertaxa matrix that has missing data for the taxa with no entries in this matrix.
-	#also, add another column to the regiontable hash
-	# foreach my $key ( keys %matrices ) {
-	for (my $i=0; $i<@matrixnames; $i++) {
-		my $key = @matrixnames[$i];
+	# now, in order of the inputted matrix names, add the sequences to the taxa of the master matrix.
+	# if a taxon is missing from the matrix, add missing data for that entry.
+	foreach my $key (@matrixnames) {
 		my $ref = $matrices{$key};
-		$regiontable{"regions"} = $regiontable{"regions"} . "$key\t";
-		my %expandedmatrix = %mastertaxa;
-		foreach my $k (keys %{$ref}) {
+		my @curr_matrix_taxa = keys(%$ref);
+		my $total = length($ref->{$curr_matrix_taxa[0]});
+		$regiontable{"regions"} .= "$key\t";
+		my %expandedmatrix = ();
+		foreach my $k (keys %mastertaxa) {
 			#add entries from this matrix into expandedmatrix
-			$expandedmatrix{ $k } = $ref->{ $k };
-			$regiontable{$k} = $regiontable{$k} . "x\t";
-		}
-		my $total = $expandedmatrix{'length'};
-		my $starts_at = $currlength + 1;
-		$currlength = $currlength + $total;
-		$regiontable{"exclusion-sets"} = $regiontable{"exclusion-sets"} . "$starts_at" . "-" . "$currlength\t";
-		my $replacement = "-" x $total;
-		foreach my $k (keys %expandedmatrix) {
-			my $l = length($expandedmatrix{$k});
-			if ($l == 0) {
-				#if the entry in expandedmatrix is empty, fill it with blanks
-				$expandedmatrix{ $k } = "$replacement";
+			if (defined $ref->{$k}) {
+				$mastertaxa{$k} .= $ref->{ $k };
+				$regiontable{$k} = $regiontable{$k} . "x\t";
+			} else {
+				$mastertaxa{$k} .= "-" x $total;
 				$regiontable{$k} = $regiontable{$k} . "\t";
 			}
-			$l = length($expandedmatrix{$k});
 		}
-		$matrices{$key} = \%expandedmatrix;
-	}
+		my $starts_at = $currlength + 1;
+		$currlength = $currlength + $total;
+		$regiontable{"exclusion-sets"} = $regiontable{"exclusion-sets"} . ($currlength + 1) . "-" . "$currlength\t";
 
-	#now, for each matrix, concatenate them to the corresponding entry in mastertaxa
-	my $l = 0;
-	for (my $i=0; $i<@matrixnames; $i++) {
-		my $key = @matrixnames[$i];
-		my $ref = $matrices{$key};
-		$l = $l + $ref->{"length"};
-		foreach my $k (keys %{$ref}) {
-			$mastertaxa{$k} = $mastertaxa{$k} . $ref->{$k};
-		}
 	}
-	$mastertaxa{"length"} = $l;
+	$mastertaxa{"length"} = $currlength;
+
 	return (\%mastertaxa, \%regiontable);
 }
 
@@ -497,11 +485,9 @@ sub meld_sequence_files {
 	my @inputfiles = @$arg;
 
 	my %matrices = ();
-	my $currlength = 0;
 	my @matrixnames = ();
 
-	for (my $i=0; $i< scalar(@inputfiles); $i++) {
-		my $inputfile = @inputfiles[$i];
+	foreach my $inputfile (@inputfiles) {
 		push @matrixnames, $inputfile;
 		if ($inputfile =~ /\.nex/) {
 			($matrices{ $inputfile }, undef) = parse_nexus ($inputfile);

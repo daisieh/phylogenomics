@@ -67,7 +67,11 @@ my $result_matrix;
 
 for (my $i=0;$i<@refids;$i++) {
 	print "blasting $refids[$i]...\n";
-	$result_matrix = blast_to_ref($align_file, $references[$i], $blast_file, $evalue);
+	my $this_blast_file = "";
+	if ($blast_file ne "") {
+		$this_blast_file = "$blast_file.$refids[$i]";
+	}
+	$result_matrix = blast_to_ref($align_file, $references[$i], $this_blast_file, $evalue);
 	$result_matrix->{'reference'} = $references[$i];
 	$result_matrices{$refids[$i]} = $result_matrix;
 }
@@ -75,8 +79,8 @@ for (my $i=0;$i<@refids;$i++) {
 $refid = join ("+", @refids);
 foreach my $key (keys %result_matrices) {
 	$result_matrices{$key}->{$refid} = delete ($result_matrices{$key}->{'reference'});
+	print "result_matrix $key has " . keys (%{$result_matrices{$key}}) . " keys\n";
 }
-push @refids, $refid;
 
 my ($res1, $res2) = meld_matrices(\@refids, \%result_matrices);
 my %mastertaxa = %{$res1};
@@ -84,12 +88,20 @@ my %regiontable = %{$res2};
 
 open (fileOUT, ">", $out_file);
 
-my $value = $mastertaxa{$refid};
+# debug code:
+# my $x = 0;
+# foreach my $key (@refids) {
+# 	foreach my $keyid (keys %{$result_matrices{$key}}) {
+# 		print fileOUT ">$keyid\n$result_matrices{$key}->{$keyid}\n";
+# 	}
+# 	print fileOUT $x++ . "###\n";
+# }
 
+my $value = $mastertaxa{$refid};
+#
 print fileOUT ">$refid\n$value\n";
 delete $mastertaxa{$refid};
 delete $mastertaxa{"length"};
-
 
 # currently printing in fasta format: perhaps add a flag to alter this?
 foreach my $key ( keys %mastertaxa ) {
