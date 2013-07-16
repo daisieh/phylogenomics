@@ -501,5 +501,36 @@ sub meld_sequence_files {
 	return meld_matrices (\@matrixnames, \%matrices);
 }
 
+
+=head1
+
+B<String $out_file meld_matrices ( String $vcf_file, [String $out_file] )>
+
+Generates a summary file with the read depths of each position in the inputted vcf file.
+
+$vcf_file:  A vcf file.
+
+=cut
+
+
+
+sub vcf_to_depth {
+	my $vcf_file = shift;
+	my $out_file = shift;
+
+	$vcf_file =~ /(.+)(\.vcf)/;
+	my $basename = $1;
+
+	if ($out_file == 0) {
+		$out_file = "$basename.depth";
+	}
+
+	system ("awk 'BEGIN {OFS=\"\\t\"} /^.*?\\t(.*?)\\t/ {print \$1,\$2,\$8}' $vcf_file | awk 'BEGIN {OFS=\"\\t\"} {sub(/DP=/,\"\",\$3);sub(/;.*/,\"\",\$3);print \$1,\$2,\$3}' - > $out_file");
+
+	return $out_file;
+}
+
+
+
 # must return 1 for the file overall.
 1;

@@ -1,20 +1,29 @@
-These are the scripts I write as I do my work. You're free to use them but please cite me if you do.
+This repo contains visualization and analysis scripts that I've written to help me perform
+phylogenomic analyses. Almost all are written in Perl. Some require the Bioperl package.
 
-Notes:
-Many of the scripts require subfuncs.pl and circlegraph.pl, so unless you are
-planning to always call the scripts from the main directory, you might want to add
-this directory to your $PERL5LIB variable.
+Scripts that require the Bioperl package will either call the Bio package directly or require
+subfunctions that are in the file bioperl_subfuncs.pl. It might be easiest if you include
+this directory in your $PERL5LIB path so that the various subfunction files are easy for
+the interpreter to find.
 
 CircleGraph.pm is an object-oriented package that makes it easier to draw graphs along
-a circle. It makes postscript objects.
+a circle. It makes postscript objects and uses the Postscript::Simple package.
 
-subfuncs.pl is a random hodgepodge of utility functions.
+subfuncs.pl is a random hodgepodge of utility functions. As I write more of them, I may
+move some to more specific subfunction files to reduce overhead.
+
+bioperl_subfuncs.pl has helper functions that require Bioperl packages.
 
 circlegraph.pl has helper functions that draw specific kinds of circular graphs.
 
 The subdirs contain scripts for various tasks:
-- converting: helper scripts to convert files from one format to another
+- analysis: scripts that perform various analyses on datasets.
+    introgression: scripts to calculate statistics for introgression analysis.
+    selection: scripts that use Bioperl, PAML, HyPhy to analyze selection on genes.
+- converting: scripts to convert files from one format to another or to combine files
+  in various ways.
+- filtering: scripts that reduce complexity.
 - parsing: uses Bioperl to slice and dice sequence files in various ways.
 - plastome: scripts that take input about the plastome and draw circle graphs to
   represent that data.
-- selection_analysis: scripts that use Bioperl, PAML, HyPhy to analyze selection on genes.
+- reporting: scripts that take vcf or sequence files and report statistics about them.
