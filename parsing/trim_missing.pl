@@ -11,10 +11,10 @@ if (@ARGV == 0) {
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
 my $inputfile = "";
-my $outname = "melded";
+my $outname = "trimmed";
 my ($help, $row_thresh, $col_thresh) = 0;
 
-GetOptions ('files|input=s' => \$inputfile,
+GetOptions ('fasta|input=s' => \$inputfile,
             'outputfile=s' => \$outname,
             'rowthreshold=f' => \$row_thresh,
             'colthreshold=f' => \$col_thresh,
@@ -85,3 +85,34 @@ for (my $i=0;$i<@rows;$i++) {
 	print FH ">$rowids[$i]\n$row\n";
 }
 close FH;
+
+
+__END__
+
+=head1 NAME
+
+trim_missing
+
+=head1 SYNOPSIS
+
+trim_missing -input fastafile -output outputfile -row row_missing_frac -col col_missing_frac
+
+=head1 OPTIONS
+
+GetOptions ('fasta|input=s' => \$inputfile,
+            'outputfile=s' => \$outname,
+            'rowthreshold=f' => \$row_thresh,
+            'colthreshold=f' => \$col_thresh,
+            'help' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+  -fasta|input:     fasta file of aligned sequences.
+  -outputfile:      output file name.
+  -row:	            fraction of missing data allowed per row
+  -col:	            fraction of missing data allowed per column
+
+=head1 DESCRIPTION
+
+Takes a fasta file and removes rows and columns that contain more missing data than the specified thresholds.
+
+=cut
+
