@@ -552,8 +552,7 @@ sub blast_to_alignment {
 		}
 		if ($line =~ /Subject/) {
 			$line = shift @lines;
-			$line = shift @lines;
-			$line =~ /Length=(\d+).*$/;
+			$line =~ /Length=\s*(\d+).*$/;
 			$ref_length = $1;
 			last;
 		}
@@ -567,6 +566,7 @@ sub blast_to_alignment {
 			}
 			$curr_query_id = $1;
 			($query_end, $subject_end) = 0;
+
 			$query_seq = "";
 		} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
 			$curr_query_start = $1;
@@ -629,7 +629,6 @@ sub blast_short_to_alignment {
 		}
 		if ($line =~ /Subject/) {
 			$line = shift @lines;
-			$line = shift @lines;
 			$line =~ /Length=(\d+).*$/;
 			$ref_length = $1;
 			last;
@@ -639,7 +638,8 @@ sub blast_short_to_alignment {
 	while (my $line = shift @lines) {
 		if ($line =~ /Query=\s+(.*)$/) {
 			if ($query_seq ne "") {
-				$query_seq .= "n" x (length($refseq) - length($query_seq));
+				my $ns = "n" x ($ref_length - length($query_seq));
+				$query_seq .= "n" x ($ref_length - length($query_seq));
 				$result_matrix{$curr_query_id} = $query_seq;
 			}
 			$curr_query_id = $1;
