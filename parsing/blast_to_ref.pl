@@ -154,12 +154,12 @@ sub blast_to_ref {
 		}
 	}
 
-	my @seqids = ();
-	my @seqs = ();
 	open BLAST_FH, "<", $blastfile;
 	my @lines = <BLAST_FH>;
 	close BLAST_FH;
 
+	my @seqids = ();
+	my @seqs = ();
 	my %result_matrix = ();
 	my $curr_query_id = "";
 	my $query_seq = "";
@@ -167,78 +167,12 @@ sub blast_to_ref {
 	my ($curr_query_start, $curr_query_seq, $curr_query_end) = 0;
 
 	if ($blast_task =~ /-task blastn-short/) {
-		while (my $line = shift @lines) {
-			if ($line =~ /Query=\s+(.*)$/) {
-				if ($query_seq ne "") {
-					$query_seq .= "n" x (length($refseq) - length($query_seq));
-					$result_matrix{$curr_query_id} = $query_seq;
-				}
-				$curr_query_id = $1;
-				push @seqids, $curr_query_id;
-				$query_seq = "";
-			} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
-				$curr_query_seq = $2;
-				$curr_query_end = $3;
-			} elsif ($line =~ /Sbjct\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
-				my $curr_subject_start = $1;
-				my $curr_subject_seq = $2;
-				my $curr_subject_end = $3;
-				while ($curr_subject_seq =~ /(.*)-(.*)/) {
-					$curr_subject_seq = "$1$2";
-					$curr_query_seq =~ /(.{length($1)}).(.*)/;
-					$curr_query_seq = "$1$2";
-				}
-				if ($query_seq eq "") {
-					$query_seq = "n" x ($curr_subject_start - 1);
-					$query_seq .= uc($curr_query_seq);
-				}
-			}
-		}
+		my $result_ptr = blast_short_to_alignment ($blastfile);
+		%result_matrix = %{$result_ptr};
 	} else {
-		while (my $line = shift @lines) {
-			if ($line =~ /Query=\s+(.*)$/) {
-				if ($query_seq ne "") {
-					$query_seq .= "n" x (length($refseq) - length($query_seq));
-					$result_matrix{$curr_query_id} = $query_seq;
-				}
-				$curr_query_id = $1;
-				($query_end, $subject_end) = 0;
-				$query_seq = "";
-			} elsif ($line =~ /Query\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
-				$curr_query_start = $1;
-				$curr_query_seq = $2;
-				$curr_query_end = $3;
-				if ($curr_query_start < $query_end) {
-					while ($line !~ /Query=\s+(.*)$/) {
-						$line = shift @lines;
-					}
-					unshift @lines, $line;
-				}
-			} elsif ($line =~ /Sbjct\s+(\d+)\s+(.+?)\s+(\d+).*$/) {
-				my $curr_subject_start = $1;
-				my $curr_subject_seq = $2;
-				my $curr_subject_end = $3;
-				while ($curr_subject_seq =~ /(.*)-(.*)/) {
-					$curr_subject_seq = "$1$2";
-					$curr_query_seq =~ /(.{length($1)}).(.*)/;
-					$curr_query_seq = "$1$2";
-				}
-				if ($query_seq eq "") {
-					$query_seq = "n" x ($curr_subject_start - 1);
-					$query_seq .= uc($curr_query_seq);
-				} elsif (($query_end + 1) == $curr_query_start) {
-					$query_seq .= uc($curr_query_seq);
-				} else {
-					$query_seq .= "n" x ($curr_subject_start - $subject_end - 1);
-					$query_seq .= uc($curr_query_seq);
-				}
-				$subject_end = $curr_subject_end;
-				$query_end = $curr_query_end;
-			}
-		}
+		my $result_ptr = blast_to_alignment ($blastfile);
+		%result_matrix = %{$result_ptr};
 	}
-	$query_seq .= "n" x (length($refseq) - length($query_seq));
-	$result_matrix{$curr_query_id} = $query_seq;
 
 	# flip the seqs if we did the blast for the revcomp
 	if ($revcomp ne "") {
