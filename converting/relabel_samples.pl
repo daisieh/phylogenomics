@@ -4,10 +4,11 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 
-my ($inputfile, $labelfile, $outfile, $simplename) = 0;
+my ($inputfile, $labelfile, $outfile, $simplename, $dnacode) = 0;
 GetOptions ('input|samples=s' => \$inputfile,
             'labels|names=s' => \$labelfile,
             'simple' => \$simplename,
+            'dna|code' => \$dnacode,
 			'outfile=s' => \$outfile) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 unless ($inputfile && $labelfile) {
@@ -37,6 +38,7 @@ foreach my $line (@input_lines) {
 		$line = "";
 		while ($templine =~ /^(.*?[\(\,]+)(.*?)([\:\,\)])(.*)/) {
 			my ($head, $key, $tail, $remainder) = ($1, $2, $3, $4);
+			$key = get_key($key, $dnacode);
 			my $label = $key;
 			if (exists $labels->{$key}) {
 				$label = $labels->{$key};
@@ -53,6 +55,7 @@ foreach my $line (@input_lines) {
 				$head = $head . $1;
 				$key = $2;
 			}
+			$key = get_key($key, $dnacode);
 			my $label = $key;
 			if (exists $labels->{$key}) {
 				$label = $labels->{$key};
@@ -63,8 +66,8 @@ foreach my $line (@input_lines) {
 		$line .= "$templine\n";
 	} elsif ($line =~ /^>(.+?)(\s.*|$)/) {
 		# it is a fasta-type line
-		my $key = $1;
-		my $remainder = $2;
+		my ($key, $remainder) = ($1,$2);
+		$key = get_key($key, $dnacode);
 		my $label = $key;
 		if (exists $labels->{$key}) {
 			$label = $labels->{$key};
@@ -77,9 +80,8 @@ foreach my $line (@input_lines) {
 	} elsif ($line =~ /^(\s*\d+\s+)(.+?)(,*)$/) {
 		# it is a TRANSLATE-type line (numbered list of taxa)
 		print "translate $line";
-		my $beginning = $1;
-		my $key = $2;
-		my $remainder = $3;
+		my ($beginning, $key, $remainder) = ($1,$2,$3);
+		$key = get_key($key, $dnacode);
 		my $label = $key;
 		if (exists $labels->{$key}) {
 			$label = $labels->{$key};
@@ -88,8 +90,8 @@ foreach my $line (@input_lines) {
 		$line = "$beginning$label$remainder\n";
 	} elsif ($line =~ /^(.+?)(\s+.+)$/) {
 		# it is a generic NEXUS/phylip-type line
-		my $key = $1;
-		my $remainder = $2;
+		my ($key, $remainder) = ($1,$2);
+		$key = get_key($key, $dnacode);
 		my $label = $key;
 		if (exists $labels->{$key}) {
 			$label = $labels->{$key};
@@ -103,6 +105,16 @@ foreach my $line (@input_lines) {
 
 close $out_fh;
 
+sub get_key {
+	my $key = shift;
+	my $dnacode = shift;
+
+	if ($dnacode) {
+		$key =~ s/.*DNA(\d+).*/$1/;
+	}
+
+	return $key;
+}
 __END__
 
 =head1 NAME
