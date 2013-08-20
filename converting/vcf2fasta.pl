@@ -110,6 +110,7 @@ if ($samplefile =~ /recode\.vcf/) {
 				push @this_pos, @AMBIGUOUS_POS;
 				push @positions, \@this_pos;
 				$i++;
+				@this_pos = ();
 			}
 			if ($line =~ /INDEL/) { # we don't handle indels; drop these lines.
 				push @this_pos, @AMBIGUOUS_POS;
@@ -149,7 +150,7 @@ foreach my $sample (@samples) {
 				my $alleles = get_allele_str([$ref, $alt]);
 				my @genotypes = @{get_ordered_genotypes($alleles)};
 				$alt = "N";
-				foreach (my $g=0;$g<@pls;$g++) {
+				for (my $g=0;$g<@pls;$g++) {
 					if ($pls[$g] <= $pl_thresh) {
 						$alt = get_iupac_code($genotypes[$g]);
 					}
@@ -174,11 +175,13 @@ if (@samples == 1) {
 	}
 }
 
-
-open FH, ">", $outfile.".fasta";
-print FH "$result_str";
-close FH;
-
+if ($outfile eq "") {
+	print "$result_str";
+} else {
+	open FH, ">", $outfile.".fasta";
+	print FH "$result_str";
+	close FH;
+}
 
 
 __END__
