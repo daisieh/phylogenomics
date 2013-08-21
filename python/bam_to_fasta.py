@@ -9,8 +9,11 @@ def stop_err( msg ):
 
 def runscript(sample_string):
     host,sample,location = sample_string.split()
-#     cmd = "samtools view %s | gawk \'{print \">$1\n$10\"}\' - > %s.fasta" % (location, sample)
-    cmd = "bash ../converting/bam_to_fasta.sh %s %s" % (location, sample)
+    print 'sys.argv[0] =', sys.argv[0]
+    pathname = os.path.dirname(sys.argv[0])
+    print 'path =', pathname
+    print 'full path =', os.path.abspath(pathname)
+    cmd = "bash %s/bam_to_fasta.sh %s %s" % (pathname, location, sample)
     os.system(cmd)
 
 def __main__():
