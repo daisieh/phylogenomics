@@ -9,7 +9,8 @@ def stop_err( msg ):
 
 def runscript(sample_string):
     host,sample,location = sample_string.split()
-    cmd = "samtools view %s | gawk \'{print \">$1\n$10\"}\' - > %s.fasta" % (location, sample)
+#     cmd = "samtools view %s | gawk \'{print \">$1\n$10\"}\' - > %s.fasta" % (location, sample)
+	cmd = "bash ../converting/bam_to_fasta.sh %s %s" % (location, sample)
     os.system(cmd)
 
 def __main__():
@@ -40,3 +41,4 @@ def __main__():
 
 if __name__=="__main__":
     __main__()
+
