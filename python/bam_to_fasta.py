@@ -9,11 +9,9 @@ def stop_err( msg ):
 
 def runscript(sample_string):
     host,sample,location = sample_string.split()
-    print 'sys.argv[0] =', sys.argv[0]
     pathname = os.path.dirname(sys.argv[0])
-    print 'path =', pathname
-    print 'full path =', os.path.abspath(pathname)
-    cmd = "bash %s/bam_to_fasta.sh %s %s" % (pathname, location, sample)
+    head,tail = os.path.split(pathname)
+    cmd = "bash %s/converting/bam_to_fasta.sh %s %s" % (head, location, sample)
     os.system(cmd)
 
 def __main__():
