@@ -4,33 +4,28 @@ use File::Basename;
 
 
 my $usage = "perl " . basename($0);
-$usage .=	" <file.txt> <result>\n\n";
+$usage .=	" <interleaved.fasta> <result_prefix>\n\n";
 
 my $fastafile = shift or die "$usage";
-my $resultfile = shift or die "$usage";
+my $resultprefix = shift or die "$usage";
 
-open my $F, "<$fastafile" or die "couldn't open fasta file";
+open FH, "<", $fastafile or die "couldn't open fasta file";
 
-my $fs = readline $F;
-chomp $fs;
-my $result1 .= ">$fs\n";
-$fs = readline $F;
-chomp $fs;
-my $result2 .= ">$fs\n";
-$fs = readline $F;
-$fs = readline $F;
+open OUT1_FH, ">", "$resultprefix.1.fasta" or die "couldn't create result file";
+open OUT2_FH, ">", "$resultprefix.2.fasta" or die "couldn't create result file";
 
+my $fs = readline FH;
 while ($fs) {
-	$result1 .= "$fs";
-	$fs = readline $F;
-	$result2 .= "$fs";
-	$fs = readline $F;
-	$fs = readline $F;
+	print OUT1_FH $fs;
+	$fs = readline FH;
+	print OUT1_FH $fs;
+	$fs = readline FH;
+	print OUT2_FH $fs;
+	$fs = readline FH;
+	print OUT2_FH $fs;
+	$fs = readline FH;
 }
-open my $outfile1, ">$resultfile.fasta" or die "couldn't create result file";
-truncate $outfile1, 0;
 
-print $outfile1 "$result1\n$result2";
-
-close $F;
-close $outfile1;
+close FH;
+close OUT1_FH;
+close OUT2_FH;
