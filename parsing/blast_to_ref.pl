@@ -43,9 +43,11 @@ my $refseq = "";
 my $refid = "";
 
 while (my $line = readline refFH) {
-	if ($line =~ />(.+)/) {
+	if ($line =~ />(.+)$/) {
 		$refid = $1;
+		$refid =~ s/\s/_/g;
 		push @refids, $refid;
+		print "$refid !\n";
 		if ($refseq ne "") {
 			push @references, "$refseq";
 			$refseq = "";
@@ -80,6 +82,9 @@ $refid = join ("+", @refids);
 foreach my $key (keys %result_matrices) {
 	$result_matrices{$key}->{$refid} = delete ($result_matrices{$key}->{'reference'});
 	print "result_matrix $key has " . keys (%{$result_matrices{$key}}) . " keys\n";
+	foreach my $k (keys (%{$result_matrices{$key}})) {
+		print "$k in $key has length ".length(${$result_matrices{$key}}{$k})."\n";
+	}
 }
 
 my ($res1, $res2) = meld_matrices(\@refids, \%result_matrices);
@@ -105,6 +110,7 @@ delete $mastertaxa{"length"};
 
 # currently printing in fasta format: perhaps add a flag to alter this?
 foreach my $key ( keys %mastertaxa ) {
+print "printing $key\n";
 	my $value = $mastertaxa{$key};
 	print fileOUT ">$key\n$value\n";
 }
@@ -134,7 +140,8 @@ sub blast_to_ref {
 	if ($blastfile eq "") {
 		(undef, $blastfile) = tempfile(UNLINK => 1);
 	}
-	system ("blastn $blast_task -query $align_file -subject $tempreffile > $blastfile");
+			system ("makeblastdb -in $align_file -dbtype nucl -out $tempreffile.db");
+			system ("blastn $blast_task -query $tempreffile -db $tempreffile.db > $blastfile");
 	open BLAST_FH, "<", $blastfile;
 	my @lines = <BLAST_FH>;
 	close BLAST_FH;
@@ -149,7 +156,8 @@ sub blast_to_ref {
 			open refFH, ">", $tempreffile;
 			print refFH ">$refid\n$revcomp\n";
 			close refFH;
-			system ("blastn $blast_task -query $align_file -subject $tempreffile > $blastfile");
+			system ("makeblastdb -in $tempreffile -dbtype nucl -out $tempreffile.db");
+			system ("blastn $blast_task -query $align_file -db $tempreffile.db > $blastfile");
 			last;
 		}
 	}
