@@ -556,9 +556,12 @@ sub blast_to_alignment {
 			$curr_query_id = $1;
 		}
 		if ($line =~ /Subject/) {
-			$line = shift @lines;
-			$line =~ /Length=\s*(\d+).*$/;
-			$ref_length = $1;
+			while ($line = shift @lines) {
+				if ($line =~ /Length=(\d+)/) {
+					$ref_length = $1;
+					last;
+				}
+			}
 			last;
 		}
 	}
@@ -633,9 +636,12 @@ sub blast_short_to_alignment {
 			$curr_query_id = $1;
 		}
 		if ($line =~ /Subject/) {
-			$line = shift @lines;
-			$line =~ /Length=(\d+).*$/;
-			$ref_length = $1;
+			while ($line = shift @lines) {
+				if ($line =~ /Length=(\d+)/) {
+					$ref_length = $1;
+					last;
+				}
+			}
 			last;
 		}
 	}
