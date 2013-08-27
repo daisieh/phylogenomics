@@ -446,6 +446,11 @@ sub meld_matrices {
 		my $ref = $matrices{$key};
 		my @curr_matrix_taxa = keys(%$ref);
 		my $total = length($ref->{$curr_matrix_taxa[0]});
+		foreach my $v (values %ref) {
+			if (length($v) > $total) {
+				$total == length($v);
+			}
+		}
 		$regiontable{"regions"} .= "$key\t";
 		my %expandedmatrix = ();
 		foreach my $k (keys %mastertaxa) {
