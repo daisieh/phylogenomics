@@ -79,7 +79,7 @@ for (my $i=0;$i<@refids;$i++) {
 $refid = join ("+", @refids);
 foreach my $key (keys %result_matrices) {
 	$result_matrices{$key}->{$refid} = delete ($result_matrices{$key}->{'reference'});
-	print "result_matrix $key has " . keys (%{$result_matrices{$key}}) . " keys\n";
+# 	print "result_matrix $key has " . keys (%{$result_matrices{$key}}) . " keys\n";
 }
 
 my ($res1, $res2) = meld_matrices(\@refids, \%result_matrices);
