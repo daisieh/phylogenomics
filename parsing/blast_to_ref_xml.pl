@@ -1,6 +1,6 @@
 use strict;
 use XML::Simple;
-use Data::Dumper;
+require "subfuncs.pl";
 
 my $blast_xml = shift;
 
@@ -9,51 +9,105 @@ my $parser = new XML::Simple();
 open XML_FH, "<", $blast_xml;
 my %xml_strings = ();
 
-my $curr_xml = readline XML_FH;
+my $xml = readline XML_FH;
 my $query_name = "";
 
 while (my $line = readline XML_FH) {
 	if ($line =~ /<\?xml/) {
 		# we've reached the next xml object
-		$xml_strings{$query_name} = "$curr_xml";
-		$curr_xml = "$line";
+		$xml_strings{$query_name} = "$xml";
+		$xml = "$line";
 	} else {
 		if ($line =~ /<BlastOutput_query-def>(.*?)<\/BlastOutput_query-def>/) {
 			$query_name = $1;
 		}
-		$curr_xml .= $line;
+		$xml .= $line;
 	}
 }
-$xml_strings{$query_name} = "$curr_xml";
+$xml_strings{$query_name} = "$xml";
 
 close XML_FH;
 
 foreach my $key (keys %xml_strings) {
-	print "key $key\n";
-	my $tree = $parser->XMLin($xml_strings{$key});
-
-	my $blastoutput_iterations = $tree->{"BlastOutput_iterations"}; # BlastOutput_iterations is a hash with one key, "Iterations"
-	my $iterations = ($tree->{"BlastOutput_iterations"}->{"Iteration"}); # key Iteration has a value that is an anonymous array of iteration hashes.
+	my $tree = $parser->XMLin($xml_strings{$key}, ForceArray => 1);
+	my $iterations = ($tree->{"BlastOutput_iterations"}[0]->{"Iteration"}); # key Iteration has a value that is an anonymous array of iteration hashes.
 	foreach my $iteration (@$iterations) { # for each iteration
-		my $iterid = $iteration->{"Iteration_query-ID"};
-		my $iterquerydef = $iteration->{"Iteration_query-def"};
-		my $hsps = $iteration->{"Iteration_hits"}->{"Hit"}->{"Hit_hsps"}->{"Hsp"}; # hsps should be an anonymous array of the actual hit sequences.
-		my @sorted_hsps = sort { $a->{"Hsp_hit-from"} - $b->{"Hsp_hit-from"} } @$hsps;
-		foreach my $hsp (@sorted_hsps) { # for each hsp for this query
-			print "## $iterid ($iterquerydef) from query " . $hsp->{"Hsp_query-from"} . "-" . $hsp->{"Hsp_query-to"} . " has an hsp of score " . $hsp->{"Hsp_score"} ."\n";
-			print "##    which matches " . $hsp->{"Hsp_hit-from"} . "-" . $hsp->{"Hsp_hit-to"} ."\n";
-			print "\t" . $hsp->{"Hsp_qseq"} . "\n";
-			print "\t" . $hsp->{"Hsp_hseq"} . "\n";
-			if ($hsp->{"Hsp_evalue"} < 0.0000001) {
-
+		my $iterid = $iteration->{"Iteration_query-ID"}[0];
+		my $iterquerydef = $iteration->{"Iteration_query-def"}[0];
+		my $hits = $iteration->{"Iteration_hits"}[0]->{"Hit"};
+		foreach my $hit (@$hits) {
+			my $hsps = $hit->{"Hit_hsps"}[0]->{"Hsp"}; # Key Hsp has a value that is an anonymous array of the hit hashes.
+			my $hitdef = $hit->{"Hit_def"}[0];
+			# if any of the hits are on the minus strand, reverse-comp before dealing with them.
+			foreach my $hsp(@$hsps) {
+				my $hit_to = $hsp->{"Hsp_hit-to"}[0];
+				my $hit_from = $hsp->{"Hsp_hit-from"}[0];
+				my $query_to = $hsp->{"Hsp_query-to"}[0];
+				my $query_from = $hsp->{"Hsp_query-from"}[0];
+				if ($hit_to < $hit_from) {
+					$hsp->{"Hsp_hit-to"}[0] = $hit_from;
+					$hsp->{"Hsp_hit-from"}[0] = $hit_to;
+					$hsp->{"Hsp_query-to"}[0] = $query_from;
+					$hsp->{"Hsp_query-from"}[0] = $query_to;
+					$hsp->{"Hsp_qseq"}[0] = lc(reverse_complement($hsp->{"Hsp_qseq"}[0]));
+					$hsp->{"Hsp_hseq"}[0] = lc(reverse_complement($hsp->{"Hsp_hseq"}[0]));
+				}
 			}
+			my @sorted_hsps = sort { $a->{"Hsp_hit-from"}[0] - $b->{"Hsp_hit-from"}[0] } @$hsps;
+			my $query_end = 0;
+			my @selected_hsps = ();
+			foreach my $hsp (@sorted_hsps) { # for each hsp for this query
+				if ($hsp->{"Hsp_evalue"}[0] > 0.0000001) {
+					# this is no good: move on to the next hit.
+					next;
+				} elsif (@selected_hsps == 0) {
+					# this is the first chunk of sequence.
+					my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
+					$query_end = pop @end;
+					push @selected_hsps, $hsp;
+				} elsif (($hsp->{"Hsp_query-to"}[0] <= $query_end) && ($hsp->{"Hsp_query-from"}[0] <= $query_end)) {
+					# does this seq deal with a part of the query we've already addressed? Then move on.
+					next;
+				} else {
+					# does this seq overlap with the last one in terms of hit coverage?
+					my $last_hsp = pop @selected_hsps;
+					if ($last_hsp->{"Hsp_hit-to"}[0] > $hsp->{"Hsp_hit-to"}[0]) {
+						# if this hsp has a beginning that is smaller than the end of the last one, then we have a partial overlap.
+						# compare the two by score:
+						if ($last_hsp->{"Hsp_score"}[0] > $hsp->{"Hsp_score"}[0]) {
+							push @selected_hsps, $last_hsp;
+							next;
+						} else {
+							my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
+							$query_end = pop @end;
+							push @selected_hsps, $hsp;
+							next;
+						}
+					} else {
+						push @selected_hsps, $last_hsp;
+					}
+					my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
+					$query_end = pop @end;
+					push @selected_hsps, $hsp;
+				}
+			}
+			my $hit_end = 1;
+			my $sequence = "";
+			foreach my $hsp (@selected_hsps) { # for each hsp for this query
+				my $last_end = $hit_end;
+				$hit_end = $hsp->{"Hsp_hit-to"}[0];
+				# remove gaps from query seq that might have been inserted into the ref seq.
+				while ($hsp->{"Hsp_hseq"}[0] =~ /^(.*?)(-+)(.*)$/) {
+					my $left = $1;
+					my $gap = $2;
+					my $right = $3;
+					$hsp->{"Hsp_hseq"}[0] = $left . $right;
+					$hsp->{"Hsp_qseq"}[0] =~ /^(.{length($left)})(.{length($gap)})(.{length($right)})/;
+					$hsp->{"Hsp_qseq"}[0] = $1 . $3;
+				}
+				$sequence .= "-" x ($last_end - $hsp->{"Hsp_hit-from"}[0] - 1) . $hsp->{"Hsp_qseq"}[0];
+			}
+			print ">$hitdef | $iterquerydef\n$sequence\n";
 		}
 	}
-
-	print Dumper ($tree) . "\n";
-}
-
-my @element_stack = ();
-sub sort_hsps {
-	return ( $a->{"Hsp_query-from"} - $b->{"Hsp_query-from"} );
 }
