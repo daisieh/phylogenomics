@@ -105,7 +105,7 @@ foreach my $key (keys %xml_strings) {
 					$hsp->{"Hsp_qseq"}[0] =~ /^(.{length($left)})(.{length($gap)})(.{length($right)})/;
 					$hsp->{"Hsp_qseq"}[0] = $1 . $3;
 				}
-				$sequence .= "-" x ($last_end - $hsp->{"Hsp_hit-from"}[0] - 1) . $hsp->{"Hsp_qseq"}[0];
+				$sequence .= "-" x ($hsp->{"Hsp_hit-from"}[0] - $last_end) . $hsp->{"Hsp_qseq"}[0];
 			}
 			print ">$hitdef | $iterquerydef\n$sequence\n";
 		}
