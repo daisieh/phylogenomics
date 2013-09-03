@@ -91,7 +91,7 @@ if ($samplefile =~ /recode\.vcf/) {
 	foreach my $sample (@samplefiles) {
 		$name = basename($sample);
 		my $vcf_file = $sample . ".vcf";
-		open VCF_FH, "<", $vcf_file or die "couldn't open input file $vcf_file.";
+		unless (open (VCF_FH, "<", $vcf_file)) { next; }
 
 		# eat header:
 		my $line = readline VCF_FH;
