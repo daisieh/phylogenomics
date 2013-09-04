@@ -240,7 +240,7 @@ for ($j=0; $j< keys(%samples); $j++) {
     $circlegraph_obj->plot_line(\@xvals, \@yvals, {color=>$j});
 
     # plot the indel map
-    $circlegraph_obj = draw_regions ( "$outfile"."_$key"."_indels.txt", $circlegraph_obj, $j, $circlegraph_obj->inner_radius + ($j*5) -150);
+    $circlegraph_obj = draw_regions ( "$outfile"."_$key"."_indels.txt", $circlegraph_obj, $j, $circlegraph_obj->inner_radius + ($j*3) -150);
 }
 
 $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);

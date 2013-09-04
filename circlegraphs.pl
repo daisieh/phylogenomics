@@ -324,7 +324,7 @@ sub draw_regions {
         my $start_angle = ($start/$circle_size) * 360;
         my $stop_angle = ($stop/$circle_size) * 360;
 
-        $circlegraph_obj->draw_arc ($radius, $start_angle, $stop_angle, {color => "$color", width => 5});
+        $circlegraph_obj->draw_arc ($radius, $start_angle, $stop_angle, {color => "$color", width => 3});
     }
 
     return $circlegraph_obj;
