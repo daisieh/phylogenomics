@@ -30,6 +30,7 @@ if ($samplefile =~ /(.*?)\.vcf$/) {
 
 foreach my $sample (@samples) {
 	$name = basename($sample);
+	print "processing $name...\n";
 	my $vcf_file = $sample . ".vcf";
 	if ($outfile ne "") {
 		vcf_to_depth ($vcf_file,$outfile);

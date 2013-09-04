@@ -203,7 +203,6 @@ vcf2fasta -samplefile -output [-threshold]
 
 =head1 DESCRIPTION
 
-Graphs coverage depths using depth data generated from samtools mpileup.
-
+Converts a VCF file (or files) to a fasta file, using the Phred-scaled likelihood of each genotype call.
 =cut
 
