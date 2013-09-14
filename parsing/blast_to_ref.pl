@@ -166,6 +166,7 @@ sub blast_to_ref_xml {
 			foreach my $hit (@$hits) {
 				my $hsps = $hit->{"Hit_hsps"}[0]->{"Hsp"}; # Key Hsp has a value that is an anonymous array of the hit hashes.
 				my $hitdef = $hit->{"Hit_def"}[0];
+				print "HIT $hitdef QUERY $iterquerydef\n";
 				# if any of the hits are on the minus strand, reverse-comp before dealing with them.
 				foreach my $hsp(@$hsps) {
 					my $hit_to = $hsp->{"Hsp_hit-to"}[0];
@@ -185,43 +186,55 @@ sub blast_to_ref_xml {
 				my $query_end = 0;
 				my @selected_hsps = ();
 				foreach my $hsp (@sorted_hsps) { # for each hsp for this query
-					if ($hsp->{"Hsp_evalue"}[0] > 0.0000001) {
-						# this is no good: move on to the next hit.
-						next;
-					} elsif (@selected_hsps == 0) {
+					my $aln_length = $hsp->{"Hsp_align-len"}[0];
+					my $aln_percent = sprintf("%.2f",$hsp->{"Hsp_identity"}[0] / $aln_length);
+# 					if ($hsp->{"Hsp_evalue"}[0] > 10) {
+# 						# this is no good: move on to the next hit.
+# 						next;
+# 					}
+					if (@selected_hsps == 0) {
 						# this is the first chunk of sequence.
 						my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
 						$query_end = pop @end;
+						print "\tfirst seq ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\n";
 						push @selected_hsps, $hsp;
-					} elsif (($hsp->{"Hsp_query-to"}[0] <= $query_end) && ($hsp->{"Hsp_query-from"}[0] <= $query_end)) {
-						# does this seq deal with a part of the query we've already addressed? Then move on.
-						next;
 					} else {
 						# does this seq overlap with the last one in terms of hit coverage?
 						my $last_hsp = pop @selected_hsps;
-						if ($last_hsp->{"Hsp_hit-to"}[0] > $hsp->{"Hsp_hit-to"}[0]) {
+						my $last_aln_percent = sprintf("%.2f",$last_hsp->{"Hsp_identity"}[0] / $last_hsp->{"Hsp_align-len"}[0]);
+						if (($last_hsp->{"Hsp_hit-to"}[0] > $hsp->{"Hsp_hit-to"}[0]) || ($last_hsp->{"Hsp_hit-to"}[0] > $hsp->{"Hsp_hit-from"}[0])){
+							print "\tcomparing:\n";
+							print "\t\t\t".$last_hsp->{"Hsp_hit-from"}[0] ."-".$last_hsp->{"Hsp_hit-to"}[0]."\t".$last_hsp->{"Hsp_query-from"}[0] ."-".$last_hsp->{"Hsp_query-to"}[0]."\t(" . $last_hsp->{"Hsp_align-len"}[0].")\t$last_aln_percent\t".$last_hsp->{"Hsp_bit-score"}[0]."\t". $last_hsp->{"Hsp_evalue"}[0] . "\n";
+							print "\t\t\t".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0] ."-".$hsp->{"Hsp_query-to"}[0]."\t(". $hsp->{"Hsp_align-len"}[0].")\t$aln_percent\t".$hsp->{"Hsp_bit-score"}[0]."\t". $hsp->{"Hsp_evalue"}[0] . "\n";
 							# if this hsp has a beginning that is smaller than the end of the last one, then we have a partial overlap.
 							# compare the two by score:
-							if ($last_hsp->{"Hsp_score"}[0] > $hsp->{"Hsp_score"}[0]) {
+							if ($last_hsp->{"Hsp_bit-score"}[0] > $hsp->{"Hsp_bit-score"}[0]) {
+								print "\tchoose 1: " . $last_hsp->{"Hsp_hit-from"}[0] ."-".$last_hsp->{"Hsp_hit-to"}[0]  . "\n";
 								push @selected_hsps, $last_hsp;
 								next;
 							} else {
 								my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
 								$query_end = pop @end;
+								print "\tchoose 2: " . $hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]  . "\n";
 								push @selected_hsps, $hsp;
 								next;
 							}
 						} else {
+							print "\tno comparison, adding " . $hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]  . "\n";
 							push @selected_hsps, $last_hsp;
+							push @selected_hsps, $hsp;
 						}
 						my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
 						$query_end = pop @end;
-						push @selected_hsps, $hsp;
 					}
 				}
-				my $hit_end = 1;
+				print "final sequence:\n";
+				my $hit_end = 0;
 				my $sequence = "";
 				foreach my $hsp (@selected_hsps) { # for each hsp for this query
+					my $aln_length = $hsp->{"Hsp_align-len"}[0];
+# 					my $aln_percent = sprintf("%.2f",$hsp->{"Hsp_identity"}[0] / $aln_length);
+					print "\t".$hsp->{"Hsp_hit-from"}[0]."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
 					my $last_end = $hit_end;
 					$hit_end = $hsp->{"Hsp_hit-to"}[0];
 					# remove gaps from query seq that might have been inserted into the ref seq.
@@ -233,9 +246,13 @@ sub blast_to_ref_xml {
 						$hsp->{"Hsp_qseq"}[0] =~ /^(.{length($left)})(.{length($gap)})(.{length($right)})/;
 						$hsp->{"Hsp_qseq"}[0] = $1 . $3;
 					}
-					$sequence .= "-" x ($hsp->{"Hsp_hit-from"}[0] - $last_end) . $hsp->{"Hsp_qseq"}[0];
+					$sequence .= "-" x ($hsp->{"Hsp_hit-from"}[0] - $last_end - 1) . $hsp->{"Hsp_qseq"}[0];
 				}
-				$result_matrix{$hitdef}->{$iterquerydef} = $sequence;
+				if ($sequence =~ /\w/) {
+					$result_matrix{$hitdef}->{$iterquerydef} = $sequence;
+				} else {
+					print "\tno match\n";
+				}
 			}
 		}
 	}
