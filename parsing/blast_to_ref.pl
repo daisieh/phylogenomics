@@ -72,7 +72,7 @@ if ($blast_file eq "") {
 }
 
 system ("makeblastdb -in $ref_file -dbtype nucl -out $tempreffile.db");
-system ("blastn -query $align_file -db $tempreffile.db -outfmt 5 -out $blast_file");
+system ("blastn -task blastn -query $align_file -db $tempreffile.db -outfmt 5 -out $blast_file");
 $result_matrices = blast_to_ref_xml("$blast_file");
 
 for (my $i=0;$i<@refids;$i++) {
