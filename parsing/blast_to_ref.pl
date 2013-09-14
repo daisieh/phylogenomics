@@ -16,6 +16,7 @@ my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 my $ref_file = 0;
 my $align_file = 0;
 my $out_file = 0;
+my $separate = 0;
 my $help = 0;
 my $blast_file = "";
 my $evalue = 10;
@@ -23,6 +24,7 @@ my $evalue = 10;
 GetOptions ('fasta|input=s' => \$align_file,
             'outputfile=s' => \$out_file,
             'reference=s' => \$ref_file,
+            'separate' => \$separate,
             'blastfile=s' => \$blast_file,
             'evalue=f' => \$evalue,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
@@ -76,8 +78,12 @@ $result_matrices = blast_to_ref_xml("$blast_file");
 for (my $i=0;$i<@refids;$i++) {
 	$result_matrices->{$refids[$i]}->{'reference'} = $references[$i];
 }
+if ($separate == 0) {
+	$refid = join ("+", @refids);
+} else {
+	$refid = "reference";
+}
 
-$refid = join ("+", @refids);
 for (my $i=0;$i<@refids;$i++) {
 	my $key = $refids[$i];
 	my $reflen = length($references[$i]);
@@ -88,34 +94,37 @@ for (my $i=0;$i<@refids;$i++) {
 	}
 }
 
-my ($res1, $res2) = meld_matrices(\@refids, $result_matrices);
-my %mastertaxa = %{$res1};
-my %regiontable = %{$res2};
+if ($separate == 0) {
+	my ($res1, $res2) = meld_matrices(\@refids, $result_matrices);
+	my %mastertaxa = %{$res1};
+	my %regiontable = %{$res2};
 
-open (fileOUT, ">", $out_file);
+	my $value = $mastertaxa{$refid};
+	open (fileOUT, ">", "$out_file.fasta");
+	print fileOUT ">$refid\n$value\n";
+	delete $mastertaxa{$refid};
+	delete $mastertaxa{"length"};
 
-# debug code:
-# my $x = 0;
-# foreach my $key (@refids) {
-# 	foreach my $keyid (keys %{$result_matrices{$key}}) {
-# 		print fileOUT ">$keyid\n$result_matrices{$key}->{$keyid}\n";
-# 	}
-# 	print fileOUT $x++ . "###\n";
-# }
-
-my $value = $mastertaxa{$refid};
-#
-print fileOUT ">$refid\n$value\n";
-delete $mastertaxa{$refid};
-delete $mastertaxa{"length"};
-
-# currently printing in fasta format: perhaps add a flag to alter this?
-foreach my $key ( keys %mastertaxa ) {
-	my $value = $mastertaxa{$key};
-	print fileOUT ">$key\n$value\n";
+	# currently printing in fasta format: perhaps add a flag to alter this?
+	foreach my $key ( keys %mastertaxa ) {
+		my $value = $mastertaxa{$key};
+		print fileOUT ">$key\n$value\n";
+	}
+	close fileOUT;
+} else {
+	foreach my $refname (@refids) {
+		open (fileOUT, ">", "$out_file.$refname.fasta");
+		my $value = ${$result_matrices->{$refname}}{$refid};
+		print fileOUT ">$refid\n$value\n";
+		delete ${$result_matrices->{$refname}}{$refid};
+		delete ${$result_matrices->{$refname}}{"length"};
+		foreach my $key ( keys (%{$result_matrices->{$refname}}) ) {
+			my $value = ${$result_matrices->{$refname}}{$key};
+			print fileOUT ">$key\n$value\n";
+		}
+		close fileOUT;
+	}
 }
-close fileOUT;
-
 
 
 # SUBFUNCTIONS START
