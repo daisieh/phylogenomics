@@ -78,18 +78,11 @@ $result_matrices = blast_to_ref_xml("$blast_file");
 for (my $i=0;$i<@refids;$i++) {
 	$result_matrices->{$refids[$i]}->{'reference'} = $references[$i];
 }
-<<<<<<< HEAD
 
-$refid = join ("+", @refids);
-foreach my $key (keys %result_matrices) {
-	$result_matrices{$key}->{$refid} = delete ($result_matrices{$key}->{'reference'});
-# 	print "result_matrix $key has " . keys (%{$result_matrices{$key}}) . " keys\n";
-=======
 if ($separate == 0) {
 	$refid = join ("+", @refids);
 } else {
 	$refid = "reference";
->>>>>>> redo-blast_to_ref
 }
 
 for (my $i=0;$i<@refids;$i++) {
