@@ -20,6 +20,7 @@ my $separate = 0;
 my $help = 0;
 my $blast_file = "";
 my $evalue = 10;
+my $no_blast = 0;
 
 GetOptions ('fasta|input=s' => \$align_file,
             'outputfile=s' => \$out_file,
@@ -27,6 +28,7 @@ GetOptions ('fasta|input=s' => \$align_file,
             'separate' => \$separate,
             'blastfile=s' => \$blast_file,
             'evalue=f' => \$evalue,
+            'no_blast' => \$no_blast,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -71,8 +73,10 @@ if ($blast_file eq "") {
 	(undef, $blast_file) = tempfile(UNLINK => 1);
 }
 
-system ("makeblastdb -in $ref_file -dbtype nucl -out $tempreffile.db");
-system ("blastn -task blastn -query $align_file -db $tempreffile.db -outfmt 5 -out $blast_file");
+if ($no_blast != 1) {
+	system ("makeblastdb -in $ref_file -dbtype nucl -out $tempreffile.db");
+	system ("blastn -task blastn -query $align_file -db $tempreffile.db -outfmt 5 -out $blast_file");
+} else { print "no blast\n"; }
 $result_matrices = blast_to_ref_xml("$blast_file");
 
 for (my $i=0;$i<@refids;$i++) {
@@ -116,7 +120,9 @@ if ($separate == 0) {
 	foreach my $refname (@refids) {
 		open (fileOUT, ">", "$out_file.$refname.fasta");
 		my $value = ${$result_matrices->{$refname}}{$refid};
-		print fileOUT ">$refid\n$value\n";
+		if ($ref_out == 1) {
+			print fileOUT ">$refid\n$value\n";
+		}
 		delete ${$result_matrices->{$refname}}{$refid};
 		delete ${$result_matrices->{$refname}}{"length"};
 		foreach my $key ( keys (%{$result_matrices->{$refname}}) ) {
