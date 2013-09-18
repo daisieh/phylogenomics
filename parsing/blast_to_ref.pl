@@ -20,6 +20,7 @@ my $separate = 0;
 my $help = 0;
 my $blast_file = "";
 my $evalue = 10;
+my $ref_out = 0;
 my $no_blast = 0;
 
 GetOptions ('fasta|input=s' => \$align_file,
@@ -28,6 +29,7 @@ GetOptions ('fasta|input=s' => \$align_file,
             'separate' => \$separate,
             'blastfile=s' => \$blast_file,
             'evalue=f' => \$evalue,
+            'include_ref' => \$ref_out,
             'no_blast' => \$no_blast,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
@@ -84,7 +86,7 @@ for (my $i=0;$i<@refids;$i++) {
 }
 
 if ($separate == 0) {
-	$refid = join ("+", @refids);
+	$refid = join ("|", @refids);
 } else {
 	$refid = "reference";
 }
@@ -106,7 +108,9 @@ if ($separate == 0) {
 
 	my $value = $mastertaxa{$refid};
 	open (fileOUT, ">", "$out_file.fasta");
-	print fileOUT ">$refid\n$value\n";
+	if ($ref_out == 1) {
+		print fileOUT ">$refid\n$value\n";
+	}
 	delete $mastertaxa{$refid};
 	delete $mastertaxa{"length"};
 
