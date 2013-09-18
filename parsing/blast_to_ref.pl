@@ -244,20 +244,20 @@ sub blast_to_ref {
 				my $sequence = "";
 				foreach my $hsp (@selected_hsps) { # for each hsp for this query
 					my $aln_length = $hsp->{"Hsp_align-len"}[0];
-# 					my $aln_percent = sprintf("%.2f",$hsp->{"Hsp_identity"}[0] / $aln_length);
-					print "\t".$hsp->{"Hsp_hit-from"}[0]."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+ 					my $aln_percent = sprintf("%.2f",$hsp->{"Hsp_identity"}[0] / $aln_length);
+					print "\t".$hsp->{"Hsp_hit-from"}[0]."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\t$aln_length\t$aln_percent\n";
 					my $last_end = $hit_end;
 					$hit_end = $hsp->{"Hsp_hit-to"}[0];
 					# remove gaps from query seq that might have been inserted into the ref seq.
 					while ($hsp->{"Hsp_hseq"}[0] =~ /^(.*?)(-+)(.*)$/) {
-						my $left = $1;
-						my $gap = $2;
-						my $right = $3;
-						$hsp->{"Hsp_hseq"}[0] = $left . $right;
-						$hsp->{"Hsp_qseq"}[0] =~ /^(.{length($left)})(.{length($gap)})(.{length($right)})/;
+						my $left = length($1);
+						my $gap = length($2);
+						my $right = length($3);
+						$hsp->{"Hsp_hseq"}[0] = $1 . $3;
+						$hsp->{"Hsp_qseq"}[0] =~ /^(.{$left})(.{$gap})(.{$right})/;
 						$hsp->{"Hsp_qseq"}[0] = $1 . $3;
 					}
-					$sequence .= "-" x ($hsp->{"Hsp_hit-from"}[0] - $last_end - 1) . $hsp->{"Hsp_qseq"}[0];
+					$sequence .= "n" x ($hsp->{"Hsp_hit-from"}[0] - $last_end - 1) . $hsp->{"Hsp_qseq"}[0];
 				}
 				if ($sequence =~ /\w/) {
 					$result_matrix{$hitdef}->{$iterquerydef} = $sequence;
