@@ -1,17 +1,17 @@
 use strict;
 
-my $fastafile_1 = shift;
-my $seq_blast = shift;
+my $fastafile = shift;
+my $sequences = shift;
 
-my $seq_names = "$seq_blast.sorted";
+my $seq_names = "$sequences.sorted";
 my $outfile = "$seq_names.fasta";
-system ("cat $seq_blast | sort | uniq -u > $seq_names");
+system ("cat $sequences | sort | uniq -u > $seq_names");
 
-system ("gawk '{if (NF == 0) next; s = \"\"; for (i=2;i<=NF;i++) s = s\$i; print \$1\",\"s}' RS=\">\" $fastafile_1 | sort | gawk '{ print \">\"\$1\"\\n\"\$2}' FS=\",\" > $fastafile_1.sorted");
+system ("gawk '{if (NF == 0) next; s = \"\"; for (i=2;i<=NF;i++) s = s\$i; print \$1\",\"s}' RS=\">\" $fastafile | sort | gawk '{ print \">\"\$1\"\\n\"\$2}' FS=\",\" > $fastafile.sorted");
 
 
 open LIST_FH, "<", "$seq_names";
-open FA1_FH, "<", "$fastafile_1.sorted";
+open FA1_FH, "<", "$fastafile.sorted";
 open OUT_FH, ">", "$outfile";
 
 my $curr_name = readline LIST_FH;
