@@ -79,7 +79,7 @@ if ($no_blast != 1) {
 	system ("makeblastdb -in $ref_file -dbtype nucl -out $tempreffile.db");
 	system ("blastn -task blastn -query $align_file -db $tempreffile.db -outfmt 5 -out $blast_file");
 } else { print "no blast\n"; }
-$result_matrices = blast_to_ref_xml("$blast_file");
+$result_matrices = blast_to_ref("$blast_file");
 
 for (my $i=0;$i<@refids;$i++) {
 	$result_matrices->{$refids[$i]}->{'reference'} = $references[$i];
@@ -139,7 +139,7 @@ if ($separate == 0) {
 
 
 # SUBFUNCTIONS START
-sub blast_to_ref_xml {
+sub blast_to_ref {
 	my $blast_xml = shift;
 	my %result_matrix = ();
 
@@ -270,78 +270,6 @@ sub blast_to_ref_xml {
 	print "result has " . (keys %result_matrix) . "\n";
 	return \%result_matrix;
 }
-
-sub blast_to_ref {
-	my $align_file = shift;
-	my $refseq = shift;
-	my $blastfile = shift;
-	my $evalue = shift;
-
-	my $blast_task = "-evalue $evalue ";
-	if (length ($refseq) < 50) {
-		$blast_task .= "-task blastn-short";
-	}
-
-	my (undef, $tempreffile) = tempfile(UNLINK => 1);
-	open refFH, ">", $tempreffile;
-	print refFH ">reference\n$refseq\n";
-	close refFH;
-
-	#blast the seq
-	if ($blastfile eq "") {
-		(undef, $blastfile) = tempfile(UNLINK => 1);
-	}
-	system ("makeblastdb -in $align_file -dbtype nucl -out $tempreffile.db");
-	system ("blastn $blast_task -query $tempreffile -db $tempreffile.db > $blastfile");
-	open BLAST_FH, "<", $blastfile;
-	my @lines = <BLAST_FH>;
-	close BLAST_FH;
-
-	my $revcomp = "";
-
-	foreach my $line (@lines) {
-		if ($line =~ /Strand=Plus\/Plus/) {
-			last;
-		} elsif ($line =~ /Strand=Plus\/Minus/) {
-			$revcomp = reverse_complement ($refseq);
-			open refFH, ">", $tempreffile;
-			print refFH ">$refid\n$revcomp\n";
-			close refFH;
-			system ("makeblastdb -in $tempreffile -dbtype nucl -out $tempreffile.db");
-			system ("blastn $blast_task -query $align_file -db $tempreffile.db > $blastfile");
-			last;
-		}
-	}
-
-	open BLAST_FH, "<", $blastfile;
-	my @lines = <BLAST_FH>;
-	close BLAST_FH;
-
-	my @seqids = ();
-	my @seqs = ();
-	my %result_matrix = ();
-	my $curr_query_id = "";
-	my $query_seq = "";
-	my ($query_end, $subject_end) = 0;
-	my ($curr_query_start, $curr_query_seq, $curr_query_end) = 0;
-
-	if ($blast_task =~ /-task blastn-short/) {
-		my $result_ptr = blast_short_to_alignment ($blastfile);
-		%result_matrix = %{$result_ptr};
-	} else {
-		my $result_ptr = blast_to_alignment ($blastfile);
-		%result_matrix = %{$result_ptr};
-	}
-
-	# flip the seqs if we did the blast for the revcomp
-	if ($revcomp ne "") {
-		foreach my $id (keys %result_matrix) {
-			$result_matrix{$id} = reverse_complement ($result_matrix{$id});
-		}
-	}
-	return \%result_matrix;
-}
-
 
 __END__
 
