@@ -254,7 +254,7 @@ sub blast_to_ref {
 
 					# remove all hits that would fall within this range: might as well start from the far end of the array.
 					my $this_hsp = 0;
-					for (my $j=@sorted_hsps-1; $j>0; $j--) {
+					for (my $j=@sorted_hsps-1; $j>=0; $j--) {
 						$this_hsp = $sorted_hsps[$j];
 						if (($this_hsp->{"Hsp_hit-from"}[0] >= $hit_start) && ($this_hsp->{"Hsp_hit-to"}[0] <= $hit_end)) {
 							splice (@sorted_hsps,$j,1);
