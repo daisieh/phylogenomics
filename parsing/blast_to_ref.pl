@@ -178,25 +178,19 @@ sub blast_to_ref {
 				my $hsps = $hit->{"Hit_hsps"}[0]->{"Hsp"}; # Key Hsp has a value that is an anonymous array of the hit hashes.
 				my $hitdef = $hit->{"Hit_def"}[0];
 				print "HIT $hitdef QUERY $iterquerydef\n";
-				# if any of the hits are on the minus strand, reverse-comp before dealing with them.
-				foreach my $hsp(@$hsps) {
+				my @sorted_hsps = sort { $b->{"Hsp_score"}[0] - $a->{"Hsp_score"}[0] } @$hsps;
+				my @selected_hsps = ();
+				my ($query_start, $query_end, $hit_start, $hit_end, $align_strand) = 0;
+				while (my $hsp = shift @sorted_hsps) {
 					my $hit_to = $hsp->{"Hsp_hit-to"}[0];
 					my $hit_from = $hsp->{"Hsp_hit-from"}[0];
-					my $query_to = $hsp->{"Hsp_query-to"}[0];
-					my $query_from = $hsp->{"Hsp_query-from"}[0];
-					if ($hit_to < $hit_from) {
+					# if $hsp is on the minus strand, reverse-comp before dealing with it.
+					if ($hsp->{"Hsp_hit-frame"}[0] < 0) {
 						$hsp->{"Hsp_hit-to"}[0] = $hit_from;
 						$hsp->{"Hsp_hit-from"}[0] = $hit_to;
-						$hsp->{"Hsp_query-to"}[0] = $query_from;
-						$hsp->{"Hsp_query-from"}[0] = $query_to;
 						$hsp->{"Hsp_qseq"}[0] = lc(reverse_complement($hsp->{"Hsp_qseq"}[0]));
 						$hsp->{"Hsp_hseq"}[0] = lc(reverse_complement($hsp->{"Hsp_hseq"}[0]));
 					}
-				}
-				my @sorted_hsps = sort { $a->{"Hsp_hit-from"}[0] - $b->{"Hsp_hit-from"}[0] } @$hsps;
-				my $query_end = 0;
-				my @selected_hsps = ();
-				foreach my $hsp (@sorted_hsps) { # for each hsp for this query
 					my $aln_length = $hsp->{"Hsp_align-len"}[0];
 					my $aln_percent = sprintf("%.2f",$hsp->{"Hsp_identity"}[0] / $aln_length);
 # 					if ($hsp->{"Hsp_evalue"}[0] > 10) {
@@ -205,47 +199,78 @@ sub blast_to_ref {
 # 					}
 					if (@selected_hsps == 0) {
 						# this is the first chunk of sequence.
-						my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
-						$query_end = pop @end;
-						print "\tfirst seq ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\n";
+						print "\tfirst seq with score ".$hsp->{"Hsp_score"}[0].": ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+						$query_start = $hsp->{"Hsp_query-from"}[0];
+						$query_end = $hsp->{"Hsp_query-to"}[0];
+						$hit_start = $hsp->{"Hsp_hit-from"}[0];
+						$hit_end = $hsp->{"Hsp_hit-to"}[0];
+						$align_strand = $hsp->{"Hsp_hit-frame"}[0];
+						print "\tdirectionality is set: $align_strand\n";
 						push @selected_hsps, $hsp;
 					} else {
-						# does this seq overlap with the last one in terms of hit coverage?
-						my $last_hsp = pop @selected_hsps;
-						my $last_aln_percent = sprintf("%.2f",$last_hsp->{"Hsp_identity"}[0] / $last_hsp->{"Hsp_align-len"}[0]);
-						if (($last_hsp->{"Hsp_hit-to"}[0] > $hsp->{"Hsp_hit-to"}[0]) || ($last_hsp->{"Hsp_hit-to"}[0] > $hsp->{"Hsp_hit-from"}[0])){
-							print "\tcomparing:\n";
-							print "\t\t\t".$last_hsp->{"Hsp_hit-from"}[0] ."-".$last_hsp->{"Hsp_hit-to"}[0]."\t".$last_hsp->{"Hsp_query-from"}[0] ."-".$last_hsp->{"Hsp_query-to"}[0]."\t(" . $last_hsp->{"Hsp_align-len"}[0].")\t$last_aln_percent\t".$last_hsp->{"Hsp_bit-score"}[0]."\t". $last_hsp->{"Hsp_evalue"}[0] . "\n";
-							print "\t\t\t".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0] ."-".$hsp->{"Hsp_query-to"}[0]."\t(". $hsp->{"Hsp_align-len"}[0].")\t$aln_percent\t".$hsp->{"Hsp_bit-score"}[0]."\t". $hsp->{"Hsp_evalue"}[0] . "\n";
-							# if this hsp has a beginning that is smaller than the end of the last one, then we have a partial overlap.
-							# compare the two by score:
-							if ($last_hsp->{"Hsp_bit-score"}[0] > $hsp->{"Hsp_bit-score"}[0]) {
-								print "\tchoose 1: " . $last_hsp->{"Hsp_hit-from"}[0] ."-".$last_hsp->{"Hsp_hit-to"}[0]  . "\n";
-								push @selected_hsps, $last_hsp;
-								next;
-							} else {
-								my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
-								$query_end = pop @end;
-								print "\tchoose 2: " . $hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]  . "\n";
-								push @selected_hsps, $hsp;
-								next;
-							}
+						# if it's not the first chunk, we need to check to see if it falls in a reasonable part of the sequence: both hit and query have to lie before or after the working region.
+						print "looking for hsps that work with $align_strand: $hit_start-$hit_end\t$query_start-$query_end\n";
+						print "\tlooking at next seq with score ".$hsp->{"Hsp_score"}[0].", ".$hsp->{"Hsp_hit-frame"}[0].": ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+						if ($hsp->{"Hsp_hit-frame"}[0] != $align_strand) {
+							print "\t\tNO: next seq has the wrong directionality\n";
 						} else {
-							print "\tno comparison, adding " . $hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]  . "\n";
-							push @selected_hsps, $last_hsp;
-							push @selected_hsps, $hsp;
+							if ($align_strand > 0) {
+								if (($hsp->{"Hsp_hit-to"}[0] < $hit_start) && ($hsp->{"Hsp_query-to"}[0] < $query_start)) {
+									# we know $hsp will fall completely on the left, so we're good.
+									print "\t\tYES: next seq falls to the left of $hit_start and $query_start: ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+									$query_start = $hsp->{"Hsp_query-from"}[0];
+									$hit_start = $hsp->{"Hsp_hit-from"}[0];
+									push @selected_hsps, $hsp;
+								} elsif (($hsp->{"Hsp_hit-from"}[0] > $hit_end) && ($hsp->{"Hsp_query-from"}[0] > $query_end)) {
+									# we know $hsp will fall completely on the left, so we're good.
+									print "\t\tYES: next seq falls to the right of $hit_end and $query_end: ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+									$query_end = $hsp->{"Hsp_query-to"}[0];
+									$hit_end = $hsp->{"Hsp_hit-to"}[0];
+									push @selected_hsps, $hsp;
+								} else {
+									print "\t\tNO: hit and query fell on opposite sides\n";
+								}
+							} else {
+								# we're dealing with a minus strand:
+								# hit should be the same, but query is backwards?
+								if (($hsp->{"Hsp_hit-to"}[0] < $hit_start) && ($hsp->{"Hsp_query-from"}[0] < $query_start)) {
+									# we know $hsp will fall completely on the left, so we're good.
+									print "\t\tYES: next seq falls to the left of $hit_start and $query_start: ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+									$query_start = $hsp->{"Hsp_query-from"}[0];
+									$hit_start = $hsp->{"Hsp_hit-from"}[0];
+									push @selected_hsps, $hsp;
+								} elsif (($hsp->{"Hsp_hit-from"}[0] > $hit_end) && ($hsp->{"Hsp_query-from"}[0] > $query_end)) {
+									# we know $hsp will fall completely on the left, so we're good.
+									print "\t\tYES: next seq falls to the right of $hit_end and $query_end: ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+									$query_end = $hsp->{"Hsp_query-to"}[0];
+									$hit_end = $hsp->{"Hsp_hit-to"}[0];
+									push @selected_hsps, $hsp;
+								} else {
+									print "\t\tNO: hit and query fell on opposite sides\n";
+								}
+							}
 						}
-						my @end = sort ({$a <=> $b}($query_end, $hsp->{"Hsp_query-to"}[0], $hsp->{"Hsp_query-from"}[0]));
-						$query_end = pop @end;
+					}
+
+					# remove all hits that would fall within this range: might as well start from the far end of the array.
+					my $this_hsp = 0;
+					for (my $j=@sorted_hsps-1; $j>0; $j--) {
+						$this_hsp = $sorted_hsps[$j];
+						if (($this_hsp->{"Hsp_hit-from"}[0] >= $hit_start) && ($this_hsp->{"Hsp_hit-to"}[0] <= $hit_end)) {
+							splice (@sorted_hsps,$j,1);
+						} elsif (($this_hsp->{"Hsp_query-from"}[0] >= $query_start) && ($this_hsp->{"Hsp_query-to"}[0] <= $query_end)) {
+							splice (@sorted_hsps,$j,1);
+						}
 					}
 				}
 				print "final sequence:\n";
 				my $hit_end = 0;
 				my $sequence = "";
+				my @selected_hsps = sort { $a->{"Hsp_hit-from"}[0] - $b->{"Hsp_hit-from"}[0] } @selected_hsps;
 				foreach my $hsp (@selected_hsps) { # for each hsp for this query
 					my $aln_length = $hsp->{"Hsp_align-len"}[0];
  					my $aln_percent = sprintf("%.2f",$hsp->{"Hsp_identity"}[0] / $aln_length);
-					print "\t".$hsp->{"Hsp_hit-from"}[0]."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\t$aln_length\t$aln_percent\n";
+					print "\t".$hsp->{"Hsp_hit-from"}[0]."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\t$aln_length\t$aln_percent\t".$hsp->{"Hsp_score"}[0]."\n";
 					my $last_end = $hit_end;
 					$hit_end = $hsp->{"Hsp_hit-to"}[0];
 					# remove gaps from query seq that might have been inserted into the ref seq.
