@@ -30,7 +30,7 @@ GetOptions ('fasta|input=s' => \$align_file,
             'blastfile=s' => \$blast_file,
             'evalue=f' => \$evalue,
             'include_ref' => \$ref_out,
-            'no_blast' => \$no_blast,
+            'no_blast|noblast' => \$no_blast,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
