@@ -182,10 +182,10 @@ sub blast_to_ref {
 				my @selected_hsps = ();
 				my ($query_start, $query_end, $hit_start, $hit_end, $align_strand) = 0;
 				while (my $hsp = shift @sorted_hsps) {
-					my $hit_to = $hsp->{"Hsp_hit-to"}[0];
-					my $hit_from = $hsp->{"Hsp_hit-from"}[0];
 					# if $hsp is on the minus strand, reverse-comp before dealing with it.
 					if ($hsp->{"Hsp_hit-frame"}[0] < 0) {
+						my $hit_to = $hsp->{"Hsp_hit-to"}[0];
+						my $hit_from = $hsp->{"Hsp_hit-from"}[0];
 						$hsp->{"Hsp_hit-to"}[0] = $hit_from;
 						$hsp->{"Hsp_hit-from"}[0] = $hit_to;
 						$hsp->{"Hsp_qseq"}[0] = lc(reverse_complement($hsp->{"Hsp_qseq"}[0]));
