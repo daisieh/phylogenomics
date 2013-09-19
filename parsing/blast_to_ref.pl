@@ -232,17 +232,17 @@ sub blast_to_ref {
 								}
 							} else {
 								# we're dealing with a minus strand:
-								# hit should be the same, but query is backwards?
-								if (($hsp->{"Hsp_hit-to"}[0] < $hit_start) && ($hsp->{"Hsp_query-from"}[0] < $query_start)) {
+								# hit should be the same, but query is backwards.
+								if (($hsp->{"Hsp_hit-to"}[0] < $hit_start) && ($hsp->{"Hsp_query-from"}[0] > $query_end)) {
 									# we know $hsp will fall completely on the left, so we're good.
-									print "\t\tYES: next seq falls to the left of $hit_start and $query_start: ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
-									$query_start = $hsp->{"Hsp_query-from"}[0];
+									print "\t\tYES: next seq falls to the left of $hit_start and -$query_end: ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+									$query_end = $hsp->{"Hsp_query-to"}[0];
 									$hit_start = $hsp->{"Hsp_hit-from"}[0];
 									push @selected_hsps, $hsp;
-								} elsif (($hsp->{"Hsp_hit-from"}[0] > $hit_end) && ($hsp->{"Hsp_query-from"}[0] > $query_end)) {
+								} elsif (($hsp->{"Hsp_hit-from"}[0] > $hit_end) && ($hsp->{"Hsp_query-to"}[0] < $query_start)) {
 									# we know $hsp will fall completely on the left, so we're good.
-									print "\t\tYES: next seq falls to the right of $hit_end and $query_end: ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
-									$query_end = $hsp->{"Hsp_query-to"}[0];
+									print "\t\tYES: next seq falls to the right of $hit_end and -$query_start: ".$hsp->{"Hsp_hit-from"}[0] ."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\n";
+									$query_start = $hsp->{"Hsp_query-from"}[0];
 									$hit_end = $hsp->{"Hsp_hit-to"}[0];
 									push @selected_hsps, $hsp;
 								} else {
