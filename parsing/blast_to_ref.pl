@@ -259,10 +259,10 @@ sub blast_to_ref {
 					for (my $j=@sorted_hsps-1; $j>=0; $j--) {
 						$this_hsp = $sorted_hsps[$j];
 						if (($this_hsp->{"Hsp_hit-from"}[0] >= $hit_start) && ($this_hsp->{"Hsp_hit-to"}[0] <= $hit_end)) {
-							debug ("\t\t\tremoving hsp ".$this_hsp->{"Hsp_hit-from"}[0]."-".$this_hsp->{"Hsp_hit-to"}[0]." because it's inside the hit\n");
+							debug ("\t\t\tremoving hsp ".$this_hsp->{"Hsp_hit-from"}[0]."-".$this_hsp->{"Hsp_hit-to"}[0]." with score ". $this_hsp->{"Hsp_score"}[0] . " because it's inside the hit\n");
 							splice (@sorted_hsps,$j,1);
 						} elsif (($this_hsp->{"Hsp_query-from"}[0] >= $query_start) && ($this_hsp->{"Hsp_query-to"}[0] <= $query_end)) {
-							debug ("\t\t\tremoving hsp ".$this_hsp->{"Hsp_query-from"}[0]."-".$this_hsp->{"Hsp_query-to"}[0]." because it's inside the query\n");
+							debug ("\t\t\tremoving hsp ".$this_hsp->{"Hsp_query-from"}[0]."-".$this_hsp->{"Hsp_query-to"}[0]." with score ". $this_hsp->{"Hsp_score"}[0] . " because it's inside the query\n");
 							splice (@sorted_hsps,$j,1);
 						} else {
 							debug ("\t\t\thsp ".$this_hsp->{"Hsp_hit-from"}[0]."-".$this_hsp->{"Hsp_hit-to"}[0]."\t".$this_hsp->{"Hsp_query-from"}[0]."-".$this_hsp->{"Hsp_query-to"}[0]." is not inside\n");
@@ -327,6 +327,9 @@ blast_to_ref -fasta fastafile -reference reffile -output outputfile
   -outputfile:      output file name.
   -blastfile:	    optional: if specified, put BLASTN output in this file.
   -evalue:	        optional: if specified, sets evalue threshold for BLASTN hits.
+  -include_ref:     optional: if specified, includes the reference sequence in the fasta output.
+  -no_blast:        optional: (use with -blastfile flag) uses the specified blast xml file as input (for debugging)
+  -debug:           optional: spews lots of information to STDERR.
 
 =head1 DESCRIPTION
 
