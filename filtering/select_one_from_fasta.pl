@@ -45,6 +45,9 @@ $line = readline FH;
 while ($line !~ />/) {
 	print RESULT_FH $line;
 	$line = readline FH;
+	if ($line == undef) {
+		last;
+	}
 }
 
 close RESULT_FH;
