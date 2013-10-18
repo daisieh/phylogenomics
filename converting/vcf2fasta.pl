@@ -147,8 +147,9 @@ foreach my $sample (@samples) {
 		if ($depth > $cov_thresh) {
 			if ($pl =~ /,/) {
 				my @pls = split(/,/, $pl);
-				my $alleles = get_allele_str([$ref, $alt]);
+				my $alleles = "$ref$alt";
 				my @genotypes = @{get_ordered_genotypes($alleles)};
+				print "$i\t$ref,$alt\t".join(",",@genotypes)."\t".join(",",@pls)."\n";
 				$alt = "N";
 				for (my $g=0;$g<@pls;$g++) {
 					if ($pls[$g] <= $pl_thresh) {
