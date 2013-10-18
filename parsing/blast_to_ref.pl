@@ -4,6 +4,7 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
 use XML::Simple;
+#no, we should use XML::XPath!
 
 require "subfuncs.pl";
 
@@ -179,6 +180,7 @@ sub blast_to_ref {
 			foreach my $hit (@$hits) {
 				my $hsps = $hit->{"Hit_hsps"}[0]->{"Hsp"}; # Key Hsp has a value that is an anonymous array of the hit hashes.
 				my $hitdef = $hit->{"Hit_def"}[0];
+				$hitdef =~ s/\s+/_/g;
 				debug ("HIT $hitdef QUERY $iterquerydef\n");
 				my @sorted_hsps = sort { $b->{"Hsp_score"}[0] - $a->{"Hsp_score"}[0] } @$hsps;
 				my @selected_hsps = ();
@@ -293,6 +295,7 @@ sub blast_to_ref {
 				}
 				if ($sequence =~ /\w/) {
 					$result_matrix{$hitdef}->{$iterquerydef} = $sequence;
+					debug ("put seq in result_matrix at $hitdef->$iterquerydef\n");
 				} else {
 					debug ("\tno match\n");
 				}
