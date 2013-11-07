@@ -40,7 +40,7 @@ def __main__():
                       help="A list of files to run script on")
     parser.add_option("-r", "--reference", default=None, dest="ref",
                       help="The reference genome")
-    parser.add_option("-p", "--processes", default=None, dest="processes",
+    parser.add_option("-p", "--processes", default=1, dest="processes",
                       help="Number of processes to use")
     (options, args) = parser.parse_args()
 

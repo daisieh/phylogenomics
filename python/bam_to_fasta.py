@@ -19,7 +19,7 @@ def __main__():
     parser = optparse.OptionParser()
     parser.add_option("-i", "--input", default=None, dest="input",
                       help="A list of files to run script on")
-    parser.add_option("-p", "--processes", default=None, dest="processes",
+    parser.add_option("-p", "--processes", default=1, dest="processes",
                       help="Number of processes to use")
     (options, args) = parser.parse_args()
 
