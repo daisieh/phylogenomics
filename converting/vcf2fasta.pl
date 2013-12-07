@@ -150,7 +150,7 @@ foreach my $sample (@samples) {
 				my $alleles = "$ref$alt";
 				my @genotypes = @{get_ordered_genotypes($alleles)};
 				my $j = $i+1;
-				print "$j\t$ref,$alt\t".join(",",@genotypes)."\t".join(",",@pls)."\n";
+				print "$j\t$depth\t$ref,$alt\t".join(",",@genotypes)."\t".join(",",@pls)."\n";
 				$alt = "N";
 				for (my $g=0;$g<@pls;$g++) {
 					if ($pls[$g] <= $pl_thresh) {
