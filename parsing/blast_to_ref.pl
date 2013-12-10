@@ -6,8 +6,6 @@ use File::Basename;
 use XML::Simple;
 #no, we should use XML::XPath!
 
-require "subfuncs.pl";
-
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
@@ -80,7 +78,7 @@ if ($blast_file eq "") {
 
 if ($no_blast != 1) {
 	system ("makeblastdb -in $ref_file -dbtype nucl -out $tempreffile.db");
-	system ("blastn -task blastn -query $align_file -db $tempreffile.db -outfmt 5 -out $blast_file");
+	system ("blastn -task blastn -evalue $evalue -query $align_file -db $tempreffile.db -outfmt 5 -out $blast_file");
 } else { debug ("no blast\n"); }
 $result_matrices = blast_to_ref("$blast_file");
 
@@ -276,10 +274,14 @@ sub blast_to_ref {
 				my $hit_end = 0;
 				my $sequence = "";
 				my @selected_hsps = sort { $a->{"Hsp_hit-from"}[0] - $b->{"Hsp_hit-from"}[0] } @selected_hsps;
+				my $total_identity = 0;
+				my $total_aln_length = 0;
 				foreach my $hsp (@selected_hsps) { # for each hsp for this query
 					my $aln_length = $hsp->{"Hsp_align-len"}[0];
  					my $aln_percent = sprintf("%.2f",$hsp->{"Hsp_identity"}[0] / $aln_length);
 					debug ("\t".$hsp->{"Hsp_hit-from"}[0]."-".$hsp->{"Hsp_hit-to"}[0]."\t".$hsp->{"Hsp_query-from"}[0]."-".$hsp->{"Hsp_query-to"}[0]."\t$aln_length\t$aln_percent\t".$hsp->{"Hsp_score"}[0]."\n");
+					$total_aln_length += $aln_length;
+					$total_identity += $hsp->{"Hsp_identity"}[0];
 					my $last_end = $hit_end;
 					$hit_end = $hsp->{"Hsp_hit-to"}[0];
 					# remove gaps from query seq that might have been inserted into the ref seq.
@@ -293,6 +295,7 @@ sub blast_to_ref {
 					}
 					$sequence .= "n" x ($hsp->{"Hsp_hit-from"}[0] - $last_end - 1) . $hsp->{"Hsp_qseq"}[0];
 				}
+				debug ("aligned $total_identity out of $total_aln_length chars\n");
 				if ($sequence =~ /\w/) {
 					$result_matrix{$hitdef}->{$iterquerydef} = $sequence;
 					debug ("put seq in result_matrix at $hitdef->$iterquerydef\n");
@@ -312,6 +315,80 @@ sub debug {
 		print STDERR "$str";
 	}
 }
+sub reverse_complement {
+	my $charstr = shift;
+
+	# reverse the DNA sequence
+	my $revcomp = reverse($charstr);
+
+	# complement the reversed DNA sequence
+	$revcomp =~ tr/ABCDGHMNRSTUVWXYabcdghmnrstuvwxy/TVGHCDKNYSAABWXRtvghcdknysaabwxr/;
+	return $revcomp;
+}
+=head1
+
+B<(\%mastertaxa, \%regiontable) meld_matrices ( @matrixnames, %matrices )>
+
+Given a hash of sequence matrices indexed by the values of @matrixnames, melds them into
+a single hash of concatenated sequences. The regiontable hash contains the information about
+which taxa contained which sequences and where they are in the concatenated supermatrix.
+
+@matrixnames:   Names of the matrices used as keys to the hash.
+%matrices       The sequence matrices to be concatenated, indexed by the values of @matrixnames.
+
+=cut
+
+sub meld_matrices {
+	my $arg1 = shift;
+	my $arg2 = shift;
+
+	my @matrixnames = @$arg1;
+	my %matrices = %$arg2;
+	my $currlength = 0;
+
+	# start the master matrix: for every taxon in every input file, make a blank entry.
+	my %mastertaxa = ();
+	my %regiontable = ();
+	foreach my $inputfile ( keys (%matrices) ) {
+		foreach my $taxon ( keys (%{$matrices{$inputfile}})) {
+			$mastertaxa {$taxon} = "";
+		}
+	}
+
+	# now, in order of the inputted matrix names, add the sequences to the taxa of the master matrix.
+	# if a taxon is missing from the matrix, add missing data for that entry.
+	foreach my $key (@matrixnames) {
+		my $ref = $matrices{$key};
+		my @curr_matrix_taxa = keys(%$ref);
+		my $total = length($ref->{$curr_matrix_taxa[0]});
+		foreach my $v (values %$ref) {
+			if (length($v) > $total) {
+				$total == length($v);
+			}
+		}
+		$regiontable{"regions"} .= "$key\t";
+		my %expandedmatrix = ();
+		foreach my $k (keys %mastertaxa) {
+			#add entries from this matrix into expandedmatrix
+			if (defined $ref->{$k}) {
+				$mastertaxa{$k} .= $ref->{ $k };
+				$regiontable{$k} = $regiontable{$k} . "x\t";
+			} else {
+				$mastertaxa{$k} .= "-" x $total;
+				$regiontable{$k} = $regiontable{$k} . "\t";
+			}
+		}
+		my $starts_at = $currlength + 1;
+		$currlength = $currlength + $total;
+		$regiontable{"exclusion-sets"} = $regiontable{"exclusion-sets"} . ($currlength + 1) . "-" . "$currlength\t";
+
+	}
+	$mastertaxa{"length"} = $currlength;
+
+	return (\%mastertaxa, \%regiontable);
+}
+
+
 
 __END__
 
