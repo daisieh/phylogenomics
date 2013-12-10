@@ -119,7 +119,7 @@ sub parse_aln_into_genes {
 
     my @gene_alns;
 
-    my $type = "gene";
+    my $type = "CDS";
 
     my $gb_seqio = Bio::SeqIO->new(-file => $gb_file);
     my $start, $end;
@@ -127,7 +127,8 @@ sub parse_aln_into_genes {
 	while (my $seq_object = $gb_seqio->next_seq) {
 		for my $feat_object ($seq_object->get_SeqFeatures) {
 			if ($feat_object->primary_tag eq $type) {
-				my $name = main_name_for_gb_feature($feat_object);
+				my @loc_list = ();
+				my $name = main_name_for_gb_feature($feat_object, 1);
 				my @locations = $feat_object->location->each_Location;
 				my $cat_aln = 0;
 				my $strand = 0;
@@ -135,12 +136,17 @@ sub parse_aln_into_genes {
 					$strand = $loc->strand;
 					my $start = $loc->start;
 					my $end = $loc->end;
+					push @loc_list, "$start..$end";
 					my $curr_slice = $whole_aln->slice($start, $end,1);
+					print "slice\n";
 					if ($cat_aln == 0) {
 						$cat_aln = $curr_slice;
 					} else {
+					print "cat\n";
 						$cat_aln = cat($cat_aln, $curr_slice);
+						print "cat2\n";
 					}
+					print "CDS\t$name\t$start\t$end\n";
 				}
 				if ($strand < 0) {
 					# must flip each seq in the curr_slice
@@ -279,7 +285,7 @@ sub main_name_for_gb_feature {
         @names = $feat->get_tag_values('gene');
 		$curr_name = @names[0];
 	}
-	if ($search_others) {
+	if (($curr_name eq "") && ($search_others)) {
 		if ($feat->has_tag('locus_tag')) {
 			@names = $feat->get_tag_values('locus_tag');
 			$curr_name = @names[0];
