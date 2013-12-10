@@ -1,3 +1,5 @@
+use strict;
+
 =head1
 
 B<(String $time, String $date) timestamp ()>
@@ -256,6 +258,7 @@ sub get_iupac_code {
 		if ($charstr =~ /N/) {
 			 return "N";
 		}
+		# MRWSYKVHDBN
 		$charstr =~ s/ACGT/N/g;
 		$charstr =~ s/AC/M/g;
 		$charstr =~ s/AG/R/g;
@@ -434,6 +437,7 @@ sub meld_matrices {
 
 	# start the master matrix: for every taxon in every input file, make a blank entry.
 	my %mastertaxa = ();
+	my %regiontable = ();
 	foreach my $inputfile ( keys (%matrices) ) {
 		foreach my $taxon ( keys (%{$matrices{$inputfile}})) {
 			$mastertaxa {$taxon} = "";
@@ -446,7 +450,7 @@ sub meld_matrices {
 		my $ref = $matrices{$key};
 		my @curr_matrix_taxa = keys(%$ref);
 		my $total = length($ref->{$curr_matrix_taxa[0]});
-		foreach my $v (values %ref) {
+		foreach my $v (values %$ref) {
 			if (length($v) > $total) {
 				$total == length($v);
 			}
@@ -472,6 +476,22 @@ sub meld_matrices {
 
 	return (\%mastertaxa, \%regiontable);
 }
+
+sub sortfasta {
+	my $fastafile = shift;
+	my $outfile = shift;
+	my $separator = shift;
+
+	if ($separator) {
+		print "using $separator\n";
+	} else {
+		$separator = '\n';
+	}
+
+	my (undef, $tempfile) = tempfile(UNLINK => 1);
+	system ("gawk '{if (NF==0) next; s = \"\"; for (i=2;i<=NF;i++) s = s\$i; print \$1\",\"s}' RS=\">\" $fastafile | sort -t',' -k 1 | gawk '{print \">\" \$1 \"$separator\" \$2}' FS=\",\" > $outfile");
+}
+
 
 =head1
 
