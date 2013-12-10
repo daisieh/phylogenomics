@@ -9,11 +9,12 @@ if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
-my ($fa_file, $gb_file, $out_file, $help, $multiple) = 0;
+my ($fa_file, $gb_file, $out_file, $help, $multiple, $concatenated) = 0;
 GetOptions ('fasta=s' => \$fa_file,
             'genbank|gb_file=s' => \$gb_file,
             'outputfile=s' => \$out_file,
             'help|?' => \$help,
+            'concatenated' => \$concatenated,
             'multiple!' => \$multiple) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -26,7 +27,7 @@ my @gene_alns = @{parse_aln_into_genes($whole_aln, $gb_file)};
 if ($multiple) {
 	foreach my $aln (@gene_alns) {
 		my $gene_name = $aln->description();
-		open my $gene_file, ">", "$out_file/$gene_name.fasta";
+		open my $gene_file, ">", "$out_file/$gene_name.fasta" or die "couldn't open file\n";
 		foreach my $seq ($aln->each_seq()) {
 			my $name = $seq->id();
 			print $gene_file ">$name\n";
@@ -34,6 +35,26 @@ if ($multiple) {
 		}
 		close $gene_file;
 	}
+} elsif ($concatenated) {
+	my @concat_seqs = ();
+	my @names = ();
+	foreach my $seq ($gene_alns[0]->each_seq()) {
+		push @concat_seqs, "";
+		push @names, $seq->id();
+	}
+	foreach my $aln (@gene_alns) {
+		my $gene_name = $aln->description();
+		my @seqs = $aln->each_seq();
+		for (my $i=0;$i<@concat_seqs;$i++) {
+			$concat_seqs[$i] .= $seqs[$i]->seq();
+			print "$gene_name\t".length($seqs[$i]->seq())."\n";
+		}
+	}
+	open my $gene_file, ">", "$out_file.fasta";
+	for (my $i=0;$i<@concat_seqs;$i++) {
+		print $gene_file ">$names[$i]\n$concat_seqs[$i]\n";
+	}
+	close $gene_file;
 } else {
 	open my $gene_file, ">", "$out_file.fasta";
 
