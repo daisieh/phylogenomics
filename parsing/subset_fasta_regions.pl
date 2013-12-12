@@ -28,9 +28,8 @@ foreach my $line (<FH>) {
 	my $regionsize = $end - $start + 1;
 
 	for (my $i=0; $i<@seqs; $i++) {
-			my ($a, $b, $c) = split_seq ($seqs[$i],$start,$end);
-			$newseqs[$i] .= "$b";
-			$seqs[$i] = "$c";
+		my ($a, $b, $c) = split_seq ($seqs[$i],$start,$end);
+		$newseqs[$i] .= "$b";
 	}
 	$location = $end+1;
 
