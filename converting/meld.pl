@@ -30,19 +30,19 @@ my ($res1, $res2) = meld_sequence_files(\@inputfiles);
 my %mastertaxa = %{$res1};
 my %regiontable = %{$res2};
 
-my $ntax = keys %mastertaxa;
 my $nchar = delete $mastertaxa{"length"};
-
-$regiontable{ "regions" } = "";
-$regiontable{ "exclusion-sets" } = "";
+my $ntax = keys %mastertaxa;
 
 open (fileOUT, ">$outname"."_regions.tab") or die "couldn't make $outname"."_regions.tab\n";
 print fileOUT "regions\t$regiontable{'regions'}\n";
 print fileOUT "exclusion_sets\t$regiontable{'exclusion-sets'}\n";
 delete $regiontable{"regions"};
 delete $regiontable{"exclusion-sets"};
+
 foreach my $key (keys %regiontable) {
-	print fileOUT "$key\t$regiontable{$key}\n";
+	if ($key ne "length") {
+		print fileOUT "$key\t$regiontable{$key}\n";
+	}
 }
 close fileOUT;
 
