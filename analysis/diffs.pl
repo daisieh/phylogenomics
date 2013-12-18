@@ -19,24 +19,36 @@ close FH;
 my $total = 0;
 my $gaps = 0;
 my $diffs = 0;
+my $ambiguities = 0;
 my $length = length ($seqs[0]);
-
+print "seqs are $length long\n";
 while ($seqs[0]) {
-	my @bases = ();
+	print "seqs are now ". length ($seqs[0]) . " long\n";
+	my $column = "";
 	for (my $i=0; $i<@seqs; $i++) {
 		if ($seqs[$i] =~ /^(.)(.*)$/) {
-			push @bases, "$1";
+			$column .= uc("$1");
 			$seqs[$i] = "$2";
 		}
 	}
-# 	print "$total\n";
-	if (($bases[0] eq "-") || ($bases[1] eq "-")) {
+
+	my $col_gaps = $column =~ tr/\-N//d;
+	if ($col_gaps > 0) {
 		$gaps++;
 		next;
 	} else {
 		$total++;
 	}
-	if ($bases[0] ne $bases[1]) {
+	my $col_ambig = $column =~ tr/ACGT//c;
+	if ($col_ambig > 0) {
+		$ambiguities++;
+	}
+
+	$column = join ('', sort (split(//, $column)));
+	$column =~ /(.)/;
+	my $char = $1;
+	$column =~ s/$char+//;
+	if ($column ne "") {
 		$diffs++;
 	}
 }
@@ -46,6 +58,7 @@ print "total length: $length\n";
 print "total gaps: $gaps\n";
 print "total compared: $total\n";
 print "total diffs: $diffs\n";
+print "total ambiguities: $ambiguities\n";
 print "percent divergence: " . (($diffs / $total) * 100) . "\n";
 
 sub flattenfasta {
