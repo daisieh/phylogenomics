@@ -358,8 +358,13 @@ $inputfile:   NEXUS file to parse.
 sub parse_nexus {
 	my $inputfile = shift;
 
-	my %taxa = ();
+	my $taxa = {};
 	my @taxonlabels = ();
+	my $gapchar = "-";
+	my $interleave = 0;
+	my $nchar = 0;
+	my $ntax = 0;
+
 	open (fileIN, "$inputfile") or die "no file named $inputfile";
 	my @inputs = <fileIN>;
 
@@ -377,41 +382,106 @@ sub parse_nexus {
 	#remove comment blocks
 	$input =~ s/\[.*?\]//sg;
 
-	$input =~ /Format(.*?)\;/ig;
-	my $format = "$1";
-	$format =~ /gap=(.)/;
-	my $gapchar = $1;
+	#find blocks:
+	my $blocks = {};
+	while ($input =~ /Begin (.+?);(.+?)End;/isg) {
+		my $blockname = uc($1);
+		my $block = $2;
+		$blocks->{$blockname} = $block;
+	}
 
-	#parse nexus block
-	$input =~ /Matrix(.*?)\;/isg;
-	my $matrix = "$1";
-
-	$matrix =~ /\s*?(\S+?)\s+/s;
-	my $firsttaxon = "$1";
-
-	my @sections = split /$firsttaxon/, $matrix;
-	foreach my $section (@sections) {
-		$section =~ s/\s+$//s;
-		if ($section eq "") { next; }
-		$section = "$firsttaxon$section";
-		$section =~ s/\s+$/\n/s;
-		$section =~ s/\t//sg;
-		my $numtaxa = ($section =~ s/\n/\n/sg);
-
-		@taxonlabels = split /\n/, $section;
-
-		foreach my $taxonlabel (@taxonlabels) {
-			$taxonlabel =~ s/\s+(.+?)$//;
-			my $taxondata = $1;
-			$taxondata =~ s/$gapchar/-/g;
-			$taxa{ $taxonlabel } = $taxa{ $taxonlabel } . $taxondata;
+	my @blocks_to_process = qw (TAXA CHARACTERS DATA);
+	foreach my $blockname (@blocks_to_process) {
+		if (exists $blocks->{$blockname}) {
+			my $statements = {};
+			while ($blocks->{$blockname} =~ /\s*(.+?)\s+(.+?);/isg) {
+				my $statementname = uc($1);
+				my $statement = $2;
+				$statements->{$statementname} = $statement;
+			}
+			$blocks->{$blockname} = $statements;
 		}
 	}
 
-	my $length = length $taxa{ $taxonlabels[0] };
-	$taxa{ "length" } = $length;
+	# look for TAXA block:
+	if (exists $blocks->{"TAXA"}) {
+		@taxonlabels = split (/\s+/, $blocks->{"TAXA"}->{"TAXLABELS"});
+	}
 
-	return \%taxa, \@taxonlabels;
+	# look for CHARACTERS or DATA block:
+	my $datablock;
+	if (exists $blocks->{"CHARACTERS"}) {
+		$datablock = $blocks->{"CHARACTERS"};
+	} elsif (exists $blocks->{"DATA"}) {
+		$datablock = $blocks->{"DATA"};
+	}
+
+	if ($datablock) {
+		$ntax = scalar @taxonlabels;
+		if (exists $datablock->{"FORMAT"}) {
+			my @params = ();
+			my $paramline = "$datablock->{'FORMAT'}";
+			while ($paramline =~ /(.+?)\s*=\s*(\S+)\s*(.*)/) {
+				push @params, (uc($1)."=".uc($2));
+				$paramline = $3;
+			}
+			foreach my $param (@params) {
+				if ($param =~ /GAP=(.*)/) {
+					$gapchar = $1;
+				} elsif ($param =~ /INTERLEAVE=(.*)/) {
+					if ($1 =~ /YES/) {
+						$interleave = 1;
+					}
+				}
+			}
+		}
+		if (exists $datablock->{"DIMENSIONS"}) {
+			my @params = ();
+			my $paramline = "$datablock->{'DIMENSIONS'}";
+			while ($paramline =~ /(.+?)\s*=\s*(\S+)\s*(.*)/) {
+				push @params, (uc($1)."=".uc($2));
+				$paramline = $3;
+			}
+			foreach my $param (@params) {
+				if ($param =~ /NTAX=(.*)/) {
+					if (($ntax > 0) && ($1 != $ntax)) {
+						die "ntax in dimensions does not match ntax in taxa block.\n";
+					}
+					$ntax = $1;
+				} elsif ($param =~ /NCHAR=(.*)/) {
+					$nchar = $1;
+				}
+			}
+		}
+		if (exists $datablock->{"MATRIX"}) {
+			my $matrix = "$datablock->{'MATRIX'}";
+			my @lines = split (/\n/, $matrix);
+			foreach my $line (@lines) {
+				if ($line =~ /\s*(\S+)\s+(\S+)/) {
+					my $currtaxon = $1;
+					my $currdata = $2;
+					$currtaxon =~ s/\'//g;
+					$currtaxon =~ s/\"//g;
+					$currdata =~ s/$gapchar/-/g;
+					if (exists $taxa->{$currtaxon}) {
+						$taxa->{$currtaxon} = $taxa->{$currtaxon} . $currdata;
+					} else {
+						$taxa->{$currtaxon} = $currdata;
+					}
+				}
+			}
+			foreach my $taxon (keys $taxa) {
+				if (length($taxa->{$taxon}) != $nchar) {
+					die "Characters specified for $taxon do not match $nchar.";
+				}
+
+			}
+		}
+	}
+
+	$taxa->{"length"} = $nchar;
+
+	return $taxa, \@taxonlabels;
 }
 
 =head1
