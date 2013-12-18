@@ -426,7 +426,7 @@ sub plot_points {
 	my $circle_size = @x_vals[(scalar @x_vals)-1] + $window_size;
 
     my @coords = $self->coords_on_circle(0,$radius);
-    my ($last_x, $last_y, $last_angle, $this_x, $this_y, $this_angle);
+    my ($last_x, $last_y, $last_angle, $this_x, $this_y, $this_angle, $this_radius);
     my @blank_sectors;
     $last_x = @coords[0];
     $last_y = @coords[1];
@@ -439,12 +439,13 @@ sub plot_points {
     for (my $i = 0; $i < (scalar @x_vals); $i++) {
     	if (@y_vals[$i]) {
 			$this_angle = (@x_vals[$i]/$circle_size) * 360;
+			$this_radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@y_vals[$i]));
 			my $increment_angle = $this_angle + $angle_size;
-			my @new_coords = $self->coords_on_circle($this_angle,$radius);
+			my @new_coords = $self->coords_on_circle($this_angle,$this_radius);
 			$this_x = @new_coords[0];
 			$this_y = @new_coords[1];
 			$p->{pspages} .= "$this_x $this_y newpath moveto\n";
-			@new_coords = $self->coords_on_circle($increment_angle,$radius);
+			@new_coords = $self->coords_on_circle($increment_angle,$this_radius);
 			$this_x = @new_coords[0];
 			$this_y = @new_coords[1];
 			$p->{pspages} .= "$this_x $this_y lineto\n";

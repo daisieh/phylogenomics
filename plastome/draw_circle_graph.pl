@@ -31,8 +31,8 @@ print "$datafile, $outfile\n";
 }
 
 my $circlegraph_obj = new CircleGraph;
-$circlegraph_obj->inner_radius($circlegraph_obj->inner_radius - 100);
-$circlegraph_obj->outer_radius($circlegraph_obj->outer_radius - 100);
+$circlegraph_obj->inner_radius($circlegraph_obj->inner_radius - 50);
+# $circlegraph_obj->outer_radius($circlegraph_obj->outer_radius);
 
 if ($gb_file) {
 	if ($gb_file =~ /\.gb$/) {
@@ -42,6 +42,7 @@ if ($gb_file) {
 	    $gb_file = "$outfile.genes";
 	}
 	$circlegraph_obj = draw_gene_map ($gb_file, $circlegraph_obj, {direction=>"OUT", width=>15});
+	$circlegraph_obj = draw_gene_map ($gb_file, $circlegraph_obj, {direction=>"IN", width=>15});
 }
 
 

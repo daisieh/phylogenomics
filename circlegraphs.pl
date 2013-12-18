@@ -145,6 +145,7 @@ sub plots_around_circle {
         for (my $i=0; $i<@items; $i++) {
             @items[$i] =~ s/\n//;
             push (@{$graphs[$i]}, @items[$i]);
+
         }
         push (@differences, @items);
         $line = readline DATAFH;
@@ -166,16 +167,17 @@ sub plots_around_circle {
 
     # draw background circles
     $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
-    $circlegraph_obj->draw_circle($circlegraph_obj->outer_radius);
+#     $circlegraph_obj->draw_circle($circlegraph_obj->outer_radius);
 
     # draw graphs
     for (my $j=0; $j<@graphs; $j++) {
-        $circlegraph_obj->plot_points(\@positions, $graphs[$j], {color=>$j,radius=>((($j+1)*15)-5),width=>10,angle=>0.3});
+    	print "plotting ".join(",",@{$graphs[$j]})."\n";
+        $circlegraph_obj->plot_points(\@positions, $graphs[$j], {color=>$j,radius=>((($j+1)*15)-5),width=>5,angle=>0.5});
         $circlegraph_obj->append_to_legend("@labels[$j]", "$j");
     }
 
-    $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius, {'filled'=>1, 'color'=>"white"} );
-    $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
+#     $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius, {'filled'=>1, 'color'=>"white"} );
+#     $circlegraph_obj->draw_circle($circlegraph_obj->inner_radius);
 
     return $circlegraph_obj;
 }
