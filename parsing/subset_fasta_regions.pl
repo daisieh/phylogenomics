@@ -29,7 +29,7 @@ foreach my $line (<FH>) {
 
 	for (my $i=0; $i<@seqs; $i++) {
 		my ($a, $b, $c) = split_seq ($seqs[$i],$start,$end);
-		$newseqs[$i] .= "$b";
+		$newseqs[$i] .= "\n$b";
 	}
 	$location = $end+1;
 

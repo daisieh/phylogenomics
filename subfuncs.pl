@@ -311,35 +311,35 @@ $inputfile:   fasta file to parse.
 
 
 sub parse_fasta {
-	my $inputfile = shift;
+	my $fastafile = shift;
 
-	my %taxa = ();
+	my $taxa = {};
 	my @taxanames = ();
-	open (fileIN, "$inputfile") or die "no file named $inputfile";
+	my $length = 0;
+	open fileIN, "<", "$fastafile";
 
 	my $input = readline fileIN;
-	my $length = 0;
 	my $taxonlabel = "";
 	my $sequence = "";
-	while ($input ne "") {
+	while ($input !~ /^\s*$/) {
 		if ($input =~ /^>(.+)\s*$/) {
 			$taxonlabel = $1;
 			push @taxanames, $taxonlabel;
 			if ($length > 0) {
 				# we are at the next taxon; push the last one onto the taxon array.
-				$taxa {"length"} = $length;
+				$taxa->{"length"} = $length;
 				$length = 0;
 			}
 		} else {
 			$input =~ /^\s*(.+)\s*$/;
-			$taxa {$taxonlabel} .= $1;
+			$taxa->{$taxonlabel} .= $1;
 			$length += length($1);
 		}
 		$input = readline fileIN;
 	}
 
 	close (fileIN);
-	return \%taxa, \@taxanames;
+	return $taxa, \@taxanames;
 }
 
 =head1
@@ -579,21 +579,21 @@ sub meld_sequence_files {
 	my $arg = shift;
 	my @inputfiles = @$arg;
 
-	my %matrices = ();
+	my $matrices = {};
 	my @matrixnames = ();
 
 	foreach my $inputfile (@inputfiles) {
 		push @matrixnames, $inputfile;
 		if ($inputfile =~ /\.nex/) {
-			($matrices{ $inputfile }, undef) = parse_nexus ($inputfile);
+			($matrices->{ $inputfile }, undef) = parse_nexus ($inputfile);
 		} elsif ($inputfile =~/\.fa/) {
-			($matrices{ $inputfile }, undef) = parse_fasta ($inputfile);
+			($matrices->{ $inputfile }, undef) = parse_fasta ($inputfile);
 		} else {
 			print "Couldn't parse $inputfile: not nexus or fasta format\n";
 		}
 	}
 
-	return meld_matrices (\@matrixnames, \%matrices);
+	return meld_matrices (\@matrixnames, $matrices);
 }
 
 
@@ -769,6 +769,20 @@ sub blast_short_to_alignment {
 
 	return \%result_matrix;
 
+}
+
+sub system_call {
+	my $cmd = shift;
+
+	my $exit_val = eval {
+		system ($cmd);
+	};
+
+	if ($exit_val != 0) {
+		print "System call \"$cmd\" exited with $exit_val\n";
+		exit;
+	}
+	return $exit_val;
 }
 
 

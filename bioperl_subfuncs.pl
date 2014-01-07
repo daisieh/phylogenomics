@@ -32,7 +32,9 @@ sub convert_aln_to_nexus {
 		foreach my $seq ( $aln->each_seq()) {
 			$len = $seq->length;
 			if ($i > $len - $blocksize) { $flag = 0; $blocksize = $len - $i + 1;}
-			$nexblock .= "" . $seq->display_name . "\t";
+			my $name = $seq->display_name;
+			$name =~ s/-/_/g;
+			$nexblock .= "" . $name . "\t";
 			$nchar = length($seq->seq());
 			my $seq_str = $seq->subseq($i, $i+$blocksize-1);
 			$nexblock .= "$seq_str\n";
