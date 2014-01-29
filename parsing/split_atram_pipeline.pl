@@ -16,7 +16,7 @@ foreach my $t (@$seqnames) {
 	my $seqfile = File::Spec->catfile( $outdir, "$clean_name.fasta" );
 	print LISTFH "$clean_name\t$seqfile\n";
 	open FH, ">", $seqfile;
-	print FH ">$t\n$taxa->{$t}\n";
+	print FH ">$t\n$seqs->{$t}\n";
 	close FH;
 }
 
