@@ -2,6 +2,7 @@
 use File::Spec;
 use FindBin;
 use lib "$FindBin::Bin/..";
+use File::Path qw (make_path);
 use Subfunctions;
 
 my $fastafile = shift;
@@ -11,6 +12,7 @@ if (! defined $outdir) { print "\n\tUsage: split_atram_pipeline.pl fastafile out
 
 my ($seqs, $seqnames) = parse_fasta($fastafile);
 $outdir = File::Spec->rel2abs($outdir);
+make_path($outdir);
 
 open LISTFH, ">", File::Spec->catfile( $outdir, "fastalist.txt" );
 
