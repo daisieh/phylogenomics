@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use File::Spec;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/..";
 use Subfunctions;
 
 my $fastafile = shift;
