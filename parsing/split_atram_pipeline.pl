@@ -7,7 +7,7 @@ use Subfunctions;
 my $fastafile = shift;
 my $outdir = shift;
 
-if ($outdir == 0) { print "\n\tUsage: split_atram_pipeline.pl fastafile outdir\n\n"; exit; }
+if (! defined $outdir) { print "\n\tUsage: split_atram_pipeline.pl fastafile outdir\n\n"; exit; }
 
 my ($seqs, $seqnames) = parse_fasta($fastafile);
 $outdir = File::Spec->rel2abs($outdir);
