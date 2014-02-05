@@ -486,7 +486,7 @@ sub parse_nexus {
 					}
 				}
 			}
-			foreach my $taxon (keys $taxa) {
+			foreach my $taxon (keys %$taxa) {
 				if (length($taxa->{$taxon}) != $nchar) {
 					die "Characters specified for $taxon do not match $nchar.";
 				}
