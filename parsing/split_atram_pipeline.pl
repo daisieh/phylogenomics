@@ -17,6 +17,7 @@ make_path($outdir);
 open LISTFH, ">", File::Spec->catfile( $outdir, "fastalist.txt" );
 
 foreach my $t (@$seqnames) {
+	print "making $t\n";
 	my $clean_name = $t;
 	$clean_name =~ s/\|.*$//;
 	my $seqfile = File::Spec->catfile( $outdir, "$clean_name.fasta" );
