@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 use File::Spec;
-require "subfuncs.pl";
+use Subfunctions;
 
 my $fastafile = shift;
 my $outdir = shift;

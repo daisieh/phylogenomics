@@ -1,4 +1,17 @@
+package Subfunctions;
 use strict;
+
+BEGIN {
+	require Exporter;
+	# set the version for version checking
+	our $VERSION     = 1.00;
+	# Inherit from Exporter to export functions and variables
+	our @ISA         = qw(Exporter);
+	# Functions and variables which are exported by default
+	our @EXPORT      = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call);
+	# Functions and variables which can be optionally exported
+	our @EXPORT_OK   = qw();
+}
 
 =head1
 
