@@ -1,5 +1,7 @@
 use strict;
-require "subfuncs.pl";
+use FindBin;
+use lib "$FindBin::Bin/..";
+use Subfunctions;
 use File::Temp qw/ tempfile tempdir /;
 
 my $input_file = shift;

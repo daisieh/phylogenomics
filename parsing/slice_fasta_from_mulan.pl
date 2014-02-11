@@ -3,7 +3,9 @@ use strict;
 use Bio::SeqIO;
 use Bio::Align::Utilities qw(cat);
 
-require "subfuncs.pl";
+use FindBin;
+use lib "$FindBin::Bin/..";
+use Subfunctions;
 
 my $inputfile = @ARGV[0];
 my $fa_file = @ARGV[1];
