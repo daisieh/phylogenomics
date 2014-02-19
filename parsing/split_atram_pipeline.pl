@@ -3,7 +3,7 @@ use File::Spec;
 use FindBin;
 use lib "$FindBin::Bin/..";
 use File::Path qw (make_path);
-use System;
+use Subfunctions;
 
 my $fastafile = shift;
 my $outdir = shift;
