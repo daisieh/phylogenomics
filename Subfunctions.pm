@@ -236,7 +236,7 @@ sub get_allele_str {
 	if (length($charstr) == 1) {
 		return $charstr;
 	}
-	if ($charstr =~ /-+/) {
+	if ($charstr =~ /^-+$/) {
 		return "-";
 	}
 	$charstr = uc($charstr);
