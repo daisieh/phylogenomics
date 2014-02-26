@@ -236,6 +236,9 @@ sub get_allele_str {
 	if (length($charstr) == 1) {
 		return $charstr;
 	}
+	if ($charstr =~ /-+/) {
+		return "-";
+	}
 	$charstr = uc($charstr);
 	$charstr =~ s/\W//g;
 	$charstr =~ s/_//g;
@@ -269,7 +272,9 @@ sub get_iupac_code {
 	if (length($charstr) == 1) {
 		return $charstr;
 	}
-
+	if ($charstr =~ /-+/) {
+		return "-";
+	}
 	while (length ($charstr) > 1) {
 		if ($charstr =~ /N/) {
 			 return "N";
