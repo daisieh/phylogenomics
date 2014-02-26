@@ -17,6 +17,7 @@ my ($taxa, $taxanames) = parse_fasta ($fastafile);
 
 my $seqlen = length ($taxa->{@$taxanames[0]});
 
+print ">consensus\n";
 while ($taxa->{@$taxanames[0]} ne "") {
 	my $currchars = "";
 	foreach my $taxon (@$taxanames) {
