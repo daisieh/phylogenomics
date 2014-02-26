@@ -1,9 +1,33 @@
 use strict;
-require "bioperl_subfuncs.pl";
+use FindBin;
+use lib "$FindBin::Bin/..";
+use Subfunctions;
 
-my $input_file = shift;
+if (@ARGV < 1) {
+	die "Usage: consensus2.pl fastafile\n";
+}
 
-my $aln = make_aln_from_fasta_file($input_file);
-my $consensus = $aln->consensus_string();
+my $fastafile = shift;
 
-print ">$input_file\n$consensus\n";
+unless (-e $fastafile) {
+	die "File $fastafile does not exist.\n";
+}
+
+my ($taxa, $taxanames) = parse_fasta ($fastafile);
+
+my $seqlen = length ($taxa->{@$taxanames[0]});
+
+print ">$fastafile\n";
+while ($taxa->{@$taxanames[0]} ne "") {
+	my $currchars = "";
+	foreach my $taxon (@$taxanames) {
+		if ($taxa->{$taxon} =~ m/(.)(.*)$/) {
+			$currchars .= $1;
+			$taxa->{$taxon} = $2;
+		}
+	}
+# 	print get_allele_str($currchars) . "\n";
+	print get_iupac_code($currchars) . "";
+}
+
+print "\n";
