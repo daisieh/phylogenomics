@@ -1,5 +1,4 @@
 use strict;
-use File::Temp qw/ tempfile tempdir /;
 use FindBin;
 use lib "$FindBin::Bin/..";
 use Subfunctions;
@@ -26,7 +25,6 @@ while ($taxa->{@$taxanames[0]} ne "") {
 			$taxa->{$taxon} = $2;
 		}
 	}
-# 	print get_allele_str($currchars) . "\n";
 	print get_iupac_code($currchars) . "";
 }
 
