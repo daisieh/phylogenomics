@@ -1,8 +1,11 @@
 use strict;
 use File::Temp qw/ tempfile tempdir /;
+use FindBin;
+use lib "$FindBin::Bin/..";
+use Subfunctions;
 
 if (@ARGV < 2) {
-	die "Usage: 6.5-sequenceretrieval.pl fastafile sequencelist\n";
+	die "Usage: sequenceretrieval.pl fastafile sequencelist\n";
 }
 
 my $fastafile = shift;
@@ -18,30 +21,37 @@ unless (-e $fastafile) {
 	die "File $fastafile does not exist.\n";
 }
 
-my (undef, $seq_names) = tempfile(UNLINK => 1);
-my (undef, $fasta_sort) = tempfile(UNLINK => 1);
-
-system ("cat $sequencelist | sort | uniq -u > $seq_names");
-system ("gawk '{if (NF == 0) next; s = \"\"; for (i=2;i<=NF;i++) s = s\$i; print \$1\",\"s}' RS=\">\" $fastafile | sort | gawk '{ print \">\"\$1\"\\n\"\$2}' FS=\",\" > $fasta_sort");
-
-open LIST_FH, "<", "$seq_names";
-open FA_FH, "<", "$fasta_sort";
-open OUT_FH, ">", "$outfile";
-
-my $curr_name = readline LIST_FH;
-
-while ($curr_name) {
-	chomp $curr_name;
-	my $fa_seq = (readline FA_FH) . (readline FA_FH);
-
-	if ($fa_seq eq "") { last; }
-
-	if ($fa_seq =~ /$curr_name/) {
-		print OUT_FH "$fa_seq";
-		$curr_name = readline LIST_FH;
-	}
+my @seqs = ();
+open LIST_FH, "<", "$sequencelist";
+foreach my $seq (<LIST_FH>) {
+	chomp $seq;
+	push @seqs, $seq;
 }
-
 close LIST_FH;
-close FA_FH;
+
+my $found = findsequences ($fastafile, \@seqs);
+
+open OUT_FH, ">", "$outfile";
+foreach my $seq (@seqs) {
+	print OUT_FH ">$seq\n$found->{$seq}\n";
+}
 close OUT_FH;
+
+sub findsequences {
+	my $fastafile = shift;
+	my $names = shift;
+
+	unless (-e $fastafile) {
+		die "File $fastafile does not exist.\n";
+	}
+
+	my $hashed_seqs = {};
+	my ($taxa, $taxanames) = parse_fasta ($fastafile);
+
+	foreach my $name (@$names) {
+		if (exists $taxa->{$name}) {
+			$hashed_seqs->{$name} = $taxa->{$name};
+		}
+	}
+	return $hashed_seqs;
+}

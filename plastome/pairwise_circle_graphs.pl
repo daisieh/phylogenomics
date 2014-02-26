@@ -4,7 +4,9 @@ use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
 require "bioperl_subfuncs.pl";
-require "subfuncs.pl";
+use FindBin;
+use lib "$FindBin::Bin/..";
+use Subfunctions;
 require "circlegraphs.pl";
 
 if (@ARGV == 0) {

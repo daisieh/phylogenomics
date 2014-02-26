@@ -1,4 +1,20 @@
+package Subfunctions;
 use strict;
+use FindBin;
+use lib "$FindBin::Bin";
+
+
+BEGIN {
+	require Exporter;
+	# set the version for version checking
+	our $VERSION     = 1.00;
+	# Inherit from Exporter to export functions and variables
+	our @ISA         = qw(Exporter);
+	# Functions and variables which are exported by default
+	our @EXPORT      = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call);
+	# Functions and variables which can be optionally exported
+	our @EXPORT_OK   = qw();
+}
 
 =head1
 
@@ -220,6 +236,9 @@ sub get_allele_str {
 	if (length($charstr) == 1) {
 		return $charstr;
 	}
+	if ($charstr =~ /-+/) {
+		return "-";
+	}
 	$charstr = uc($charstr);
 	$charstr =~ s/\W//g;
 	$charstr =~ s/_//g;
@@ -253,7 +272,9 @@ sub get_iupac_code {
 	if (length($charstr) == 1) {
 		return $charstr;
 	}
-
+	if ($charstr =~ /-+/) {
+		return "-";
+	}
 	while (length ($charstr) > 1) {
 		if ($charstr =~ /N/) {
 			 return "N";
@@ -470,7 +491,7 @@ sub parse_nexus {
 					}
 				}
 			}
-			foreach my $taxon (keys $taxa) {
+			foreach my $taxon (keys %$taxa) {
 				if (length($taxa->{$taxon}) != $nchar) {
 					die "Characters specified for $taxon do not match $nchar.";
 				}

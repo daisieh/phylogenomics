@@ -1,16 +1,23 @@
 #!/usr/bin/perl
 use File::Spec;
-require "subfuncs.pl";
+use FindBin;
+use lib "$FindBin::Bin/..";
+use File::Path qw (make_path);
+use Subfunctions;
 
 my $fastafile = shift;
 my $outdir = shift;
 
+if (! defined $outdir) { print "\n\tUsage: split_atram_pipeline.pl fastafile outdir\n\n"; exit; }
+
 my ($seqs, $seqnames) = parse_fasta($fastafile);
 $outdir = File::Spec->rel2abs($outdir);
+make_path($outdir);
 
 open LISTFH, ">", File::Spec->catfile( $outdir, "fastalist.txt" );
 
 foreach my $t (@$seqnames) {
+	print "making $t\n";
 	my $clean_name = $t;
 	$clean_name =~ s/\|.*$//;
 	my $seqfile = File::Spec->catfile( $outdir, "$clean_name.fasta" );

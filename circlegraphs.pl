@@ -14,6 +14,9 @@ $circlegraph_obj is an optional parameter for an existing CircleGraph.
 The function returns a CircleGraph object with the values plotted,
 positions mapped around the edge, and a legend describing the graph.
 
+Some of the code is based on GeneMap 1.1.1:
+OrganellarGenomeDRAW (OGDRAW) - a tool for the easy generation of high-quality custom graphical maps of plastid and mitochondrial genomes. Lohse, M., Drechsel, O. and Bock, R.. Curr. Genet. (2007) 52:267-274.
+
 =cut
 
 sub draw_circle_graph {

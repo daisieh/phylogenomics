@@ -1,4 +1,6 @@
-require "subfuncs.pl";
+use FindBin;
+use lib "$FindBin::Bin/../..";
+use Subfunctions;
 use Bio::SeqIO;
 use Bio::TreeIO;
 use Bio::Align::Utilities qw(cat);

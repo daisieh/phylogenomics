@@ -1,7 +1,9 @@
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
-require "subfuncs.pl";
+use FindBin;
+use lib "$FindBin::Bin/..";
+use Subfunctions;
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
