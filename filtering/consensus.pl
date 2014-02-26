@@ -24,8 +24,9 @@ while ($taxa->{@$taxanames[0]} ne "") {
 			$taxa->{$taxon} = $2;
 		}
 	}
+	$currchars = disambiguate_str($currchars);
+	print get_iupac_code($currchars);
 # 	print get_allele_str($currchars) . "\n";
-	print get_iupac_code($currchars) . "";
 }
 
 print "\n";

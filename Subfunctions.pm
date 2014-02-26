@@ -11,7 +11,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call);
+	our @EXPORT      = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -216,6 +216,49 @@ sub get_ordered_genotypes {
 
 =head1
 
+B<String disambiguate_str ( String/Array $charstr )>
+
+Convenience function to stringify a list or a string of alleles with extra characters.
+Returns the string in alphabetical order and in all caps.
+
+$charstr:   string or array of alleles to stringify
+
+=cut
+
+
+sub disambiguate_str {
+	my $arg = shift;
+
+	my $charstr = $arg;
+	if (ref($arg) =~ /ARRAY/) {
+		$charstr = join ("",@$arg);
+	}
+	if (length($charstr) == 1) {
+		return $charstr;
+	}
+	if ($charstr =~ /^-+$/) {
+		return "-";
+	}
+	$charstr = uc($charstr);
+	$charstr =~ s/N/ACGT/g;
+	$charstr =~ s/M/AC/g;
+	$charstr =~ s/R/AG/g;
+	$charstr =~ s/W/AT/g;
+	$charstr =~ s/S/CG/g;
+	$charstr =~ s/Y/CT/g;
+	$charstr =~ s/K/GT/g;
+	$charstr =~ s/V/ACG/g;
+	$charstr =~ s/H/ACT/g;
+	$charstr =~ s/D/AGT/g;
+	$charstr =~ s/B/CGT/g;
+
+	$charstr = join ("",sort(split('',$charstr)));
+	return "$charstr";
+}
+
+
+=head1
+
 B<String get_allele_str ( String/Array $charstr )>
 
 Convenience function to stringify a list or a string of alleles with extra characters.
@@ -269,6 +312,7 @@ sub get_iupac_code {
 	my $charstr = get_allele_str ($arg);
 	$charstr =~ tr/A-Z//s;
 
+
 	if (length($charstr) == 1) {
 		return $charstr;
 	}
@@ -276,6 +320,7 @@ sub get_iupac_code {
 		return "-";
 	}
 	while (length ($charstr) > 1) {
+# 		$charstr =~ tr/A-Z//s;
 		if ($charstr =~ /N/) {
 			 return "N";
 		}
