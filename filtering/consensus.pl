@@ -15,8 +15,6 @@ unless (-e $fastafile) {
 
 my ($taxa, $taxanames) = parse_fasta ($fastafile);
 
-my $seqlen = length ($taxa->{@$taxanames[0]});
-
 print ">$fastafile\n";
 while ($taxa->{@$taxanames[0]} ne "") {
 	my $currchars = "";
