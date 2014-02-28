@@ -320,7 +320,6 @@ sub get_iupac_code {
 		return "-";
 	}
 	while (length ($charstr) > 1) {
-# 		$charstr =~ tr/A-Z//s;
 		if ($charstr =~ /N/) {
 			 return "N";
 		}
