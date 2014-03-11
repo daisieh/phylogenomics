@@ -59,7 +59,8 @@ print $i++ . "\n";
 my $bam_input = $bamfile;
 # make a bam input file with the corresponding number of reads, if requested.
 if ($max_reads > 0) {
-	open FH, ">", "$outputfile.bam";
+	$bam_input = "$outputfile.bam";
+	open FH, ">", $bam_input;
 	close FH;
 	$cmd = "samtools view -h $bamfile | head -n $max_reads | samtools view -bhS - > $bam_input";
 	print $i++ . ": $cmd\n";
