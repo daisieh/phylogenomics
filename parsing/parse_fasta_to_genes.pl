@@ -9,7 +9,8 @@ if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
-my ($fa_file, $gb_file, $out_file, $help, $multiple, $concatenated) = 0;
+my ($help, $multiple, $concatenated) = 0;
+my ($fa_file, $gb_file, $out_file) = "";
 GetOptions ('fasta=s' => \$fa_file,
             'genbank|gb_file=s' => \$gb_file,
             'outputfile=s' => \$out_file,
