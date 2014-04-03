@@ -32,31 +32,39 @@ while (defined $line) {
 				$subject_length = $1;
 			}
 			if ($line =~ /Query_\d+\s+(\d+).+?(\d+)$/) {
+				$query_end = $2;
 				if ($query_start == 0) {
 					$query_start = $1;
 				}
-				$query_end = $2;
-			}
-			if ($line =~ /Subject_\d+\s+(\d+).+?(\d+)/) {
-				if ($subject_start == 0) {
-					$subject_start = $1;
+				$line = readline FH;
+				if ($line =~ /Subject_\d+\s+(\d+)\s+(\S+)\s+(\d+)/) {
+					$subject_end = $3;
+					my $subj = $2;
+					if ($subject_start == 0) {
+						$subject_start = $1;
+						if (($subject_end - $subject_start) != ($query_end - $query_start)) {
+							$query_start = $query_end - length($subj)+1;
+						}
+					}
 				}
-				$subject_end = $2;
 			}
 		}
-		print "finished $subject $line";
 		select OUT_FH;
 		$| = 1;
-		print OUT_FH "$subject\t$query_start\t$query_end";
-		if (($subject_end - $subject_start) != ($subject_length - 1)) {
+		print OUT_FH "$subject\t$query_start\t";
+		if (($query_end - $query_start) != ($subject_length - 1)) {
 			if (($subject_end - $subject_start) == -($subject_length - 1)) {
-				print OUT_FH "\treverse strand";
+				print OUT_FH "$query_end\treverse strand";
 			} elsif (($subject_end==0) && ($subject_start == 0)) {
-				print OUT_FH "\tno match";
+				print OUT_FH "$query_end\tno match";
 			} elsif ($subject_end==$subject_start) {
-				print OUT_FH "\tcaught twice";
+				print OUT_FH "$query_end\tcaught twice";
+			} else {
+				$query_end = $query_start + $subject_length - 1;
+				print OUT_FH "$query_end";
 			}
-				print OUT_FH "\tproblem: ($subject_end - $subject_start) != ($subject_length - 1)";
+		} else {
+			print OUT_FH "$query_end";
 		}
 		print OUT_FH "\n";
 		select STDOUT;
