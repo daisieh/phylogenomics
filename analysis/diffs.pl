@@ -23,7 +23,6 @@ my $ambiguities = 0;
 my $length = length ($seqs[0]);
 print "seqs are $length long\n";
 while ($seqs[0]) {
-	print "seqs are now ". length ($seqs[0]) . " long\n";
 	my $column = "";
 	for (my $i=0; $i<@seqs; $i++) {
 		if ($seqs[$i] =~ /^(.)(.*)$/) {

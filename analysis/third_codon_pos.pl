@@ -16,7 +16,6 @@ foreach my $line (<FH>) {
 	push @seqs, $2;
 }
 close FH;
-print "hi\n";
 my $location = 0;
 my @ns_seqs = ();
 my @s_seqs = ();
@@ -37,15 +36,12 @@ while ($seqs[0]) {
 # 			$seqs[$i] = ;
 		}
 	}
-	print "$count\n";
 	$count++;
 }
-print "hi\n";
 
 if ($fastafile =~ /(.*)\.fa.*/) {
 	$fastafile = $1;
 }
-print "hi\n";
 open NS_FH, ">", "$fastafile.ns.fasta";
 open S_FH, ">", "$fastafile.s.fasta";
 for (my $i=0; $i<@seqs; $i++) {

@@ -1,7 +1,7 @@
 use strict;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions;
+use Subfunctions qw(parse_fasta disambiguate_str get_iupac_code);
 
 if (@ARGV < 1) {
 	die "Usage: consensus2.pl fastafile\n";
