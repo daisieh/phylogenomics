@@ -37,34 +37,14 @@ print OUT_FH ">$gff_hash->{Name}.gene\n$gff_hash->{sequence}\n";
 my $params = { 'padded' => 0, 'separate' => 1 };
 for (my $mRNA_num = 1; $mRNA_num <= (keys $gff_hash->{"mRNA"}); $mRNA_num++) {
 	print "mRNA $mRNA_num:\n";
-	my $seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"five_prime_UTR"}, $params);
-	print @$seq . " 5' UTR\n";
-	if ((ref $seq) =~ /ARRAY/ ) {
-		for (my $i=1; $i<=@$seq; $i++) {
-			print "$i @$seq[$i-1]\n";
-			print OUT_FH ">$gff_hash->{Name}.$mRNA_num.5UTR$i\n@$seq[$i-1]\n";
-		}
-	}
-	$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"exon"}, $params);
-	print @$seq . " exons\n";
-	if ((ref $seq) =~ /ARRAY/ ) {
-		for (my $i=1; $i<=@$seq; $i++) {
-			print OUT_FH ">$gff_hash->{Name}.$mRNA_num.exon$i\n@$seq[$i-1]\n";
-		}
-	}
-	$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"three_prime_UTR"}, $params);
-	print @$seq . " 3' UTR\n";
-	if ((ref $seq) =~ /ARRAY/ ) {
-		for (my $i=1; $i<=@$seq; $i++) {
-			print OUT_FH ">$gff_hash->{Name}.$mRNA_num.3UTR$i\n@$seq[$i-1]\n";
-		}
-	}
-	$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"CDS"}, $params);
-	print @$seq . " CDS\n";
-	if ((ref $seq) =~ /ARRAY/ ) {
-		for (my $i=1; $i<=@$seq; $i++) {
-			print "CDS $i\n";
-			print OUT_FH ">$gff_hash->{Name}.$mRNA_num.CDS.$i\n@$seq[$i-1]\n";
+	my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
+	foreach my $type (@feature_types) {
+		my $seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
+		print @$seq . " $type\n";
+		if ((ref $seq) =~ /ARRAY/ ) {
+			for (my $i=1; $i<=@$seq; $i++) {
+				print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\n@$seq[$i-1]\n";
+			}
 		}
 	}
 }
