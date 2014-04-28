@@ -7,6 +7,10 @@ my $gene = shift;
 my $fastafile = shift;
 my $outfile = shift;
 
+if (!(defined $outfile)) {
+	$outfile = "$gene.fasta";
+}
+
 open FH, "<", $gff_file;
 my $gff_block = "";
 my $line = readline FH;
