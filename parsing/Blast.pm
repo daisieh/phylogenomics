@@ -39,9 +39,9 @@ sub blast_to_ref {
 	my $hit_array = parse_xml($blast_xml);
 
 	foreach my $hit (@$hit_array) {
-		my $query_name = $hit->{"query"};
+		my $query_name = $hit->{"query"}->{"name"};
 		my $hsps = $hit->{"hsps"}; # Key Hsp has a value that is an anonymous array of the hit hashes.
-		my $subject_name = $hit->{"subject"};
+		my $subject_name = $hit->{"subject"}->{"name"};
 		$subject_name =~ s/\s+/_/g;
 		debug ("HIT $subject_name QUERY $query_name\n");
 		my @sorted_hsps = sort { $b->{"score"} - $a->{"score"} } @$hsps;
@@ -171,7 +171,10 @@ sub blast_to_ref {
 }
 
 # parse_xml takes the freakshow that is the BLAST XML format and simplifies it:
-# the result is an
+# the result is an array of hits:
+# each hit is a hash with three keys: query, subject, hsps.
+# the "hsps" value is an array of high-scoring segment pairs (hsps).
+# each hsp has a bunch of associated key/value pairs.
 
 sub parse_xml {
 	my $blast_xml = shift;
@@ -207,11 +210,13 @@ sub parse_xml {
 		foreach my $iteration (@$iterations) { # for each iteration
 			my $hit_hash = {};
 			push @hit_array, $hit_hash;
-			$hit_hash->{"query"} = $iteration->{"Iteration_query-def"}[0];
+			$hit_hash->{"query"}->{"name"} = $iteration->{"Iteration_query-def"}[0];
+			$hit_hash->{"query"}->{"length"} = $iteration->{"Iteration_query-len"}[0];
 			foreach my $hit (@{$iteration->{"Iteration_hits"}[0]->{"Hit"}}) { # each Hit in the iteration can have multiple Hsps.
 				my @hsp_array = ();
 				$hit_hash->{"hsps"} = \@hsp_array;
-				$hit_hash->{"subject"} = $hit->{"Hit_def"}[0];
+				$hit_hash->{"subject"}->{"name"} = $hit->{"Hit_def"}[0];
+				$hit_hash->{"subject"}->{"length"} = $hit->{"Hit_len"}[0];
 				foreach my $hsp (@{$hit->{"Hit_hsps"}[0]->{"Hsp"}}) { # Key Hsp has a value that is an anonymous array of the hsp hashes.
 					my $hsp_hash = {};
 					push @hsp_array, $hsp_hash;
