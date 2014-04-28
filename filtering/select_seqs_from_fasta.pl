@@ -2,7 +2,7 @@ use strict;
 use File::Temp qw/ tempfile tempdir /;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions;
+use Subfunctions qw(parse_fasta);
 
 if (@ARGV < 2) {
 	die "Usage: sequenceretrieval.pl fastafile sequencelist\n";
