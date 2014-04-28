@@ -2,7 +2,8 @@ use strict;
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
-require "bioperl_subfuncs.pl";
+use File::Path qw (make_path);
+use File::Spec qw (catfile rel2abs);
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -10,9 +11,10 @@ if (@ARGV == 0) {
 
 my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
-my ($fastafile, $resultfile, $seq_name, $help) = 0;
+my ($fastafile, $resultfile, $seq_name, $help, $split_all) = 0;
 GetOptions ('fasta=s' => \$fastafile,
             'outputfile=s' => \$resultfile,
+            'split_all' => \$split_all,
             'sequence=s' => \$seq_name,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
@@ -31,27 +33,47 @@ unless (($fastafile && $resultfile)) {
     pod2usage(-msg => $msg, -exitval => 2);
 }
 
-open FH, "<", "$fastafile" or die "couldn't open $fastafile";
-my $line = readline FH;
+# make the output file an absolute path, just to be safe.
+my $output_path = File::Spec->rel2abs($resultfile);
 
-while ($line !~ /$seq_name/) {
-	$line = readline FH;
-}
-
-open RESULT_FH, ">", "$resultfile"."\.fasta";
-print RESULT_FH $line;
-$line = readline FH;
-
-while ($line !~ />/) {
-	print RESULT_FH $line;
-	$line = readline FH;
-	if ($line == undef) {
-		last;
+if ($split_all) {
+	print "$output_path\n";
+	# check to see if the path for the output_file exists; if not, create it.
+	unless (-d $output_path) {
+		make_path ($output_path);
 	}
 }
 
-close RESULT_FH;
-close FH;
+open fileIN, "<:crlf", "$fastafile" or die "couldn't open $fastafile";
+my $input = readline fileIN;
+my $taxonlabel = "";
+my $sequence = "";
+while (defined $input) {
+	if ($input =~ /^>(.+)\s*$/) {
+		print "$input";
+		if ($sequence ne "") { #are we done with a sequence?
+			if ($split_all) {
+				open FH, ">", File::Spec->catfile($output_path, "$taxonlabel.fasta");
+				print FH ">$taxonlabel\n$sequence\n";
+				close FH;
+			} elsif ($taxonlabel eq $seq_name) {
+				open FH, ">", "$resultfile.fasta";
+				print FH ">$taxonlabel\n$sequence\n";
+				close FH;
+			}
+		}
+		$sequence = "";
+		$taxonlabel = $1;
+		$taxonlabel =~ s/\s+/_/g;
+	} else {
+		$input =~ /^\s*(.+)\s*$/;
+		$sequence .= "$1\n";
+	}
+	$input = readline fileIN;
+}
+
+close fileIN;
+
 
 __END__
 
