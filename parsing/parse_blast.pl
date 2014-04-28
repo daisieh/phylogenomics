@@ -1,10 +1,26 @@
-#parse_fasta_to_genes.pl [-fasta fa_file] [-genbank gb_file] [-outputfile output_file] [-multiple]
+use Getopt::Long;
+use Pod::Usage;
 
-#makeblastdb -in ref_gene_set -out ref_db -dbtype 'nucl'
-#blastn -query new_file -subject ref_db -outfmt 3
+my $help = 0;
+my $blastfile = "";
+my $outfile = "";
 
-my $blastfile = shift;
-my $outfile = shift;
+
+GetOptions ('blastfile=s' => \$blastfile,
+            'outputfile=s' => \$outfile,
+            'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+if ($help) {
+    pod2usage(-verbose => 1);
+}
+
+if ($blastfile eq "") {
+    pod2usage(-verbose => 1);
+}
+
+if ($outfile eq "") {
+    pod2usage(-verbose => 1);
+}
 
 open FH, "<", $blastfile;
 open OUT_FH, ">", $outfile;
@@ -72,3 +88,26 @@ while (defined $line) {
 }
 close FH;
 close OUT_FH;
+
+__END__
+
+=head1 NAME
+
+parse_blast
+
+=head1 SYNOPSIS
+
+First run: blastn -query comparison.fasta -subject reference.fasta -outfmt 3 -out blast_file
+Then run: parse_blast [-blast blast_file] [-outputfile output_file]
+
+=head1 OPTIONS
+
+  -blast:           "outfmt 3" formatted blastn output
+  -outputfile:      name of output file
+
+=head1 DESCRIPTION
+
+Parses an "outfmt 3" formatted blastn file to generate a list of regions to be used in
+Genbank annotations.
+
+=cut
