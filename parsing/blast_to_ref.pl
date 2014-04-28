@@ -3,8 +3,6 @@ use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
-use XML::Simple;
-#no, we should use XML::XPath!
 
 use lib "$FindBin::Bin/..";
 use Subfunctions qw(split_seq reverse_complement meld_matrices);

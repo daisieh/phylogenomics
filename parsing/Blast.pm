@@ -6,6 +6,8 @@ use FindBin;
 use lib "$FindBin::Bin/..";
 use Subfunctions qw(split_seq reverse_complement meld_matrices);
 use Data::Dumper;
+use XML::Simple;
+#no, we should use XML::XPath!
 
 
 BEGIN {
