@@ -1,57 +1,25 @@
+#!/usr/bin/perl
+
+package GFF;
+use strict;
+use FindBin;
 use Data::Dumper;
 use lib "$FindBin::Bin/../";
 use Subfunctions qw (split_seq disambiguate_str get_iupac_code);
 
-my $gff_file = shift;
-my $gene = shift;
-my $fastafile = shift;
-my $outfile = shift;
 
-if (!(defined $outfile)) {
-	$outfile = "$gene.fasta";
+BEGIN {
+	require Exporter;
+	# set the version for version checking
+	our $VERSION     = 1.00;
+	# Inherit from Exporter to export functions and variables
+	our @ISA         = qw(Exporter);
+	# Functions and variables which are exported by default
+	our @EXPORT      = qw();
+	# Functions and variables which can be optionally exported
+	our @EXPORT_OK   = qw(feature_to_seq subseq_from_fasta parse_gff_block parse_attributes);
 }
 
-open FH, "<", $gff_file;
-my $gff_block = "";
-my $line = readline FH;
-while (defined $line) {
-	# scaffold_99	phytozome9_0	gene	16787	19271	.	+	.	ID=Potri.T085300;Name=Potri.T085300
-	if ($line =~ /gene.*$gene/) {
-		$gff_block .= $line;
-	} elsif ($gff_block ne "") {
-		if ($line =~ /gene/) {
-			last;
-		}
-		$gff_block .= $line;
-	}
-	$line = readline FH;
-}
-close FH;
-
-if ($gff_block eq "") {
-	print "No gene named $gene found.\n";
-	exit;
-}
-my $gff_hash = parse_gff_block ($gff_block);
-$gff_hash->{"sequence"} = subseq_from_fasta ($fastafile, $gff_hash->{"start"}, $gff_hash->{"end"});
-
-open OUT_FH, ">", $outfile or die "couldn't create $outfile";
-print OUT_FH ">$gff_hash->{Name}.gene\n$gff_hash->{sequence}\n";
-
-my $params = { 'padded' => 0, 'separate' => 1 };
-for (my $mRNA_num = 1; $mRNA_num <= (keys $gff_hash->{"mRNA"}); $mRNA_num++) {
-	print "mRNA $mRNA_num:\n";
-	my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
-	foreach my $type (@feature_types) {
-		my $seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
-		print @$seq . " $type\n";
-		if ((ref $seq) =~ /ARRAY/ ) {
-			for (my $i=1; $i<=@$seq; $i++) {
-				print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\n@$seq[$i-1]\n";
-			}
-		}
-	}
-}
 
 sub feature_to_seq {
 	my $sequence = shift;
@@ -241,3 +209,5 @@ sub parse_attributes {
 	}
 	return $attr_hash;
 }
+
+return 1;
