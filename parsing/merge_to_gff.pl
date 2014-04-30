@@ -3,7 +3,7 @@ use Getopt::Long;
 use File::Spec;
 use File::Path qw (make_path);
 use lib "$FindBin::Bin/../";
-use Subfunctions qw (split_seq disambiguate_str get_iupac_code parse_fasta);
+use Subfunctions qw (split_seq line_wrap parse_fasta);
 use lib "$FindBin::Bin/";
 use GFF qw (feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block);
 
@@ -49,7 +49,6 @@ foreach my $gene (@sorted_genes) {
 	}
 
 	my $gff_hash = parse_gff_block ($gff_block);
-# 	print Dumper($gff_hash);
 	(my $seqhash, undef) = parse_fasta (File::Spec->catfile ($fastafile, "$gene.fasta"));
 	$gff_hash->{"sequence"} = $seqhash->{$gene};
 
@@ -71,10 +70,8 @@ foreach my $gene (@sorted_genes) {
 			my $mRNA = $1;
 			my $type = $2;
 			my $num = $3;
-# 			print "replacing $longname end " . $gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"end"};
 			$gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"start"} = $start;
 			$gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"end"} = $end;
-# 			print " with " . $gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"end"} . "\n";
 		}
 	}
 
@@ -82,6 +79,8 @@ foreach my $gene (@sorted_genes) {
 	print OUTFH "##gff-version 3\n";
 	print OUTFH export_gff_block ($gff_hash);
 	print OUTFH "##FASTA\n";
+	$seqhash->{$gene} = line_wrap ($seqhash->{$gene}, 80);
+
 	print OUTFH ">$gene\n$seqhash->{$gene}\n";
 	close OUTFH;
 }
