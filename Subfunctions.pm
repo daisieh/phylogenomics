@@ -13,7 +13,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap);
 }
 
 =head1
@@ -547,6 +547,19 @@ sub parse_nexus {
 	$taxa->{"length"} = $nchar;
 
 	return $taxa, \@taxonlabels;
+}
+
+sub line_wrap {
+	my $sequence = shift;
+	my $linelength = shift;
+
+	my $result = "";
+	while ($sequence =~ /^(.{$linelength})(.*)$/) {
+		$result .= "$1\n";
+		$sequence = $2;
+	}
+	$result .= $sequence;
+	return $result;
 }
 
 =head1
