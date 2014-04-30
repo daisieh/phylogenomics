@@ -1,93 +1,92 @@
 use Getopt::Long;
 use Pod::Usage;
+use FindBin;
+use lib "$FindBin::Bin";
+use Blast qw (parse_xml);
+use lib "$FindBin::Bin/../";
+use Subfunctions qw (parse_fasta);
+use Data::Dumper;
 
 my $help = 0;
 my $blastfile = "";
 my $outfile = "";
+my $reffile = "";
+my $fastafile = "";
 
 
-GetOptions ('blastfile=s' => \$blastfile,
-            'outputfile=s' => \$outfile,
+GetOptions ('reffile=s' => \$reffile,
+			'fastafile=s' => \$fastafile,
+			'outfile=s' => \$outfile,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
     pod2usage(-verbose => 1);
 }
 
-if ($blastfile eq "") {
-    pod2usage(-verbose => 1);
-}
+$blastfile = $outfile;
 
-if ($outfile eq "") {
-    pod2usage(-verbose => 1);
-}
+system("blastn -query $fastafile -subject $reffile -outfmt 5 -out $blastfile.xml -word_size 10");
+print "format blast output\n";
 
-open FH, "<", $blastfile;
-open OUT_FH, ">", $outfile;
+my ($ref_hash, $ref_array) = parse_fasta($reffile);
 
-my $subject = "";
-my $subject_length = 0;
-my $line = "";
-my $curr_pos = 0;
-while (defined $line) {
-	$line = readline FH;
-	if ($line =~ /^\s+$/) { next; }
-
-	# start of new subject
-	if ($line =~ /Subject= (.*)$/) {
-		my $query_start = 0;
-		my $query_end = 0;
-		my $subject_start = 0;
-		my $subject_end = 0;
-		$subject = $1;
-		print "start subject $subject\n";
-		# reading a subject
-		while ($line !~ /Effective/) {
-			$line = readline FH;
-			if ($line =~ /Length=(\d+)/) {
-				$subject_length = $1;
-			}
-			if ($line =~ /Query_\d+\s+(\d+).+?(\d+)$/) {
-				$query_end = $2;
-				if ($query_start == 0) {
-					$query_start = $1;
-				}
-				$line = readline FH;
-				if ($line =~ /Subject_\d+\s+(\d+)\s+(\S+)\s+(\d+)/) {
-					$subject_end = $3;
-					my $subj = $2;
-					if ($subject_start == 0) {
-						$subject_start = $1;
-						if (($subject_end - $subject_start) != ($query_end - $query_start)) {
-							$query_start = $query_end - length($subj)+1;
-						}
-					}
-				}
-			}
-		}
-		select OUT_FH;
-		$| = 1;
-		print OUT_FH "$subject\t$query_start\t";
-		if (($query_end - $query_start) != ($subject_length - 1)) {
-			if (($subject_end - $subject_start) == -($subject_length - 1)) {
-				print OUT_FH "$query_end\treverse strand";
-			} elsif (($subject_end==0) && ($subject_start == 0)) {
-				print OUT_FH "$query_end\tno match";
-			} elsif ($subject_end==$subject_start) {
-				print OUT_FH "$query_end\tcaught twice";
-			} else {
-				$query_end = $query_start + $subject_length - 1;
-				print OUT_FH "$query_end";
-			}
-		} else {
-			print OUT_FH "$query_end";
-		}
-		print OUT_FH "\n";
-		select STDOUT;
+my $hit_array = parse_xml ("$blastfile.xml");
+my $hits = {};
+foreach my $hit (@$hit_array) {
+	my $subject = $hit->{"subject"}->{"name"};
+	my $query = $hit->{"query"}->{"name"};
+	my @hsps = sort compare_hsps @{$hit->{"hsps"}};
+	my $best_hit = shift @hsps;
+	$hits->{$subject}->{"hsp"} = $best_hit;
+	$hits->{$subject}->{"slen"} = $hit->{"subject"}->{"length"};
+	if ($best_hit->{"hit-from"} < $best_hit->{"hit-to"}) {
+		$hits->{$subject}->{"orientation"} = 1;
+	} else {
+		$hits->{$subject}->{"orientation"} = -1;
 	}
 }
-close FH;
-close OUT_FH;
+
+open OUTFH, ">", $outfile or die "couldn't create $outfile";
+
+foreach my $subj (@$ref_array) {
+	$subj =~ s/\t.*$//;
+	if (!(exists $hits->{$subj}->{"hsp"})) {
+		print "$subj: no hits\n";
+		next;
+	}
+	my $adjusted_hseq = $hits->{$subj}->{"hsp"}->{"hseq"};
+	$adjusted_hseq =~ s/-//g;
+	my $hlen = length $adjusted_hseq;
+	print OUTFH "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
+	if ($hlen == $hits->{$subj}->{"slen"}) {
+		if ($hits->{$subj}->{"orientation"} > 0) {
+			print "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
+		} else {
+			print "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\tinverted match\n";
+		}
+	} else {
+		print "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\tpartial match: $hlen ne $hits->{$subj}->{slen}\n";
+	}
+}
+
+close OUTFH;
+
+sub compare_hsps {
+	my $score = $b->{"bit-score"} - $a->{"bit-score"};
+	if ($score == 0) {
+		my $b_direction = ($b->{"query-to"} - $b->{"query-from"})/($b->{"hit-to"} - $b->{"hit-from"});
+		my $a_direction = ($a->{"query-to"} - $a->{"query-from"})/($a->{"hit-to"} - $a->{"hit-from"});
+		if ($b_direction > $a_direction) {
+			$score = 1;
+		} elsif ($a_direction < $b_direction) {
+			$score = -1;
+		} else {
+			$score = 0;
+		}
+	}
+	return $score;
+}
+
 
 __END__
 
