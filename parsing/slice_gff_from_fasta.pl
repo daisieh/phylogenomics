@@ -5,7 +5,7 @@ use File::Path qw (make_path);
 use lib "$FindBin::Bin/../";
 use Subfunctions qw (split_seq disambiguate_str get_iupac_code);
 use lib "$FindBin::Bin/";
-use GFF qw (feature_to_seq subseq_from_fasta parse_gff_block parse_attributes);
+use GFF qw (feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block);
 
 my $gff_file = "";
 my $gene = "";
@@ -54,28 +54,10 @@ if ($genefile ne "") {
 
 @sorted_genes = sort @genes;
 
-open FH, "<", $gff_file;
-my $gff_block = "";
-my $lastline = "";
+open my $fh, "<", $gff_file;
+
 foreach my $gene (@sorted_genes) {
-	my $in_gene = 0;
-	while (my $line = readline FH) {
-		# scaffold_99	phytozome9_0	gene	16787	19271	.	+	.	ID=Potri.T085300;Name=Potri.T085300
-		if (($lastline . $line) =~ /gene.*$gene/) {
-			if ($lastline =~ /gene.*$gene/) {
-				$gff_block = $lastline . $line;
-			} else {
-				$gff_block = $line;
-			}
-			$lastline = "";
-			$in_gene = 1;
-		} elsif (($line =~ /gene/) && ($in_gene == 1)) {
-			$lastline = $line;
-			last;
-		} elsif ($in_gene == 1) {
-			$gff_block .= $line;
-		}
-	}
+	$gff_block = read_gff_block($fh, $gene);
 
 	if ($gff_block eq "") {
 		print "No gene named $gene found.\n";
@@ -83,7 +65,7 @@ foreach my $gene (@sorted_genes) {
 	}
 	my $gff_hash = parse_gff_block ($gff_block);
 	$gff_hash->{"sequence"} = subseq_from_fasta ($fastafile, $gff_hash->{"start"}, $gff_hash->{"end"});
-
+	print export_gff_block($gff_hash);
 	if (@sorted_genes > 1) {
 		$outfile = File::Spec->catfile($outdir, "$gene.fasta");
 	}
