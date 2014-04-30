@@ -8,7 +8,6 @@ use Subfunctions qw (parse_fasta);
 use Data::Dumper;
 
 my $help = 0;
-my $blastfile = "";
 my $outfile = "";
 my $reffile = "";
 my $fastafile = "";
@@ -23,14 +22,13 @@ if ($help) {
     pod2usage(-verbose => 1);
 }
 
-$blastfile = $outfile;
+print "running blastn\n";
+system("blastn -query $fastafile -subject $reffile -outfmt 5 -out $outfile.xml -word_size 10");
 
-system("blastn -query $fastafile -subject $reffile -outfmt 5 -out $blastfile.xml -word_size 10");
-print "format blast output\n";
+print "parsing results\n";
 
 my ($ref_hash, $ref_array) = parse_fasta($reffile);
-
-my $hit_array = parse_xml ("$blastfile.xml");
+my $hit_array = parse_xml ("$outfile.xml");
 my $hits = {};
 foreach my $hit (@$hit_array) {
 	my $subject = $hit->{"subject"}->{"name"};
