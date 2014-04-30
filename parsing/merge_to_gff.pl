@@ -1,3 +1,4 @@
+use strict;
 use Data::Dumper;
 use Getopt::Long;
 use File::Spec;
@@ -13,6 +14,7 @@ my $fastafile = "";
 my $outfile = "";
 my $genefile = "";
 my $blastfile = "";
+my $help = 0;
 
 GetOptions ('gfffile=s' => \$gff_file,
 			'blastdir=s' => \$blastfile,
@@ -36,12 +38,12 @@ while (my $line = readline GENE_FH) {
 	push @genes, $line;
 }
 
-@sorted_genes = sort @genes;
+my @sorted_genes = sort @genes;
 
 open my $fh, "<", $gff_file;
 
 foreach my $gene (@sorted_genes) {
-	$gff_block = read_gff_block($fh, $gene);
+	my $gff_block = read_gff_block($fh, $gene);
 
 	if ($gff_block eq "") {
 		print "No gene named $gene found.\n";
@@ -56,6 +58,20 @@ foreach my $gene (@sorted_genes) {
 	$gff_hash->{"end"} = length ($gff_hash->{"sequence"});
 	$gff_hash->{"seqid"} = $gene;
 	$gff_hash->{"source"} = "Ser_aTRAM";
+
+	# first clear out all the start and end values within each mRNA:
+	for (my $i=1; exists $gff_hash->{"mRNA"}->{$i}; $i++) {
+		foreach my $type (keys $gff_hash->{"mRNA"}->{$i}) {
+			my $mRNA_hash = $gff_hash->{"mRNA"}->{$i};
+			if ((ref $mRNA_hash->{$type}) =~ /HASH/) {
+				for (my $j=1; exists $mRNA_hash->{$type}->{$j}; $j++) {
+					$gff_hash->{"mRNA"}->{$i}->{$type}->{$j}->{"start"} = 0;
+					$gff_hash->{"mRNA"}->{$i}->{$type}->{$j}->{"end"} = 0;
+				}
+			}
+		}
+	}
+
 
 	open BLASTFH, "<", File::Spec->catfile ($blastfile, $gene);
 	foreach my $line (<BLASTFH>) {
@@ -74,6 +90,7 @@ foreach my $gene (@sorted_genes) {
 			$gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"end"} = $end;
 		}
 	}
+
 
 	open OUTFH, ">", File::Spec->catfile ($outdir, "$gene.gff");
 	print OUTFH "##gff-version 3\n";
