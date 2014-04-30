@@ -267,32 +267,48 @@ sub export_gff_block {
 	$attributes .= export_attributes ($gff_hash->{"attributes"});
 	my @line = ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes);
 	$gff_string = join("\t",@line) . "\n";
-	foreach my $mRNA_id (keys $gff_hash->{"mRNA"}) {
-		# Chr01	phytozome9_0	mRNA	8391	12209	.	-	.	ID=PAC:27046907;Name=Potri.001G000400.3;pacid=27046907;longest=0;Parent=Potri.001G000400
+
+	for (my $i=1; exists $gff_hash->{"mRNA"}->{$i}; $i++) {
 		$type = "mRNA";
-		$start = delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"start"};
-		$end = delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"end"};
-		my $id = delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"ID"};
-		my $name = delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"Name"};
+		$start = $gff_hash->{"mRNA"}->{$i}->{"start"};
+		$end = $gff_hash->{"mRNA"}->{$i}->{"end"};
+		my $id = $gff_hash->{"mRNA"}->{$i}->{"ID"};
+		my $name = $gff_hash->{"mRNA"}->{$i}->{"Name"};
 		$attributes = "ID=$id;Name=$name;";
-		$attributes .= export_attributes (delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"attributes"});
+		$attributes .= export_attributes ($gff_hash->{"mRNA"}->{$i}->{"attributes"});
 		my @line = ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes);
 		$gff_string .= join("\t",@line) . "\n";
-		my $mRNA_hash = $gff_hash->{"mRNA"}->{$mRNA_id};
-		foreach my $type (keys $mRNA_hash) {
-			# Chr01	phytozome9_0	CDS	11082	11166	.	-	0	ID=PAC:27046907.CDS.1;Parent=PAC:27046907;pacid=27046907
-			for (my $i=1; $i <= (keys $mRNA_hash->{$type}); $i++) {
-				$start = $mRNA_hash->{$type}->{$i}->{"start"};
-				$end = $mRNA_hash->{$type}->{$i}->{"end"};
-				$attributes = "ID=".$id.".".$type.".".$i.";";
-				$attributes .= export_attributes ($mRNA_hash->{$type}->{$i}->{"attributes"});
-				my @line = ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes);
-				$gff_string .= join("\t",@line) . "\n";
+		foreach my $type (keys $gff_hash->{"mRNA"}->{$i}) {
+			my $mRNA_hash = $gff_hash->{"mRNA"}->{$i};
+			if ((ref $mRNA_hash->{$type}) =~ /HASH/) {
+				for (my $j=1; exists $mRNA_hash->{$type}->{$j}; $j++) {
+				# Chr01	phytozome9_0	CDS	11082	11166	.	-	0	ID=PAC:27046907.CDS.1;Parent=PAC:27046907;pacid=27046907
+					$start = $mRNA_hash->{$type}->{$j}->{"start"};
+					$end = $mRNA_hash->{$type}->{$j}->{"end"};
+					$attributes = "ID=".$id.".".$type.".".$j.";";
+					$attributes .= export_attributes ($mRNA_hash->{$type}->{$j}->{"attributes"});
+					my @line = ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes);
+					$gff_string .= join("\t",@line) . "\n";
+				}
 			}
 		}
 	}
 
 	return $gff_string;
 }
+
+# a non-destructive way to walk through a gff_hash
+# 	for (my $i=1; exists $gff_hash->{"mRNA"}->{$i}; $i++) {
+# 		print "mRNA $i\n";
+# 		foreach my $type (keys $gff_hash->{"mRNA"}->{$i}) {
+# 			my $mRNA_hash = $gff_hash->{"mRNA"}->{$i};
+# 			if ((ref $mRNA_hash->{$type}) =~ /HASH/) {
+# 				for (my $j=1; exists $mRNA_hash->{$type}->{$j}; $j++) {
+# 					print "type $type $j\n";
+# 				}
+# 			}
+# 		}
+# 	}
+
 
 return 1;
