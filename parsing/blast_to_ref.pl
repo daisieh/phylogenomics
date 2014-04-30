@@ -3,7 +3,7 @@ use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
-
+use FindBin;
 use lib "$FindBin::Bin/..";
 use Subfunctions qw(split_seq reverse_complement meld_matrices);
 use lib "$FindBin::Bin";
