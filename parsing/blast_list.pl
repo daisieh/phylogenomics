@@ -44,8 +44,9 @@ foreach my $gene (@genes) {
 	my $reffile = File::Spec->catfile ($refdir, "$gene.fasta");
 	my $outfile = File::Spec->catfile ($outdir, "$gene");
 
-	print "running blastn\n";
-	system("blastn -query $fastafile -subject $reffile -outfmt 5 -out $outfile.xml -word_size 10");
+	my $cmd = "blastn -query $fastafile -subject $reffile -outfmt 5 -out $outfile.xml -word_size 10";
+	print "running $cmd\n";
+	system($cmd);
 
 	print "parsing results\n";
 
