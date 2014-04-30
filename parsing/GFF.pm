@@ -17,9 +17,30 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(feature_to_seq subseq_from_fasta parse_gff_block parse_attributes);
+	our @EXPORT_OK   = qw(feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block);
 }
 
+sub read_gff_block {
+	my $gff_fh = shift;
+	my $gene = shift;
+
+	my $gff_block = "";
+	my $in_gene = 0;
+	while (my $line = readline $gff_fh) {
+		# scaffold_99	phytozome9_0	gene	16787	19271	.	+	.	ID=Potri.T085300;Name=Potri.T085300
+		if ($line =~ /gene.*$gene/) {
+			$gff_block = $line;
+			$in_gene = 1;
+		} elsif (($line =~ /gene/) && ($in_gene == 1)) {
+			seek($gff_fh, -length($line), 1);
+			last;
+		} elsif ($in_gene == 1) {
+			$gff_block .= $line;
+		}
+	}
+
+	return $gff_block;
+}
 
 sub feature_to_seq {
 	my $sequence = shift;
@@ -135,9 +156,14 @@ sub parse_gff_block {
 	if ($type =~ /gene/) {
 		my $attr_hash = parse_attributes($attributes);
 		$offset = $start - 1;
+		$gff_hash->{"seqid"} = $seqid;
+		$gff_hash->{"source"} = $source;
+		$gff_hash->{"type"} = $type;
 		$gff_hash->{"start"} = $start;
 		$gff_hash->{"end"} = $end;
-		$gff_hash->{"seqid"} = $seqid;
+		$gff_hash->{"score"} = $score;
+		$gff_hash->{"strand"} = $strand;
+		$gff_hash->{"phase"} = $phase;
 		$gff_hash->{"ID"} = delete $attr_hash->{"ID"};
 		$gff_hash->{"Name"} = delete $attr_hash->{"Name"};
 		$gff_hash->{"attributes"} = $attr_hash;
@@ -171,13 +197,14 @@ sub parse_gff_block {
 
 
 		if ($type eq "mRNA") {
+			# Chr01	phytozome9_0	mRNA	8391	12209	.	-	.	ID=PAC:27046907;Name=Potri.001G000400.3;pacid=27046907;longest=0;Parent=Potri.001G000400
 			if ($name =~ /$gene_name\.(\d+)/) {
 				$gff_hash->{"mRNA"}->{$id} = $hash_ptr;
-# 				$gff_hash->{$type} = $hash_ptr;
 				$hash_ptr->{"ID"} = $id;
 				$hash_ptr->{"Name"} = $name;
 			}
 		} else {
+			# Chr01	phytozome9_0	CDS	11082	11166	.	-	0	ID=PAC:27046907.CDS.1;Parent=PAC:27046907;pacid=27046907
 			if ($id =~ /(.*?)\.$type\.(\d+)/) {
 				$gff_hash->{"mRNA"}->{$1}->{$type}->{$2} = $hash_ptr;
 			}
@@ -208,6 +235,64 @@ sub parse_attributes {
 		}
 	}
 	return $attr_hash;
+}
+
+sub export_attributes {
+	my $attr_hash = shift;
+
+	my $attributes = "";
+	foreach my $k (keys %$attr_hash) {
+		$attributes .= "$k=$attr_hash->{$k};";
+	}
+	$attributes =~ s/;$//;
+	return $attributes;
+}
+
+sub export_gff_block {
+	my $gff_hash = shift;
+
+	my $gff_string = "";
+	my ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes) = 0;
+
+	# scaffold_99	phytozome9_0	gene	16787	19271	.	+	.	ID=Potri.T085300;Name=Potri.T085300
+	$seqid = $gff_hash->{"seqid"};
+	$source = $gff_hash->{"source"};
+	$type = $gff_hash->{"type"};
+	$start = $gff_hash->{"start"};
+	$end = $gff_hash->{"end"};
+	$score = $gff_hash->{"score"};
+	$strand = $gff_hash->{"strand"};
+	$phase = $gff_hash->{"phase"};
+	$attributes = "ID=$gff_hash->{ID};Name=$gff_hash->{Name};";
+	$attributes .= export_attributes ($gff_hash->{"attributes"});
+	my @line = ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes);
+	$gff_string = join("\t",@line) . "\n";
+	foreach my $mRNA_id (keys $gff_hash->{"mRNA"}) {
+		# Chr01	phytozome9_0	mRNA	8391	12209	.	-	.	ID=PAC:27046907;Name=Potri.001G000400.3;pacid=27046907;longest=0;Parent=Potri.001G000400
+		$type = "mRNA";
+		$start = delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"start"};
+		$end = delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"end"};
+		my $id = delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"ID"};
+		my $name = delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"Name"};
+		$attributes = "ID=$id;Name=$name;";
+		$attributes .= export_attributes (delete $gff_hash->{"mRNA"}->{$mRNA_id}->{"attributes"});
+		my @line = ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes);
+		$gff_string .= join("\t",@line) . "\n";
+		my $mRNA_hash = $gff_hash->{"mRNA"}->{$mRNA_id};
+		foreach my $type (keys $mRNA_hash) {
+			# Chr01	phytozome9_0	CDS	11082	11166	.	-	0	ID=PAC:27046907.CDS.1;Parent=PAC:27046907;pacid=27046907
+			for (my $i=1; $i <= (keys $mRNA_hash->{$type}); $i++) {
+				$start = $mRNA_hash->{$type}->{$i}->{"start"};
+				$end = $mRNA_hash->{$type}->{$i}->{"end"};
+				$attributes = "ID=".$id.".".$type.".".$i.";";
+				$attributes .= export_attributes ($mRNA_hash->{$type}->{$i}->{"attributes"});
+				my @line = ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes);
+				$gff_string .= join("\t",@line) . "\n";
+			}
+		}
+	}
+
+	return $gff_string;
 }
 
 return 1;
