@@ -182,64 +182,53 @@ sub parse_xml {
 	my $parser = new XML::Simple();
 
 	open XML_FH, "<", $blast_xml;
-	my %xml_strings = ();
 
-	my $xml = readline XML_FH;
+	my $xml = "";
 	my $query_name = "";
 
+	# let's just pretend that there could never be more than one xml string.
 	while (my $line = readline XML_FH) {
-		if ($line =~ /<\?xml/) {
-			# we've reached the next xml object
-			$xml_strings{$query_name} = "$xml";
-			$xml = "$line";
-		} else {
-			if ($line =~ /<BlastOutput_query-def>(.*?)<\/BlastOutput_query-def>/) {
-				$query_name = $1;
-			}
-			$xml .= $line;
-		}
+		$xml .= $line;
 	}
-	$xml_strings{$query_name} = "$xml";
 
 	close XML_FH;
-
 	my @hit_array = ();
-	foreach my $key (keys %xml_strings) {
-		my $tree = $parser->XMLin($xml_strings{$key}, ForceArray => 1);
-		my $iterations = ($tree->{"BlastOutput_iterations"}[0]->{"Iteration"}); # key Iteration has a value that is an anonymous array of iteration hashes.
-		foreach my $iteration (@$iterations) { # for each iteration
-			my $hit_hash = {};
-			push @hit_array, $hit_hash;
-			$hit_hash->{"query"}->{"name"} = $iteration->{"Iteration_query-def"}[0];
-			$hit_hash->{"query"}->{"length"} = $iteration->{"Iteration_query-len"}[0];
-			foreach my $hit (@{$iteration->{"Iteration_hits"}[0]->{"Hit"}}) { # each Hit in the iteration can have multiple Hsps.
-				my @hsp_array = ();
-				$hit_hash->{"hsps"} = \@hsp_array;
-				$hit_hash->{"subject"}->{"name"} = $hit->{"Hit_def"}[0];
-				$hit_hash->{"subject"}->{"length"} = $hit->{"Hit_len"}[0];
-				foreach my $hsp (@{$hit->{"Hit_hsps"}[0]->{"Hsp"}}) { # Key Hsp has a value that is an anonymous array of the hsp hashes.
-					my $hsp_hash = {};
-					push @hsp_array, $hsp_hash;
-					$hsp_hash->{"hseq"} = $hsp->{"Hsp_hseq"}[0];
-					$hsp_hash->{"hit-frame"} = $hsp->{"Hsp_hit-frame"}[0];
-					$hsp_hash->{"bit-score"} = $hsp->{"Hsp_bit-score"}[0];
-					$hsp_hash->{"evalue"} = $hsp->{"Hsp_evalue"}[0];
-					$hsp_hash->{"qseq"} = $hsp->{"Hsp_qseq"}[0];
-					$hsp_hash->{"hit-to"} = $hsp->{"Hsp_hit-to"}[0];
-					$hsp_hash->{"identity"} = $hsp->{"Hsp_identity"}[0];
-					$hsp_hash->{"hit-from"} = $hsp->{"Hsp_hit-from"}[0];
-					$hsp_hash->{"query-from"} = $hsp->{"Hsp_query-from"}[0];
-					$hsp_hash->{"gaps"} = $hsp->{"Hsp_gaps"}[0];
-					$hsp_hash->{"num"} = $hsp->{"Hsp_num"}[0];
-					$hsp_hash->{"query-to"} = $hsp->{"Hsp_query-to"}[0];
-					$hsp_hash->{"positive"} = $hsp->{"Hsp_positive"}[0];
-					$hsp_hash->{"query-frame"} = $hsp->{"Hsp_query-frame"}[0];
-					$hsp_hash->{"score"} = $hsp->{"Hsp_score"}[0];
-					$hsp_hash->{"align-len"} = $hsp->{"Hsp_align-len"}[0];
-					$hsp_hash->{"midline"} = $hsp->{"Hsp_midline"}[0];
-				}
-			}
+	my $hit_hash = {};
+	my $tree = $parser->XMLin($xml, ForceArray => 1);
+	my $iterations = ($tree->{"BlastOutput_iterations"}[0]->{"Iteration"}); # key Iteration represents a single blast search; has a value that is an anonymous array of iteration hashes.
+	print @{$tree->{"BlastOutput_iterations"}[0]->{"Iteration"}} . " iterations\n";
+	foreach my $iteration (@$iterations) {
+	foreach my $hit (@{$iteration->{"Iteration_hits"}[0]->{"Hit"}}) { # each Hit in the iteration can have multiple Hsps.
+		my $hit_hash = {};
+		push @hit_array, $hit_hash;
+		$hit_hash->{"query"}->{"name"} = $iteration->{"Iteration_query-def"}[0];
+		$hit_hash->{"query"}->{"length"} = $iteration->{"Iteration_query-len"}[0];
+		my @hsp_array = ();
+		$hit_hash->{"hsps"} = \@hsp_array;
+		$hit_hash->{"subject"}->{"name"} = $hit->{"Hit_def"}[0];
+		$hit_hash->{"subject"}->{"length"} = $hit->{"Hit_len"}[0];
+		foreach my $hsp (@{$hit->{"Hit_hsps"}[0]->{"Hsp"}}) { # Key Hsp has a value that is an anonymous array of the hsp hashes.
+			my $hsp_hash = {};
+			push @hsp_array, $hsp_hash;
+			$hsp_hash->{"hseq"} = $hsp->{"Hsp_hseq"}[0];
+			$hsp_hash->{"hit-frame"} = $hsp->{"Hsp_hit-frame"}[0];
+			$hsp_hash->{"bit-score"} = $hsp->{"Hsp_bit-score"}[0];
+			$hsp_hash->{"evalue"} = $hsp->{"Hsp_evalue"}[0];
+			$hsp_hash->{"qseq"} = $hsp->{"Hsp_qseq"}[0];
+			$hsp_hash->{"hit-to"} = $hsp->{"Hsp_hit-to"}[0];
+			$hsp_hash->{"identity"} = $hsp->{"Hsp_identity"}[0];
+			$hsp_hash->{"hit-from"} = $hsp->{"Hsp_hit-from"}[0];
+			$hsp_hash->{"query-from"} = $hsp->{"Hsp_query-from"}[0];
+			$hsp_hash->{"gaps"} = $hsp->{"Hsp_gaps"}[0];
+			$hsp_hash->{"num"} = $hsp->{"Hsp_num"}[0];
+			$hsp_hash->{"query-to"} = $hsp->{"Hsp_query-to"}[0];
+			$hsp_hash->{"positive"} = $hsp->{"Hsp_positive"}[0];
+			$hsp_hash->{"query-frame"} = $hsp->{"Hsp_query-frame"}[0];
+			$hsp_hash->{"score"} = $hsp->{"Hsp_score"}[0];
+			$hsp_hash->{"align-len"} = $hsp->{"Hsp_align-len"}[0];
+			$hsp_hash->{"midline"} = $hsp->{"Hsp_midline"}[0];
 		}
+	}
 	}
 	return \@hit_array;
 }
