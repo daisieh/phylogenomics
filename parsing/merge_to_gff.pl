@@ -90,7 +90,7 @@ foreach my $gene (@sorted_genes) {
 		}
 	}
 
-	write_gff_file ($gff_hash, "$gene.gff");
+	write_gff_file ($gff_hash, File::Spec->catfile($outdir,"$gene.gff"));
 }
 
 close $fh;
