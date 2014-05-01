@@ -90,9 +90,9 @@ foreach my $gene (@genes) {
 		my $adjusted_hseq = $hits->{$subj}->{"hsp"}->{"hseq"};
 		$adjusted_hseq =~ s/-//g;
 		my $hlen = length $adjusted_hseq;
-		print OUTFH "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\t$hits->{$subj}->{'hsp'}->{'identity'}\t$hlen\n";
-		my $pident = ($hits->{$subj}->{'hsp'}->{'identity'} / $hlen) * 100;
-		print "\t percent identity is $hits->{$subj}->{hsp}->{'identity'} / $hlen = $pident\n";
+		print OUTFH "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\t$hits->{$subj}->{'hsp'}->{'identity'}\t$hits->{$subj}->{'slen'}\n";
+		my $pident = ($hits->{$subj}->{'hsp'}->{'identity'} / $$hits->{$subj}->{"slen"}) * 100;
+		print "\t percent identity is $hits->{$subj}->{hsp}->{'identity'} / $hits->{$subj}->{slen} = $pident\n";
 		if ($hlen == $hits->{$subj}->{"slen"}) {
 			if ($hits->{$subj}->{"orientation"} > 0) {
 				print "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
