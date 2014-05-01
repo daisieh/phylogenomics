@@ -15,6 +15,7 @@ my $genefile = "";
 my $outdir = "";
 my $refdir = "";
 my $fastadir = "";
+my $xmldir = "";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -24,6 +25,7 @@ GetOptions ('reference=s' => \$refdir,
 			'genes=s' => \$genefile,
 			'fasta=s' => \$fastadir,
 			'output=s' => \$outdir,
+			'xml=s' => \$xmldir,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -48,14 +50,19 @@ foreach my $gene (@genes) {
 	my $reffile = File::Spec->catfile ($refdir, "$gene.fasta");
 	my $outfile = File::Spec->catfile ($outdir, "$gene");
 
-	my $cmd = "blastn -query $fastafile -subject $reffile -outfmt 5 -out $outfile.xml -word_size 10";
-	print "running $cmd\n";
-	system($cmd);
+	my $blastfile = "$outfile.xml";
+	if ($xmldir eq "") {
+		my $cmd = "blastn -query $fastafile -subject $reffile -outfmt 5 -out $blastfile -word_size 10";
+		print "running $cmd\n";
+		system($cmd);
+	} else {
+		$blastfile = File::Spec->catfile ($xmldir, "$gene.xml");
+	}
 
 	print "parsing results\n";
+	my $hit_array = parse_xml ($blastfile);
 
 	my ($ref_hash, $ref_array) = parse_fasta($reffile);
-	my $hit_array = parse_xml ("$outfile.xml");
 
 	my $hits = {};
 	foreach my $hit (@$hit_array) {
@@ -113,6 +120,7 @@ GetOptions ('reference=s' => \$refdir,
 			'genes=s' => \$genefile,
 			'fasta=s' => \$fastadir,
 			'output=s' => \$outdir,
+			'xml=s' => \$xmldir,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 =head1 DESCRIPTION
