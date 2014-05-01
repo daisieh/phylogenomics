@@ -19,7 +19,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw(blast_to_ref debug);
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw( parse_xml);
+	our @EXPORT_OK   = qw(sort_hsps_by_match parse_xml);
 }
 my $debug = 0;
 
@@ -231,6 +231,25 @@ sub parse_xml {
 	}
 	}
 	return \@hit_array;
+}
+
+sub sort_hsps_by_match {
+	my $a = shift;
+	my $b = shift;
+
+	my $score = $b->{"bit-score"} - $a->{"bit-score"};
+	if ($score == 0) {
+		my $b_direction = ($b->{"query-to"} - $b->{"query-from"})/($b->{"hit-to"} - $b->{"hit-from"});
+		my $a_direction = ($a->{"query-to"} - $a->{"query-from"})/($a->{"hit-to"} - $a->{"hit-from"});
+		if ($b_direction > $a_direction) {
+			$score = 1;
+		} elsif ($a_direction < $b_direction) {
+			$score = -1;
+		} else {
+			$score = 0;
+		}
+	}
+	return $score;
 }
 
 return 1;

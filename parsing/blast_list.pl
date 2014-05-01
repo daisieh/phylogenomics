@@ -4,7 +4,7 @@ use FindBin;
 use File::Spec;
 use File::Path qw (make_path);
 use lib "$FindBin::Bin";
-use Blast qw (parse_xml);
+use Blast qw (parse_xml sort_hsps_by_match);
 use lib "$FindBin::Bin/../";
 use Subfunctions qw (parse_fasta);
 use Data::Dumper;
@@ -15,6 +15,9 @@ my $outdir = "";
 my $refdir = "";
 my $fastadir = "";
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
 
 GetOptions ('reference=s' => \$refdir,
 			'genes=s' => \$genefile,
@@ -56,7 +59,7 @@ foreach my $gene (@genes) {
 	foreach my $hit (@$hit_array) {
 		my $subject = $hit->{"subject"}->{"name"};
 		my $query = $hit->{"query"}->{"name"};
-		my @hsps = sort compare_hsps @{$hit->{"hsps"}};
+		my @hsps = sort { sort_hsps_by_match ($a, $b) } @{$hit->{"hsps"}};
 		my $best_hit = shift @hsps;
 		$hits->{$subject}->{"hsp"} = $best_hit;
 		$hits->{$subject}->{"slen"} = $hit->{"subject"}->{"length"};
@@ -79,6 +82,8 @@ foreach my $gene (@genes) {
 		$adjusted_hseq =~ s/-//g;
 		my $hlen = length $adjusted_hseq;
 		print OUTFH "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
+		my $pident = ($hits->{$subj}->{'hsp'}->{'identity'} / $hlen) * 100;
+		print "\t percent identity is $hits->{$subj}->{hsp}->{'identity'} / $hlen = $pident\n";
 		if ($hlen == $hits->{$subj}->{"slen"}) {
 			if ($hits->{$subj}->{"orientation"} > 0) {
 				print "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
@@ -92,21 +97,6 @@ foreach my $gene (@genes) {
 
 	close OUTFH;
 }
-sub compare_hsps {
-	my $score = $b->{"bit-score"} - $a->{"bit-score"};
-	if ($score == 0) {
-		my $b_direction = ($b->{"query-to"} - $b->{"query-from"})/($b->{"hit-to"} - $b->{"hit-from"});
-		my $a_direction = ($a->{"query-to"} - $a->{"query-from"})/($a->{"hit-to"} - $a->{"hit-from"});
-		if ($b_direction > $a_direction) {
-			$score = 1;
-		} elsif ($a_direction < $b_direction) {
-			$score = -1;
-		} else {
-			$score = 0;
-		}
-	}
-	return $score;
-}
 
 
 __END__
@@ -117,13 +107,11 @@ parse_blast
 
 =head1 SYNOPSIS
 
-First run: blastn -query comparison.fasta -subject reference.fasta -outfmt 3 -out blast_file
-Then run: parse_blast [-blast blast_file] [-outputfile output_file]
-
-=head1 OPTIONS
-
-  -blast:           "outfmt 3" formatted blastn output
-  -outputfile:      name of output file
+GetOptions ('reference=s' => \$refdir,
+			'genes=s' => \$genefile,
+			'fasta=s' => \$fastadir,
+			'output=s' => \$outdir,
+            'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 =head1 DESCRIPTION
 
