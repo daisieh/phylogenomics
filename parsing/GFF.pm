@@ -5,7 +5,7 @@ use strict;
 use FindBin;
 use Data::Dumper;
 use lib "$FindBin::Bin/../";
-use Subfunctions qw (split_seq disambiguate_str get_iupac_code);
+use Subfunctions qw (split_seq disambiguate_str get_iupac_code line_wrap);
 
 
 BEGIN {
@@ -17,7 +17,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block);
+	our @EXPORT_OK   = qw(feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
 }
 
 sub read_gff_block {
@@ -137,6 +137,14 @@ sub subseq_from_fasta {
 	return $finalseq;
 }
 
+sub set_gff_sequence {
+	my $gff_hash = shift;
+	my $sequence = shift;
+
+	$gff_hash->{"sequence"} = $sequence;
+	$gff_hash->{"start"} = 1;
+	$gff_hash->{"end"} = length $gff_hash->{"sequence"};
+}
 
 sub parse_gff_block {
 	# must pass in a block corresponding to a single gene.
@@ -295,6 +303,21 @@ sub export_gff_block {
 	}
 
 	return $gff_string;
+}
+
+sub write_gff_file {
+	my $gff_hash = shift;
+	my $outfile = shift;
+
+	open OUTFH, ">", $outfile;
+	print OUTFH "##gff-version 3\n";
+	print OUTFH export_gff_block ($gff_hash);
+	if (exists $gff_hash->{"sequence"}) {
+		print OUTFH "##FASTA\n";
+		my $seq = line_wrap ($gff_hash->{"sequence"}, 80);
+		print OUTFH ">$gff_hash->{ID}\n$seq\n";
+	}
+	close OUTFH;
 }
 
 # a non-destructive way to walk through a gff_hash

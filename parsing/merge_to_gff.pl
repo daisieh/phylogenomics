@@ -4,9 +4,9 @@ use Getopt::Long;
 use File::Spec;
 use File::Path qw (make_path);
 use lib "$FindBin::Bin/../";
-use Subfunctions qw (split_seq line_wrap parse_fasta);
+use Subfunctions qw (split_seq parse_fasta);
 use lib "$FindBin::Bin/";
-use GFF qw (feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block);
+use GFF qw (feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
 
 my $gff_file = "";
 my $gene = "";
@@ -52,10 +52,8 @@ foreach my $gene (@sorted_genes) {
 
 	my $gff_hash = parse_gff_block ($gff_block);
 	(my $seqhash, undef) = parse_fasta (File::Spec->catfile ($fastafile, "$gene.fasta"));
-	$gff_hash->{"sequence"} = $seqhash->{$gene};
 
-	$gff_hash->{"start"} = 1;
-	$gff_hash->{"end"} = length ($gff_hash->{"sequence"});
+	set_gff_sequence ($gff_hash, $seqhash->{$gene});
 	$gff_hash->{"seqid"} = $gene;
 	$gff_hash->{"source"} = "Ser_aTRAM";
 
@@ -91,15 +89,7 @@ foreach my $gene (@sorted_genes) {
 		}
 	}
 
-
-	open OUTFH, ">", File::Spec->catfile ($outdir, "$gene.gff");
-	print OUTFH "##gff-version 3\n";
-	print OUTFH export_gff_block ($gff_hash);
-	print OUTFH "##FASTA\n";
-	$seqhash->{$gene} = line_wrap ($seqhash->{$gene}, 80);
-
-	print OUTFH ">$gene\n$seqhash->{$gene}\n";
-	close OUTFH;
+	write_gff_file ($gff_hash, "$gene.gff");
 }
 
 close $fh;
