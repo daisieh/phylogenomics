@@ -67,6 +67,8 @@ foreach my $gene (@sorted_genes) {
 	for (my $i=1; exists $gff_hash->{"mRNA"}->{$i}; $i++) {
 		foreach my $type (keys $gff_hash->{"mRNA"}->{$i}) {
 			my $mRNA_hash = $gff_hash->{"mRNA"}->{$i};
+			$gff_hash->{"mRNA"}->{$i}->{"start"} = 0;
+			$gff_hash->{"mRNA"}->{$i}->{"end"} = 0;
 			if ((ref $mRNA_hash->{$type}) =~ /HASH/) {
 				for (my $j=1; exists $mRNA_hash->{$type}->{$j}; $j++) {
 					$gff_hash->{"mRNA"}->{$i}->{$type}->{$j}->{"start"} = 0;
@@ -91,6 +93,10 @@ foreach my $gene (@sorted_genes) {
 			my $num = $3;
 			$gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"start"} = $start;
 			$gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"end"} = $end;
+		} elsif ($longname =~ /$gene\.(\d+)$/) {
+			print "mRNA $longname\n";
+			$gff_hash->{"mRNA"}->{$1}->{"start"} = $start;
+			$gff_hash->{"mRNA"}->{$1}->{"end"} = $end;
 		}
 	}
 

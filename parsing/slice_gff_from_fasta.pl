@@ -79,9 +79,11 @@ foreach my $gene (@sorted_genes) {
 
 	my $params = { 'padded' => 0, 'separate' => 1 };
 	for (my $mRNA_num = 1; $mRNA_num <= (keys $gff_hash->{"mRNA"}); $mRNA_num++) {
+		(undef, my $seq, undef) = split_seq($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"start"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"end"});
+		print OUT_FH ">$gff_hash->{Name}.$mRNA_num\n$seq\n";
 		my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
 		foreach my $type (@feature_types) {
-			my $seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
+			$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
 			if ((ref $seq) =~ /ARRAY/ ) {
 				for (my $i=1; $i<=@$seq; $i++) {
 					print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\n@$seq[$i-1]\n";
