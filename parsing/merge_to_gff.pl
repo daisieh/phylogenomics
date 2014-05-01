@@ -2,6 +2,7 @@
 use strict;
 use Data::Dumper;
 use Getopt::Long;
+use Pod::Usage;
 use File::Spec;
 use File::Path qw (make_path);
 use lib "$FindBin::Bin/../";
@@ -16,6 +17,10 @@ my $outfile = "";
 my $genefile = "";
 my $blastfile = "";
 my $help = 0;
+
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
 
 GetOptions ('gfffile=s' => \$gff_file,
 			'blastdir=s' => \$blastfile,
@@ -94,4 +99,25 @@ foreach my $gene (@sorted_genes) {
 
 close $fh;
 
+__END__
+
+=head1 NAME
+
+parse_blast
+
+=head1 SYNOPSIS
+
+GetOptions ('gfffile=s' => \$gff_file,
+			'blastdir=s' => \$blastfile,
+			'fastadir=s' => \$fastafile,
+			'outfile=s' => \$outfile,
+			'genefile=s' => \$genefile,
+            'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+=head1 DESCRIPTION
+
+Parses an "outfmt 3" formatted blastn file to generate a list of regions to be used in
+Genbank annotations.
+
+=cut
 
