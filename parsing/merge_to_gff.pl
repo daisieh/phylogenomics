@@ -77,9 +77,8 @@ foreach my $gene (@sorted_genes) {
 		if ($line =~ /$gene\.gene/) {
 			next;
 		}
-
 # 		Potri.001G000200.1.exon.1	525	608
-		my ($longname,$start,$end) = split (/\t/, $line);
+		my ($longname,$start,$end,undef) = split (/\t/, $line, 4);
 		chomp $end;
 		if ($longname =~ /$gene\.(\d+)\.(.+?)\.(\d+)/) {
 			my $mRNA = $1;

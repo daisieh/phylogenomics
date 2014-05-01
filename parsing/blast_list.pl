@@ -56,6 +56,7 @@ foreach my $gene (@genes) {
 
 	my ($ref_hash, $ref_array) = parse_fasta($reffile);
 	my $hit_array = parse_xml ("$outfile.xml");
+
 	my $hits = {};
 	foreach my $hit (@$hit_array) {
 		my $subject = $hit->{"subject"}->{"name"};
@@ -82,7 +83,7 @@ foreach my $gene (@genes) {
 		my $adjusted_hseq = $hits->{$subj}->{"hsp"}->{"hseq"};
 		$adjusted_hseq =~ s/-//g;
 		my $hlen = length $adjusted_hseq;
-		print OUTFH "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
+		print OUTFH "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\t$hits->{$subj}->{'hsp'}->{'identity'}\t$hlen\n";
 		my $pident = ($hits->{$subj}->{'hsp'}->{'identity'} / $hlen) * 100;
 		print "\t percent identity is $hits->{$subj}->{hsp}->{'identity'} / $hlen = $pident\n";
 		if ($hlen == $hits->{$subj}->{"slen"}) {
