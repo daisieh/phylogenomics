@@ -26,7 +26,7 @@ sub read_gff_block {
 
 	my $gff_block = "";
 	my $in_gene = 0;
-	if ($gene == undef) {
+	if (!(defined $gene)) {
 		my $line = readline $gff_fh;
 		my ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes) = split(/\t/, $line);
 		$attributes =~ /ID=(.+?);/;
@@ -34,6 +34,9 @@ sub read_gff_block {
 		seek($gff_fh, -length($line), 1);
 	}
 	while (my $line = readline $gff_fh) {
+		if ($line =~ /##gff-version 3/) {
+			next;
+		}
 		if ($line =~ /^##/) {
 			seek($gff_fh, -length($line), 1);
 			last;
