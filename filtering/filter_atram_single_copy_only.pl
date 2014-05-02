@@ -34,7 +34,7 @@ foreach my $key (keys %$singlecopy_contigs) {
 	$singlecopy_seqs->{$key} = $contigs->{$singlecopy_contigs->{$key}};
 }
 
-open OUTFH, ">", "genelist.txt";
+open OUTFH, ">", File::Spec->catfile($outdir, "$genelist.txt");
 foreach my $key (keys %$singlecopy_seqs) {
 	print OUTFH "$key\n";
 	my $fh_name = File::Spec->catfile($outdir, "$key.fasta");
