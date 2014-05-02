@@ -7,7 +7,8 @@ use File::Spec qw (rel2abs);
 use File::Temp qw (tempfile);
 use File::Path qw (make_path);
 use FindBin;
-use lib "$FindBin::Bin/../lib";
+use lib "$FindBin::Bin/../";
+use Subfunctions qw(parse_fasta);
 
 my $validatefile = shift;
 my $contigdir = shift;
@@ -30,11 +31,11 @@ close VALFH;
 
 foreach my $key (keys %$singlecopy_contigs) {
 	my $bestfile = File::Spec->catfile($contigdir, "$key.best.fasta");
-	my ($contigs, $contigarray) = parsefasta($bestfile);
+	my ($contigs, $contigarray) = parse_fasta($bestfile);
 	$singlecopy_seqs->{$key} = $contigs->{$singlecopy_contigs->{$key}};
 }
 
-open OUTFH, ">", File::Spec->catfile($outdir, "$genelist.txt");
+open OUTFH, ">", File::Spec->catfile($outdir, "genelist.txt");
 foreach my $key (keys %$singlecopy_seqs) {
 	print OUTFH "$key\n";
 	my $fh_name = File::Spec->catfile($outdir, "$key.fasta");
