@@ -5,9 +5,9 @@ use Pod::Usage;
 use File::Spec;
 use File::Path qw (make_path);
 use lib "$FindBin::Bin/../";
-use Subfunctions qw (split_seq disambiguate_str get_iupac_code);
+use Subfunctions qw (split_seq disambiguate_str get_iupac_code subseq_from_fasta);
 use lib "$FindBin::Bin/";
-use GFF qw (feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
+use GFF qw (feature_to_seq parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
 
 my $gff_file = "";
 my $gene = "";
@@ -63,10 +63,13 @@ foreach my $gene (@sorted_genes) {
 
 	if ($gff_block eq "") {
 		print "No gene named $gene found.\n";
-		exit;
+		next;
 	}
 	my $gff_hash = parse_gff_block ($gff_block);
-	set_gff_sequence ($gff_hash, subseq_from_fasta ($fastafile, $gff_hash->{"start"}, $gff_hash->{"end"}));
+	my $sequence = $gff_hash->{"sequence"};
+	if (! (exists $gff_hash->{"sequence"})) {
+		set_gff_sequence ($gff_hash, subseq_from_fasta ($fastafile, $gff_hash->{"start"}, $gff_hash->{"end"}));
+	}
 
 	if (@sorted_genes > 1) {
 		$outfile = File::Spec->catfile($outdir, "$gene.fasta");

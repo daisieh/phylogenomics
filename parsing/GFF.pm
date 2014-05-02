@@ -5,7 +5,7 @@ use strict;
 use FindBin;
 use Data::Dumper;
 use lib "$FindBin::Bin/../";
-use Subfunctions qw (split_seq disambiguate_str get_iupac_code line_wrap);
+use Subfunctions qw (split_seq disambiguate_str get_iupac_code line_wrap subseq_from_fasta);
 
 
 BEGIN {
@@ -17,7 +17,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(feature_to_seq subseq_from_fasta parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
+	our @EXPORT_OK   = qw(feature_to_seq parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
 }
 
 sub read_gff_block {
@@ -26,7 +26,18 @@ sub read_gff_block {
 
 	my $gff_block = "";
 	my $in_gene = 0;
+	if ($gene == undef) {
+		my $line = readline $gff_fh;
+		my ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes) = split(/\t/, $line);
+		$attributes =~ /ID=(.+?);/;
+		$gene = $1;
+		seek($gff_fh, -length($line), 1);
+	}
 	while (my $line = readline $gff_fh) {
+		if ($line =~ /^##/) {
+			seek($gff_fh, -length($line), 1);
+			last;
+		}
 		# scaffold_99	phytozome9_0	gene	16787	19271	.	+	.	ID=Potri.T085300;Name=Potri.T085300
 		if ($line =~ /gene.*$gene/) {
 			$gff_block = $line;
@@ -98,43 +109,6 @@ sub feature_to_seq {
 	}
 
 
-}
-
-sub subseq_from_fasta {
-	my $fastafile = shift;
-	my $start = shift;
-	my $end = shift;
-
-	my $sequence = "";
-	my $pos = 0;
-	my $newstart = 0;
-	my $length = $end - $start;
-	my $newend = 0;
-	open FH, "<", $fastafile or die "couldn't open $fastafile";
-
-	my $line = readline FH; # first line is the name
-	$line = readline FH;
-	while (defined $line) {
-		$line =~ s/\s//g;
-		my $linelen = length ($line);
-		if (($pos + $linelen) >= $start) {
-			if ($newstart == 0) {
-				$newstart = $start - $pos;
-				$newend = $newstart + $length;
-			}
-			$sequence .= "$line";
-			if ($pos >= $end) {
-				last;
-			}
-		}
-		$pos += $linelen;
-
-		$line = readline FH;
-	}
-	close FH;
-	my (undef, $finalseq, undef) = split_seq ($sequence, $newstart, $newend);
-
-	return $finalseq;
 }
 
 sub set_gff_sequence {

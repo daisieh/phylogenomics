@@ -13,7 +13,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap subseq_from_fasta);
 }
 
 =head1
@@ -907,6 +907,56 @@ sub split_seq {
 	}
 	return ($startseq, $regionseq, $endseq);
 }
+
+
+
+=head1
+
+B<String $out_file subseq_from_fasta ( String $fastafile, int $start, int $end )>
+
+For use in dealing with extremely large fasta files, so we don't have to actually read in
+the whole sequence into memory before finding a subseq.
+
+=cut
+
+
+sub subseq_from_fasta {
+	my $fastafile = shift;
+	my $start = shift;
+	my $end = shift;
+
+	my $sequence = "";
+	my $pos = 0;
+	my $newstart = 0;
+	my $length = $end - $start;
+	my $newend = 0;
+	open FH, "<", $fastafile or die "couldn't open $fastafile";
+
+	my $line = readline FH; # first line is the name
+	$line = readline FH;
+	while (defined $line) {
+		$line =~ s/\s//g;
+		my $linelen = length ($line);
+		if (($pos + $linelen) >= $start) {
+			if ($newstart == 0) {
+				$newstart = $start - $pos;
+				$newend = $newstart + $length;
+			}
+			$sequence .= "$line";
+			if ($pos >= $end) {
+				last;
+			}
+		}
+		$pos += $linelen;
+
+		$line = readline FH;
+	}
+	close FH;
+	my (undef, $finalseq, undef) = split_seq ($sequence, $newstart, $newend);
+
+	return $finalseq;
+}
+
 
 # must return 1 for the file overall.
 1;
