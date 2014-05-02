@@ -4,6 +4,7 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Spec;
 use File::Path qw (make_path);
+use FindBin;
 use lib "$FindBin::Bin/..";
 use Subfunctions qw (split_seq disambiguate_str get_iupac_code subseq_from_fasta);
 use lib "$FindBin::Bin";
