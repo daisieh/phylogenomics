@@ -31,10 +31,10 @@ close VALFH;
 print "found " . (keys %$singlecopy_contigs) . " single copy genes\n";
 
 foreach my $key (keys %$singlecopy_contigs) {
-	print "finding $key in $key.best.fasta\n";
 	my $bestfile = File::Spec->catfile($contigdir, "$key.best.fasta");
 	my ($contigs, $contigarray) = parse_fasta($bestfile);
 	$singlecopy_seqs->{$key} = $contigs->{$singlecopy_contigs->{$key}};
+	print "finding $singlecopy_contigs->{$key} in $key.best.fasta\n";
 }
 
 open OUTFH, ">", File::Spec->catfile($outdir, "genelist.txt");
