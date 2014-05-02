@@ -57,7 +57,7 @@ if ($genefile ne "") {
 
 @sorted_genes = sort @genes;
 
-open my $fh, "<", $gff_file;
+open my $fh, "<", $gff_file or die "couldn't open gff file $gff_file";
 
 foreach my $gene (@sorted_genes) {
 	$gff_block = read_gff_block($fh, $gene);
