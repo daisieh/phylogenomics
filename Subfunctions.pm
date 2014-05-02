@@ -379,7 +379,7 @@ sub parse_fasta {
 	my $taxa = {};
 	my @taxanames = ();
 	my $length = 0;
-	open fileIN, "<", "$fastafile";
+	open fileIN, "<", "$fastafile" or die "couldn't parse fasta file $fastafile";
 
 	my $input = readline fileIN;
 	my $taxonlabel = "";

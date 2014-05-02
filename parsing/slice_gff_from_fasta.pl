@@ -42,7 +42,7 @@ if ($genefile ne "") {
 		unless (-d $outdir) {
 			make_path($outdir);
 		}
-		open GENE_FH, "<", $genefile or die "couldn't open gene file.";
+		open GENE_FH, "<", $genefile or die "couldn't open gene file $genefile.";
 		while (my $line = readline GENE_FH) {
 			chomp $line;
 			push @genes, $line;
