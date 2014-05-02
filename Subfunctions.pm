@@ -1,7 +1,5 @@
 package Subfunctions;
 use strict;
-use FindBin;
-use lib "$FindBin::Bin";
 
 
 BEGIN {
