@@ -66,7 +66,7 @@ foreach my $gene (@sorted_genes) {
 
 	# first clear out all the start and end values within each mRNA:
 	for (my $i=1; exists $gff_hash->{"mRNA"}->{$i}; $i++) {
-		foreach my $type (keys $gff_hash->{"mRNA"}->{$i}) {
+		foreach my $type (keys %{$gff_hash->{"mRNA"}->{$i}}) {
 			my $mRNA_hash = $gff_hash->{"mRNA"}->{$i};
 			$gff_hash->{"mRNA"}->{$i}->{"start"} = 0;
 			$gff_hash->{"mRNA"}->{$i}->{"end"} = 0;

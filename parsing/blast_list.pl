@@ -6,7 +6,7 @@ use File::Spec;
 use File::Path qw (make_path);
 use lib "$FindBin::Bin";
 use Blast qw (parse_xml sort_hsps_by_match);
-use lib "$FindBin::Bin/../";
+use lib "$FindBin::Bin/..";
 use Subfunctions qw (parse_fasta);
 use Data::Dumper;
 

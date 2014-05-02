@@ -77,7 +77,7 @@ sub feature_to_seq {
 	if (! (defined $feature)) {
 		return "";
 	}
-	for (my $i = 1; $i <= keys $feature; $i++) {
+	for (my $i = 1; $i <= keys %$feature; $i++) {
 		my $feat = $feature->{$i};
 		my ($startseq, $seq, $endseq) = split_seq ($sequence, $feat->{"start"}, $feat->{"end"});
 		if ($padded == 1) {
@@ -194,7 +194,7 @@ sub parse_gff_block {
 	}
 	# now that we've finished hashing, we can rename the mRNAs with the numerical index.
 	my $mRNA_hash = {};
-	foreach my $k (keys $gff_hash->{"mRNA"}) {
+	foreach my $k (keys %{$gff_hash->{"mRNA"}}) {
 		my $name = $gff_hash->{"mRNA"}->{$k}->{"Name"};
 		my $this_hash = delete $gff_hash->{"mRNA"}->{$k};
 		$name =~ /$gene_name\.(\d+)/;
@@ -260,7 +260,7 @@ sub export_gff_block {
 		$attributes .= export_attributes ($gff_hash->{"mRNA"}->{$i}->{"attributes"});
 		my @line = ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes);
 		$gff_string .= join("\t",@line) . "\n";
-		foreach my $type (keys $gff_hash->{"mRNA"}->{$i}) {
+		foreach my $type (keys %{$gff_hash->{"mRNA"}->{$i}}) {
 			my $mRNA_hash = $gff_hash->{"mRNA"}->{$i};
 			if ((ref $mRNA_hash->{$type}) =~ /HASH/) {
 				for (my $j=1; exists $mRNA_hash->{$type}->{$j}; $j++) {
