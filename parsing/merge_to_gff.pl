@@ -41,8 +41,9 @@ unless (-d $outdir) {
 }
 open GENE_FH, "<", $genefile or die "couldn't open gene file.";
 while (my $line = readline GENE_FH) {
-	chomp $line;
-	push @genes, $line;
+	if ($line =~ /^(.+?)\s*/) {
+		push @genes, $line;
+	}
 }
 
 my @sorted_genes = sort @genes;

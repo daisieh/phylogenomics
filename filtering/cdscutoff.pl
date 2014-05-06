@@ -36,7 +36,7 @@ foreach my $gene (@genes) {
 	}
 	close FH;
 	if (($totallength > 0) && (($totalident/$totallength) > $cutoff)){
-		print OUTFH "$gene\n";
+		print OUTFH "$gene\t$totalident / $totallength = ".($totalident/$totallength)."\n";
 		print "$gene\t".($totalident/$totallength)."\n";
 	}
 }
