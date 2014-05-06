@@ -27,9 +27,9 @@ foreach my $gene (@genes) {
 	my $totalident = 0;
 	my $totallength = 0;
 	foreach my $line (<FH>) {
-		#Potri.001G001400.1.CDS.1	1621	1733	106	113
+#Potri.001G230000.1.CDS.12	5876	5995	118	123
 		my ($name, $start, $end, $ident, $length) = split (/\t/, $line);
-		if ($name =~ /\.CDS\.1/) {
+		if ($name =~ /\.1\.CDS\./) {
 			$totalident += $ident;
 			$totallength += $length;
 		}
