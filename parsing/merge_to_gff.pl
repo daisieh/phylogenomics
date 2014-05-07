@@ -42,7 +42,7 @@ unless (-d $outdir) {
 open GENE_FH, "<", $genefile or die "couldn't open gene file.";
 while (my $line = readline GENE_FH) {
 	if ($line =~ /^(.+?)\s*/) {
-		push @genes, $line;
+		push @genes, $1;
 	}
 }
 
