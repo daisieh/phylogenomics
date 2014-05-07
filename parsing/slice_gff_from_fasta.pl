@@ -60,7 +60,9 @@ if ($genefile ne "") {
 open my $fh, "<", $gff_file or die "couldn't open gff file $gff_file";
 
 foreach my $gene (@sorted_genes) {
+	open my $fh, "<", $gff_file or die "couldn't open gff file $gff_file";
 	$gff_block = read_gff_block($fh, $gene);
+	close FH;
 
 	if ($gff_block eq "") {
 		print "No gene named $gene found.\n";
@@ -69,6 +71,11 @@ foreach my $gene (@sorted_genes) {
 	my $gff_hash = parse_gff_block ($gff_block);
 	my $sequence = $gff_hash->{"sequence"};
 	if (! (exists $gff_hash->{"sequence"})) {
+		my $scaffold = $gff_hash->{"seqid"};
+		if ($fastafile !~ /$scaffold/) {
+			my ($volume,$directories,$file) = File::Spec->splitpath( $fastafile );
+			$fastafile = File::Spec->catfile ($volume, $directories, "$scaffold.fasta");
+		}
 		set_gff_sequence ($gff_hash, subseq_from_fasta ($fastafile, $gff_hash->{"start"}, $gff_hash->{"end"}));
 	}
 
@@ -98,7 +105,6 @@ foreach my $gene (@sorted_genes) {
 	close OUT_FH;
 }
 
-close FH;
 
 
 __END__
