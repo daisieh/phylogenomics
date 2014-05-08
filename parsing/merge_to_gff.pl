@@ -48,10 +48,11 @@ while (my $line = readline GENE_FH) {
 
 my @sorted_genes = sort @genes;
 
-open my $fh, "<", $gff_file;
 
 foreach my $gene (@sorted_genes) {
+open my $fh, "<", $gff_file;
 	my $gff_block = read_gff_block($fh, $gene);
+close $fh;
 
 	if ($gff_block eq "") {
 		print "No gene named $gene found.\n";
@@ -105,7 +106,6 @@ foreach my $gene (@sorted_genes) {
 	write_gff_file ($gff_hash, File::Spec->catfile($outdir,"$gene.gff"));
 }
 
-close $fh;
 
 __END__
 
