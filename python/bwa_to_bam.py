@@ -28,9 +28,11 @@ def runscript(sample_string):
     os.system(cmd)
     cmd = "bwa sampe %s %s.1.sai %s.2.sai %s %s > %s.sam" % (refname,sample,sample,location,location,sample)
     os.system(cmd)
+    cmd = "rm %s.1.sai; rm %s.2.sai" % (sample,sample)
+    os.system(cmd)
     cmd = "samtools view -S -b -u -o %s.bam %s.sam" % (sample,sample)
     os.system(cmd)
-    cmd = "rm %s.1.sai; rm %s.2.sai; rm %s.sam" % (sample,sample,sample)
+    cmd = "rm %s.sam" % (sample)
     os.system(cmd)
 
 def __main__():
