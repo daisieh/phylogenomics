@@ -23,7 +23,7 @@ def runscript(sample_string):
     #This happens locally
     cmd = "samtools faidx %s" % (refname)
     os.system(cmd)
-    cmd = "samtools view %s | head -n 50000000 | samtools view -S -u -t %s.fai - > %s.small.bam" % (location, refname, sample)
+    cmd = "samtools view %s | head -n options.lines | samtools view -S -u -t %s.fai - > %s.small.bam" % (location, refname, sample)
     sys.stderr.write( "%s\n" % cmd )
     os.system(cmd)
     cmd = "bwa aln %s -b1 %s.small.bam > %s.1.sai" % (refname,sample,sample)
@@ -48,6 +48,8 @@ def __main__():
                       help="The reference genome")
     parser.add_option("-p", "--processes", default=1, dest="processes",
                       help="Number of processes to use")
+    parser.add_option("-n", "--number", default=50000000, dest="lines",
+                      help="Number of short reads to use")
     (options, args) = parser.parse_args()
 
     try:
