@@ -3,12 +3,12 @@ import optparse
 from socket import gethostname
 from multiprocessing import Pool
 
-refname = "~/Populus/reference_seqs/populus.trichocarpa.cp.fasta";
+# refname = "~/Populus/reference_seqs/populus.trichocarpa.cp.fasta";
 
-def assign_ref( ref ):
-	global refname
-	refname = ref;
-	print("refname is %s\n" % refname);
+# def assign_ref( ref ):
+# 	global refname
+# 	refname = ref;
+# 	print("refname is %s\n" % refname);
 
 def stop_err( msg ):
     sys.stderr.write( "%s\n" % msg )
@@ -23,7 +23,7 @@ def runscript(sample_string):
     #This happens locally
     cmd = "samtools faidx %s" % (refname)
     os.system(cmd)
-    cmd = "samtools view %s | head -n %i | samtools view -S -u -t %s.fai - > %s.small.bam" % (location, options.lines, refname, sample)
+    cmd = "samtools view %s | head -n %i | samtools view -S -u -t %s.fai - > %s.small.bam" % (location, lines, refname, sample)
     sys.stderr.write( "%s\n" % cmd )
     os.system(cmd)
     cmd = "bwa aln %s -b1 %s.small.bam > %s.1.sai" % (refname,sample,sample)
@@ -40,17 +40,22 @@ def runscript(sample_string):
     os.system(cmd)
 
 def __main__():
+	global refname
+	global lines
     #Parse Command Line
     parser = optparse.OptionParser()
-    parser.add_option("-i", "--input", default=None, dest="input",
+    parser.add_option("-i", "--input", type="string", default=None, dest="input",
                       help="A list of files to run script on")
-    parser.add_option("-r", "--reference", default=None, dest="ref",
+    parser.add_option("-r", "--reference", type="string", default="~/Populus/reference_seqs/populus.trichocarpa.cp.fasta", dest="ref",
                       help="The reference genome")
-    parser.add_option("-p", "--processes", default=1, dest="processes",
+    parser.add_option("-p", "--processes", default=1, type="int", dest="processes",
                       help="Number of processes to use")
-    parser.add_option("-n", "--number", default=50000000, dest="lines",
+    parser.add_option("-n", "--number", default=50000000, type="int", dest="num",
                       help="Number of short reads to use")
+
     (options, args) = parser.parse_args()
+    refname = options.ref
+    lines = options.num
 
     try:
         open(options.input, "r").close()
@@ -62,8 +67,7 @@ def __main__():
     except TypeError, e:
         stop_err("Reference file not found:\n" + str(e))
 
-    print ("options.ref\n")
-    assign_ref(options.ref)
+    print ("%s, %i\n" % refname, lines)
 
     pool = Pool(int(options.processes))
 
