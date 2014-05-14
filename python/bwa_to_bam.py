@@ -23,7 +23,7 @@ def runscript(sample_string):
     #This happens locally
     cmd = "samtools faidx %s" % (refname)
     os.system(cmd)
-    cmd = "samtools view %s | head -n options.lines | samtools view -S -u -t %s.fai - > %s.small.bam" % (location, refname, sample)
+    cmd = "samtools view %s | head -n %i | samtools view -S -u -t %s.fai - > %s.small.bam" % (location, options.lines, refname, sample)
     sys.stderr.write( "%s\n" % cmd )
     os.system(cmd)
     cmd = "bwa aln %s -b1 %s.small.bam > %s.1.sai" % (refname,sample,sample)
