@@ -21,7 +21,9 @@ def runscript(sample_string):
     host,sample,location = sample_string.split()
 
     #This happens locally
-    cmd = "samtools view %s | head -n 50000000 > %s.small.bam" % (location, sample)
+    cmd = "samtools faidx %s" % (refname)
+    os.system(cmd)
+    cmd = "samtools view %s | head -n 50000000 | samtools view -S -b -t %s.fai > %s.small.bam" % (location, refname, sample)
     os.system(cmd)
     cmd = "bwa aln %s -b1 %s.small.bam > %s.1.sai" % (refname,sample,sample)
     os.system(cmd)
