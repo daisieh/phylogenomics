@@ -63,7 +63,7 @@ def __main__():
     except TypeError, e:
         stop_err("Reference file not found:\n" + str(e))
 
-    print ("%s, %i\n" % refname, lines)
+    print ("using ", refname, " with ", lines)
 
     pool = Pool(int(options.processes))
 
