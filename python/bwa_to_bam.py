@@ -24,6 +24,7 @@ def runscript(sample_string):
     cmd = "samtools faidx %s" % (refname)
     os.system(cmd)
     cmd = "samtools view %s | head -n 50000000 | samtools view -S -u -t %s.fai - > %s.small.bam" % (location, refname, sample)
+    sys.stderr.write( "%s\n" % cmd )
     os.system(cmd)
     cmd = "bwa aln %s -b1 %s.small.bam > %s.1.sai" % (refname,sample,sample)
     os.system(cmd)
