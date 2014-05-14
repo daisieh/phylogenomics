@@ -5,10 +5,6 @@ from multiprocessing import Pool
 
 # refname = "~/Populus/reference_seqs/populus.trichocarpa.cp.fasta";
 
-# def assign_ref( ref ):
-# 	global refname
-# 	refname = ref;
-# 	print("refname is %s\n" % refname);
 
 def stop_err( msg ):
     sys.stderr.write( "%s\n" % msg )
@@ -40,8 +36,8 @@ def runscript(sample_string):
     os.system(cmd)
 
 def __main__():
-	global refname
-	global lines
+    global refname
+    global lines
     #Parse Command Line
     parser = optparse.OptionParser()
     parser.add_option("-i", "--input", type="string", default=None, dest="input",
