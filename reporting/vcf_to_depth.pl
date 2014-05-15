@@ -26,7 +26,6 @@ if ($help) {
 print $runline;
 
 my @samples = @{sample_list ($samplefile)};
-print "samples ". join (",",@samples). "\n";
 if ($samplefile =~ /(.*?)\.vcf$/) {
 	@samples = ($1);
 }
