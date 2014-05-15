@@ -20,11 +20,11 @@ def runscript(sample_string):
     host,sample,location = sample_string.split()
 
     p1 = Popen(["samtools", "view", location], stdout=PIPE, stderr=logfile)
-    p2 = Popen(["head", "-n", str(lines)], stdin=p1.stdout, stdout=PIPE, stderr=logfile)
+    p2 = Popen(["head", "-n", str(lines)], stdin=p1.stdout, stdout=PIPE)
 
     smallbamfilename = str(sample+".small.bam")
     smallbamfile = open(smallbamfilename, "w")
-    p3 = Popen(["samtools", "view", "-S", "-u", "-t", refname+".fai", "-"], stdin=p2.stdout, stdout=smallbamfile)
+    p3 = Popen(["samtools", "view", "-S", "-u", "-t", refname+".fai", "-"], stdin=p2.stdout, stdout=smallbamfile, stderr=logfile)
     smallbamfile.close()
 
     cmd = "bwa aln -b1 %s %s > %s.1.sai" % (refname,smallbamfilename,sample)
