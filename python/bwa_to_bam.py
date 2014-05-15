@@ -4,6 +4,7 @@ from multiprocessing import Pool
 from subprocess import Popen, PIPE, call
 
 def runcommand(cmd):
+    print >>sys.stderr, "calling "+cmd
     try:
         retcode = call(cmd, shell=True)
         if retcode < 0:
