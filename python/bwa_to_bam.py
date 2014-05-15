@@ -26,7 +26,7 @@ def runscript(sample_string):
     smallbamfilename = str(sample+".small.bam")
     smallbamfile = open(smallbamfilename, "w")
     p3 = Popen(["samtools", "view", "-S", "-u", "-"], stdin=p2.stdout, stdout=smallbamfile, stderr=logfile)
-    p2.communicate()
+    p3.communicate()
     smallbamfile.close()
     p2.terminate()
     cmd = "bwa aln -b1 %s %s > %s.1.sai" % (refname,smallbamfilename,sample)
