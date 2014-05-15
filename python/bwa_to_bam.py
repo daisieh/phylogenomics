@@ -84,4 +84,4 @@ except IOError as e:
 
 pool.map(runscript, samples)
 
-close logfile
+logfile.close()
