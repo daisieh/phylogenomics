@@ -57,7 +57,8 @@ lines = options.num
 if options.input == "":
     sys.exit("Sample file must be provided.\n")
 
-global logfile = open (str(options.input+".log"), "w")
+global logfile
+logfile = open (str(options.input+".log"), "w")
 
 try:
     open(options.ref, "r").close()
