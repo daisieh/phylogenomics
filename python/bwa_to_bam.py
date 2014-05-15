@@ -19,8 +19,8 @@ def runscript(sample_string):
     print >>sys.stdout, "sample", sample_string
     host,sample,location = sample_string.split()
 
-    p1 = Popen(["samtools", "view", location], stdout=PIPE)
-    p2 = Popen(["head", "-n", str(lines)], stdin=p1.stdout, stdout=PIPE)
+    p1 = Popen(["samtools", "view", location], stdout=PIPE, stderr=logfile)
+    p2 = Popen(["head", "-n", str(lines)], stdin=p1.stdout, stdout=PIPE, stderr=logfile)
 
     smallbamfilename = str(sample+".small.bam")
     smallbamfile = open(smallbamfilename, "w")
@@ -57,6 +57,8 @@ lines = options.num
 if options.input == "":
     sys.exit("Sample file must be provided.\n")
 
+global logfile = open (str(options.input+".log"), "w")
+
 try:
     open(options.ref, "r").close()
     cmd = "samtools faidx %s" % (refname)
@@ -80,3 +82,5 @@ except IOError as e:
     sys.exit("Sample file " + options.input + " not found\n")
 
 pool.map(runscript, samples)
+
+close logfile
