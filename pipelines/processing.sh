@@ -48,6 +48,6 @@ ls -1 /home/daisieh/complete_chrs/Ser_Potri_ph > /home/daisieh/complete_chrs/gff
 while read p
 do
 echo $p
-perl /home/daisieh/phylogenomics/pipelines/pairwise_ser2pop_cds.pl -gff $p -ref $refdir -out /home/daisieh/complete_chrs/pairwise
+perl /home/daisieh/phylogenomics/pipelines/pairwise_ser2pop_cds.pl -gff /home/daisieh/complete_chrs/Ser_Potri_ph/$p -ref $refdir -out /home/daisieh/complete_chrs/pairwise
 done < /home/daisieh/complete_chrs/gfflist.txt
 
