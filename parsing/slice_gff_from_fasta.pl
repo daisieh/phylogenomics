@@ -44,8 +44,9 @@ if ($genefile ne "") {
 		}
 		open GENE_FH, "<", $genefile or die "couldn't open gene file $genefile.";
 		while (my $line = readline GENE_FH) {
-			chomp $line;
-			push @genes, $line;
+			if ($line =~ /^(.+?)\s+/) {
+				push @genes, $1;
+			}
 		}
 	}
 } else {

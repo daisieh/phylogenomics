@@ -50,9 +50,9 @@ my @sorted_genes = sort @genes;
 
 
 foreach my $gene (@sorted_genes) {
-open my $fh, "<", $gff_file;
+	open my $fh, "<", $gff_file;
 	my $gff_block = read_gff_block($fh, $gene);
-close $fh;
+	close $fh;
 
 	if ($gff_block eq "") {
 		print "No gene named $gene found.\n";
