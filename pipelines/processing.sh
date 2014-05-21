@@ -22,8 +22,13 @@ refdir=/home/daisieh/refs/pop_refs
 # blast list
 #perl /home/daisieh/phylogenomics/parsing/blast_list.pl -ref $refdir -gene /home/daisieh/complete_chrs/$chr/single/genelist.txt -fasta /home/daisieh/complete_chrs/$chr/single/ -out /home/daisieh/complete_chrs/$chr/blast
 
+# filter list for best hits
+# cd /home/daisieh/complete_chrs/$chr/
+# perl /home/daisieh/phylogenomics/filtering/cdscutoff.pl /home/daisieh/complete_chrs/$chr/single/genelist.txt /home/daisieh/complete_chrs/$chr/blast/ 90
+
 # merge gff
-#perl /home/daisieh/phylogenomics/parsing/merge_to_gff.pl -gff /home/daisieh/refs/Ptrichocarpa_210_gene_exons.gff3 -gene /home/daisieh/complete_chrs/$chr/single/genelist.txt -fasta /home/daisieh/complete_chrs/$chr/single/ -blast /home/daisieh/complete_chrs/$chr/blast -out /home/daisieh/complete_chrs/gff
+# sort /home/daisieh/complete_chrs/$chr/cutoff.90 > /home/daisieh/complete_chrs/$chr/cutoff.new
+# perl /home/daisieh/phylogenomics/parsing/merge_to_gff.pl -gff /home/daisieh/refs/Ptrichocarpa_210_gene_exons.gff3 -gene /home/daisieh/complete_chrs/$chr/cutoff.new -fasta /home/daisieh/complete_chrs/$chr/single/ -blast /home/daisieh/complete_chrs/$chr/blast -out /home/daisieh/complete_chrs/$chr/gff
 
 #done
 
