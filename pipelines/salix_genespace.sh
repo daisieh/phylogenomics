@@ -10,7 +10,7 @@ refdir=/home/daisieh/refs/pop_refs
 
 for chr in Chr01 Chr02 Chr03 Chr04 Chr05 Chr06 Chr07 Chr08 Chr09 Chr10 Chr11 Chr12 Chr13 Chr14 Chr15 Chr16 Chr17 Chr18 Chr19 ChrT
 
-#do
+do
 #echo $chr
 # filter single genes.
 #perl /home/daisieh/phylogenomics/filtering/filter_atram_single_copy_only.pl /home/daisieh/complete_chrs/$chr/validate/results.txt /home/daisieh/complete_chrs/$chr/best /home/daisieh/complete_chrs/$chr/single
@@ -29,7 +29,7 @@ perl /home/daisieh/phylogenomics/parsing/slice_gff_from_fasta.pl -gff /home/dais
 # merge gff
 # perl /home/daisieh/phylogenomics/parsing/merge_to_gff.pl -gff /home/daisieh/refs/Ptrichocarpa_210_gene_exons.gff3 -gene /home/daisieh/complete_chrs/$chr/cutoff.90 -fasta /home/daisieh/complete_chrs/$chr/single/ -blast /home/daisieh/complete_chrs/$chr/blast -out /home/daisieh/complete_chrs/$chr/gff
 
-#done
+done
 
 # rename all to Ser.ph:
 # FILES=/home/daisieh/complete_chrs/gff/*
@@ -42,12 +42,12 @@ perl /home/daisieh/phylogenomics/parsing/slice_gff_from_fasta.pl -gff /home/dais
 # mv /home/daisieh/complete_chrs/gff/ /home/daisieh/complete_chrs/Ser_Potri_ph
 
 # make list of these gff files:
-# ls -1 /home/daisieh/complete_chrs/Ser_Potri_ph > /home/daisieh/complete_chrs/gfflist.txt
+ls -1 /home/daisieh/complete_chrs/Ser_Potri_ph > /home/daisieh/complete_chrs/gfflist.txt
 
 # set up the pairwise comparison:
-# while read p
-# do
-# echo $p
-# perl /home/daisieh/phylogenomics/pipelines/pairwise_ser2pop_cds.pl -gff /home/daisieh/complete_chrs/Ser_Potri_ph/$p -ref $refdir -out /home/daisieh/complete_chrs/pairwise
-# done < /home/daisieh/complete_chrs/gfflist.txt
-#
+while read p
+do
+echo $p
+perl /home/daisieh/phylogenomics/pipelines/pairwise_ser2pop_cds.pl -gff /home/daisieh/complete_chrs/Ser_Potri_ph/$p -ref $refdir -out /home/daisieh/complete_chrs/pairwise
+done < /home/daisieh/complete_chrs/gfflist.txt
+
