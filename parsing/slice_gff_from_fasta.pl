@@ -95,8 +95,8 @@ foreach my $gene (@sorted_genes) {
 		print OUT_FH ">$gff_hash->{Name}.$mRNA_num\n$seq\n";
 		my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
 		foreach my $type (@feature_types) {
-			print Dumper ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}) ;
 			$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
+			print Dumper ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}) ;
 			if ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}->{"strand"} eq "-") {
 				$seq = reverse_complement($seq);
 			}
