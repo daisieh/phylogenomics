@@ -11,7 +11,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap subseq_from_fasta);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap subseq_from_fasta translate_seq codon_to_aa);
 }
 
 =head1
@@ -953,6 +953,93 @@ sub subseq_from_fasta {
 	my (undef, $finalseq, undef) = split_seq ($sequence, $newstart, $newend);
 
 	return $finalseq;
+}
+
+sub translate_seq {
+	my $nucl_seq = shift;
+
+	my $aa_seq = "";
+	while ($nucl_seq =~ /^(\w\w\w)(.*)$/) {
+		$nucl_seq = $2;
+		$aa_seq .= codon_to_aa ($1);
+	}
+	if ($nucl_seq ne "") {
+		# this wasn't div by 3, so there's a problem.
+		return "";
+	}
+	return $aa_seq;
+}
+
+# reference table:
+# F	TTT	TTC
+# L	TTA	TTG
+# S	TCT	TCC	TCA	TCG
+# Y	TAT	TAC
+# *	TAA	TAG	TGA
+# C	TGT	TGC
+# W	TGG
+# L	CTT	CTC	CTA	CTG
+# P	CCT	CCC	CCA	CCG
+# H	CAT	CAC
+# Q	CAA	CAG
+# R	CGT	CGC	CGA	CGG
+# I	ATT	ATC	ATA
+# M	ATG
+# T	ACT	ACC	ACA	ACG
+# N	AAT	AAC
+# K	AAA	AAG
+# S	AGT	AGC
+# R	AGA	AGG
+# V	GTT	GTC	GTA	GTG
+# A	GCT	GCC	GCA	GCG
+# D	GAT	GAC
+# E	GAA	GAG
+# G	GGT	GGC	GGA	GGG
+
+
+sub codon_to_aa {
+	my $codon = shift;
+	$codon = uc($codon);
+	if ($codon !~ /.../) { return "-"; }
+	if ($codon =~ /AC./) { return "T"; }
+	if ($codon =~ /CT./) { return "L"; }
+	if ($codon =~ /CC./) { return "P"; }
+	if ($codon =~ /CG./) { return "R"; }
+	if ($codon =~ /GT./) { return "V"; }
+	if ($codon =~ /GC./) { return "A"; }
+	if ($codon =~ /GG./) { return "G"; }
+	if ($codon =~ /TC./) { return "S"; }
+	if ($codon =~ /TT[CTY]/) { return "F"; }
+	if ($codon =~ /TT[AGR]/) { return "L"; }
+	if ($codon =~ /TA[CTY]/) { return "Y"; }
+	if ($codon =~ /TA[AGR]|TGA/) { return "*"; }
+	if ($codon =~ /TG[CTY]/) { return "C"; }
+	if ($codon =~ /TGG/) { return "W"; }
+	if ($codon =~ /CA[CTY]/) { return "H"; }
+	if ($codon =~ /CA[AGR]/) { return "Q"; }
+	if ($codon =~ /AT[CATMYWH]/) { return "I"; }
+	if ($codon =~ /ATG/) { return "M"; }
+	if ($codon =~ /AA[CTY]/) { return "N"; }
+	if ($codon =~ /AA[AGR]/) { return "K"; }
+	if ($codon =~ /AG[CTY]/) { return "S"; }
+	if ($codon =~ /AG[AGR]/) { return "R"; }
+	if ($codon =~ /GA[CTY]/) { return "D"; }
+	if ($codon =~ /GA[AGR]/) { return "E"; }
+
+
+# 	$charstr =~ s/N/ACGT/g;
+# 	$charstr =~ s/M/AC/g;
+# 	$charstr =~ s/R/AG/g;
+# 	$charstr =~ s/W/AT/g;
+# 	$charstr =~ s/S/CG/g;
+# 	$charstr =~ s/Y/CT/g;
+# 	$charstr =~ s/K/GT/g;
+# 	$charstr =~ s/V/ACG/g;
+# 	$charstr =~ s/H/ACT/g;
+# 	$charstr =~ s/D/AGT/g;
+# 	$charstr =~ s/B/CGT/g;
+# TAA TAG TGA TAR
+	return "X";
 }
 
 
