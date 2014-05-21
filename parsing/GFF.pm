@@ -183,6 +183,7 @@ sub parse_gff_block {
 		$hash_ptr->{"phase"} = $phase;
 		$hash_ptr->{"attributes"} = $attr_hash;
 
+		print Dumper ($hash_ptr);
 
 		if ($type eq "mRNA") {
 			# Chr01	phytozome9_0	mRNA	8391	12209	.	-	.	ID=PAC:27046907;Name=Potri.001G000400.3;pacid=27046907;longest=0;Parent=Potri.001G000400
