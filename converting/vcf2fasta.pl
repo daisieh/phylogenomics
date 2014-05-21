@@ -3,7 +3,7 @@ use Getopt::Long;
 use Pod::Usage;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions;
+use Subfunctions qw(sample_list get_ordered_genotypes get_iupac_code);
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
