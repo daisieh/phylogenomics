@@ -101,7 +101,7 @@ foreach my $gene (@sorted_genes) {
 			}
 			if ((ref $seq) =~ /ARRAY/ ) {
 				for (my $i=1; $i<=@$seq; $i++) {
-					print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\n@$seq[$i-1]\n";
+					print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\t$gff_hash->{mRNA}->{$mRNA_num}->{$type}->{strand}\n@$seq[$i-1]\n";
 				}
 			}
 		}
