@@ -72,7 +72,7 @@ foreach my $gff_block (@genes) {
 	open OUT_FH, ">", $outfile or die "couldn't create $outfile";
 
 	my $params = { 'padded' => 0, 'separate' => 1 };
-	for (my $mRNA_num = 1; $mRNA_num <= (keys $gff_hash->{"mRNA"}); $mRNA_num++) {
+	for (my $mRNA_num = 1; $mRNA_num <= (keys %{$gff_hash->{"mRNA"}}); $mRNA_num++) {
 		(undef, my $seq, undef) = split_seq($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"start"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"end"});
 		print OUT_FH ">$gff_hash->{Name}.$mRNA_num\n$seq\n";
 		my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
