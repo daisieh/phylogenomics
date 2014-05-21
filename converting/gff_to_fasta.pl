@@ -6,7 +6,7 @@ use File::Spec;
 use File::Path qw (make_path);
 use FindBin;
 use lib "$FindBin::Bin/../";
-use Subfunctions qw (split_seq disambiguate_str get_iupac_code subseq_from_fasta);
+use Subfunctions qw (split_seq disambiguate_str get_iupac_code subseq_from_fasta reverse_complement);
 use lib "$FindBin::Bin/../parsing";
 use GFF qw (feature_to_seq parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
 
@@ -78,6 +78,9 @@ foreach my $gff_block (@genes) {
 		my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
 		foreach my $type (@feature_types) {
 			$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
+			if ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}->{"strand"} eq "-") {
+				$seq = reverse_complement($seq);
+			}
 			if ((ref $seq) =~ /ARRAY/ ) {
 				for (my $i=1; $i<=@$seq; $i++) {
 					print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\n@$seq[$i-1]\n";

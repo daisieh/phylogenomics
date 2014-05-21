@@ -165,7 +165,7 @@ sub parse_gff_block {
 		# type is the key under which this should be filed, with a subkey for the unique id of this feature.
 		#	the id is named after the parent: #PAC:27046906.exon.3
 		# the start and end are offsets from the parent gene.
-		# the next three are irrelevant for our purposes, so can be discarded.
+		# we don't care about the next three, usually, but we might as well hash them too.
 		# keep the attributes as is.
 
 		$start = $start - $offset;
@@ -178,6 +178,9 @@ sub parse_gff_block {
 		my $hash_ptr = {};
 		$hash_ptr->{"start"} = $start;
 		$hash_ptr->{"end"} = $end;
+		$hash_ptr->{"score"} = $score;
+		$hash_ptr->{"strand"} = $strand;
+		$hash_ptr->{"phase"} = $phase;
 		$hash_ptr->{"attributes"} = $attr_hash;
 
 
