@@ -385,7 +385,7 @@ sub parse_fasta {
 	my $taxonlabel = "";
 	my $sequence = "";
 	while (defined $input) {
-		if ($input =~ /^>(.+)\s*$/) {
+		if ($input =~ /^>(.+?)\s*$/) {
 			$taxonlabel = $1;
 			push @taxanames, $taxonlabel;
 			if ($length > 0) {
