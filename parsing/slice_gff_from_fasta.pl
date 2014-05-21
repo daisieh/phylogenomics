@@ -96,13 +96,13 @@ foreach my $gene (@sorted_genes) {
 		my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
 		foreach my $type (@feature_types) {
 			$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
-			print Dumper ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}) ;
-			if ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}->{"strand"} eq "-") {
-				$seq = reverse_complement($seq);
-				print "hi\n";
-			} else { print "nope\n"; }
 			if ((ref $seq) =~ /ARRAY/ ) {
 				for (my $i=1; $i<=@$seq; $i++) {
+					if ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}->{$i}->{"strand"} eq "-") {
+						@$seq[$i-1] = reverse_complement(@$seq[$i-1]);
+						print "hi\n";
+					} else { print "nope\n"; }
+
 					print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\t$gff_hash->{mRNA}->{$mRNA_num}->{$type}->{strand}\n@$seq[$i-1]\n";
 				}
 			}
