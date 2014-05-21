@@ -72,10 +72,12 @@ close $fh;
 			my $mRNA_hash = $gff_hash->{"mRNA"}->{$i};
 			$gff_hash->{"mRNA"}->{$i}->{"start"} = 0;
 			$gff_hash->{"mRNA"}->{$i}->{"end"} = 0;
+			$gff_hash->{"mRNA"}->{$i}->{"strand"} = "+";
 			if ((ref $mRNA_hash->{$type}) =~ /HASH/) {
 				for (my $j=1; exists $mRNA_hash->{$type}->{$j}; $j++) {
 					$gff_hash->{"mRNA"}->{$i}->{$type}->{$j}->{"start"} = 0;
 					$gff_hash->{"mRNA"}->{$i}->{$type}->{$j}->{"end"} = 0;
+					$gff_hash->{"mRNA"}->{$i}->{"strand"} = "+";
 				}
 			}
 		}
@@ -97,7 +99,6 @@ close $fh;
 			$gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"start"} = $start;
 			$gff_hash->{"mRNA"}->{$mRNA}->{$type}->{$num}->{"end"} = $end;
 		} elsif ($longname =~ /$gene\.(\d+)$/) {
-			print "mRNA $longname\n";
 			$gff_hash->{"mRNA"}->{$1}->{"start"} = $start;
 			$gff_hash->{"mRNA"}->{$1}->{"end"} = $end;
 		}
