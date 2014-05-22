@@ -1,6 +1,6 @@
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions;
+use Subfunctions qw(make_label_lookup);
 
 use File::Basename;
 use Getopt::Long;
