@@ -16,6 +16,10 @@ my $fastafile = "";
 my $outfile = "";
 my $genefile = "";
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
+
 GetOptions ('gfffile=s' => \$gff_file,
 			'output=s' => \$outfile,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
