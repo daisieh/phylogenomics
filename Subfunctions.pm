@@ -861,6 +861,12 @@ sub system_call {
 	return $exit_val;
 }
 
+=head1
+
+B<String ($startseq, $regionseq, $endseq) split_seq ( String $seq, int $start, int $end )>
+
+=cut
+
 
 sub split_seq {
     my $seq = shift;

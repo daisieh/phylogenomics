@@ -154,8 +154,9 @@ sub blast_to_ref {
 				my $gap = length($2);
 				my $right = length($3);
 				$hsp->{"hseq"} = $1 . $3;
-				$hsp->{"qseq"} =~ /^(.{$left})(.{$gap})(.{$right})/;
-				$hsp->{"qseq"} = $1 . $3;
+# 				$hsp->{"qseq"} =~ /^(.{$left})(.{$gap})(.{$right})/;
+				my ($startseq, $regionseq, $endseq) = split_seq ( $hsp->{"qseq"}, $left+1, $left+$gap);
+				$hsp->{"qseq"} = $startseq . $endseq;
 			}
 			$sequence .= "n" x ($hsp->{"hit-from"} - $last_end - 1) . $hsp->{"qseq"};
 		}
