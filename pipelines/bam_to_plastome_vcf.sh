@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for f in $1
+for f in $1 #or whatever files contain the formatted input files for bwa_to_bam.py
 do
 	echo $f
 
