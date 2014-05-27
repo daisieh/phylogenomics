@@ -17,31 +17,34 @@ def runcommand(cmd):
 
 
 def runscript(sample_string):
-    print >>sys.stdout, "sample", sample_string
-    host,sample,location = sample_string.split()
+    if sample_string.strip() == ""
+        return
+    else
+        print >>sys.stdout, "sample", sample_string
+        host,sample,location = sample_string.split()
 
-    p1 = Popen(["samtools", "view", location], stdout=PIPE, stderr=logfile)
-    p2 = Popen(["head", "-n", str(lines)], stdin=p1.stdout, stdout=PIPE)
+        p1 = Popen(["samtools", "view", location], stdout=PIPE, stderr=logfile)
+        p2 = Popen(["head", "-n", str(lines)], stdin=p1.stdout, stdout=PIPE)
 
-    smallbamfilename = str(sample+".small.bam")
-    smallbamfile = open(smallbamfilename, "w")
-    p3 = Popen(["samtools", "view", "-S", "-u", "-"], stdin=p2.stdout, stdout=smallbamfile, stderr=logfile)
-    p3.communicate()
-    smallbamfile.close()
-    p2.terminate()
-    cmd = "bwa aln -b1 %s %s > %s.1.sai" % (refname,smallbamfilename,sample)
-    print >>sys.stdout, cmd
-    runcommand(cmd)
-    cmd = "bwa aln -b2 %s %s > %s.2.sai" % (refname,smallbamfilename,sample)
-    runcommand(cmd)
-    cmd = "bwa sampe %s %s.1.sai %s.2.sai %s.small.bam %s.small.bam > %s.sam" % (refname,sample,sample,sample,sample,sample)
-    runcommand(cmd)
-    cmd = "rm %s.1.sai; rm %s.2.sai; rm %s.small.bam" % (sample,sample,sample)
-    runcommand(cmd)
-    cmd = "samtools view -S -b -u -o %s.bam %s.sam" % (sample,sample)
-    runcommand(cmd)
-    cmd = "rm %s.sam" % (sample)
-    runcommand(cmd)
+        smallbamfilename = str(sample+".small.bam")
+        smallbamfile = open(smallbamfilename, "w")
+        p3 = Popen(["samtools", "view", "-S", "-u", "-"], stdin=p2.stdout, stdout=smallbamfile, stderr=logfile)
+        p3.communicate()
+        smallbamfile.close()
+        p2.terminate()
+        cmd = "bwa aln -b1 %s %s > %s.1.sai" % (refname,smallbamfilename,sample)
+        print >>sys.stdout, cmd
+        runcommand(cmd)
+        cmd = "bwa aln -b2 %s %s > %s.2.sai" % (refname,smallbamfilename,sample)
+        runcommand(cmd)
+        cmd = "bwa sampe %s %s.1.sai %s.2.sai %s.small.bam %s.small.bam > %s.sam" % (refname,sample,sample,sample,sample,sample)
+        runcommand(cmd)
+        cmd = "rm %s.1.sai; rm %s.2.sai; rm %s.small.bam" % (sample,sample,sample)
+        runcommand(cmd)
+        cmd = "samtools view -S -b -u -o %s.bam %s.sam" % (sample,sample)
+        runcommand(cmd)
+        cmd = "rm %s.sam" % (sample)
+        runcommand(cmd)
 
 global refname
 global lines
