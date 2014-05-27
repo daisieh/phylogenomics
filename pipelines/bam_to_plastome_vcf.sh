@@ -1,8 +1,7 @@
 #!/bin/bash
 
-for f in balsam.txt tricho.txt #or whatever files contain the formatted input files for bwa_to_bam.py
+for f in $1
 do
-	f="samples/$f"
 	echo $f
 
 	# this cuts out the first ~2.2GB of the unsorted bam file: equivalent to >1000 reads/bp
