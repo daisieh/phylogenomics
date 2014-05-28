@@ -19,7 +19,7 @@ def runcommand(cmd):
 def runscript(sample_string):
     if sample_string.strip() == "":
         return
-    else
+    else:
         print >>sys.stdout, "sample", sample_string
         host,sample,location = sample_string.split()
 
