@@ -1,13 +1,5 @@
 #!/bin/bash
 
-#PBS -l nodes=1:ppn=8
-#PBS -l walltime=48:00:00
-#PBS -l mem=8000mb
-#PBS -j oe
-
-module load perl/5.14.2
-module load blast/ncbi-2.2.28+
-
 # $1 is the input directory, $2 is the output directory.
 for f in $1
 do
