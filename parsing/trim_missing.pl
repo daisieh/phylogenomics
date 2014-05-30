@@ -4,7 +4,7 @@ use Pod::Usage;
 use File::Basename;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions;
+use Subfunctions qw(parse_fasta);
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
