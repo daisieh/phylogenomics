@@ -59,7 +59,7 @@ foreach my $gene (@genes) {
 		$blastfile = File::Spec->catfile ($xmldir, "$gene.xml");
 	}
 
-	print "parsing results\n";
+	print "parsing results for $blastfile\n";
 	my $hit_array = parse_xml ($blastfile);
 
 	my ($ref_hash, $ref_array) = parse_fasta($reffile);
@@ -107,7 +107,7 @@ foreach my $gene (@genes) {
 	close OUTFH;
 }
 
-
+print "finished blast_list\n";
 __END__
 
 =head1 NAME
