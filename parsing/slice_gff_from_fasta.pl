@@ -81,7 +81,7 @@ foreach my $gene (@sorted_genes) {
 				$fastafile = File::Spec->catfile ($volume, $directories, "$seqid.fasta");
 			}
 		}
-		print "$fastafile\n";
+		print "$seqid $fastafile\n";
 # 		set_gff_sequence ($gff_hash, subseq_from_fasta ($fastafile, $gff_hash->{"start"}, $gff_hash->{"end"}));
 	}
 
