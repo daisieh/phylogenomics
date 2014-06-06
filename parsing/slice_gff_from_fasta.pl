@@ -72,43 +72,48 @@ foreach my $gene (@sorted_genes) {
 	my $gff_hash = parse_gff_block ($gff_block);
 	my $sequence = $gff_hash->{"sequence"};
 	if (! (exists $gff_hash->{"sequence"})) {
-		my $scaffold = $gff_hash->{"seqid"};
-		if ($fastafile !~ /$scaffold/) {
+		my $seqid = $gff_hash->{"seqid"};
+		if (-d $fastafile) { # if a directory of fasta files was specified:
 			my ($volume,$directories,$file) = File::Spec->splitpath( $fastafile );
-			$fastafile = File::Spec->catfile ($volume, $directories, "$scaffold.fasta");
-		}
-		set_gff_sequence ($gff_hash, subseq_from_fasta ($fastafile, $gff_hash->{"start"}, $gff_hash->{"end"}));
-	}
-
-	if (@sorted_genes > 1) {
-		$outfile = File::Spec->catfile($outdir, "$gene.fasta");
-	}
-
-# 	write_gff_file ($gff_hash, "$outfile.gff");
-
-	open OUT_FH, ">", $outfile or die "couldn't create $outfile";
-	print OUT_FH ">$gff_hash->{Name}.gene\n$gff_hash->{sequence}\n";
-
-	my $params = { 'padded' => 0, 'separate' => 1 };
-	for (my $mRNA_num = 1; $mRNA_num <= (keys %{$gff_hash->{"mRNA"}}); $mRNA_num++) {
-		(undef, my $seq, undef) = split_seq($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"start"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"end"});
-		print OUT_FH ">$gff_hash->{Name}.$mRNA_num\n$seq\n";
-		my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
-		foreach my $type (@feature_types) {
-			$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
-			if ((ref $seq) =~ /ARRAY/ ) {
-				for (my $i=1; $i<=@$seq; $i++) {
-					if ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}->{$i}->{"strand"} eq "-") {
-						@$seq[$i-1] = reverse_complement(@$seq[$i-1]);
-						print "hi\n";
-					} else { print "nope\n"; }
-
-					print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\t$gff_hash->{mRNA}->{$mRNA_num}->{$type}->{strand}\n@$seq[$i-1]\n";
-				}
+			if ($seqid =~ /Potri\.0(\d+)G/) {
+				$fastafile = File::Spec->catfile ($volume, $directories, "Chr$1.fasta");
+			} elsif ($seqid =~ /Potri\.T/) {
+				$fastafile = File::Spec->catfile ($volume, $directories, "$seqid.fasta");
 			}
 		}
+		print "$fastafile\n";
+# 		set_gff_sequence ($gff_hash, subseq_from_fasta ($fastafile, $gff_hash->{"start"}, $gff_hash->{"end"}));
 	}
-	close OUT_FH;
+
+# 	if (@sorted_genes > 1) {
+# 		$outfile = File::Spec->catfile($outdir, "$gene.fasta");
+# 	}
+#
+# # 	write_gff_file ($gff_hash, "$outfile.gff");
+#
+# 	open OUT_FH, ">", $outfile or die "couldn't create $outfile";
+# 	print OUT_FH ">$gff_hash->{Name}.gene\n$gff_hash->{sequence}\n";
+#
+# 	my $params = { 'padded' => 0, 'separate' => 1 };
+# 	for (my $mRNA_num = 1; $mRNA_num <= (keys %{$gff_hash->{"mRNA"}}); $mRNA_num++) {
+# 		(undef, my $seq, undef) = split_seq($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"start"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{"end"});
+# 		print OUT_FH ">$gff_hash->{Name}.$mRNA_num\n$seq\n";
+# 		my @feature_types = ("five_prime_UTR","exon","three_prime_UTR","CDS");
+# 		foreach my $type (@feature_types) {
+# 			$seq = feature_to_seq ($gff_hash->{"sequence"}, $gff_hash->{"mRNA"}->{$mRNA_num}->{$type}, $params);
+# 			if ((ref $seq) =~ /ARRAY/ ) {
+# 				for (my $i=1; $i<=@$seq; $i++) {
+# 					if ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}->{$i}->{"strand"} eq "-") {
+# 						@$seq[$i-1] = reverse_complement(@$seq[$i-1]);
+# 						print "hi\n";
+# 					} else { print "nope\n"; }
+#
+# 					print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\t$gff_hash->{mRNA}->{$mRNA_num}->{$type}->{strand}\n@$seq[$i-1]\n";
+# 				}
+# 			}
+# 		}
+# 	}
+# 	close OUT_FH;
 }
 
 
