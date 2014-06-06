@@ -100,8 +100,7 @@ foreach my $gene (@sorted_genes) {
 				for (my $i=1; $i<=@$seq; $i++) {
 					if ($gff_hash->{"mRNA"}->{$mRNA_num}->{$type}->{$i}->{"strand"} eq "-") {
 						@$seq[$i-1] = reverse_complement(@$seq[$i-1]);
-						print "hi\n";
-					} else { print "nope\n"; }
+					}
 
 					print OUT_FH ">$gff_hash->{Name}.$mRNA_num.$type.$i\t$gff_hash->{mRNA}->{$mRNA_num}->{$type}->{strand}\n@$seq[$i-1]\n";
 				}

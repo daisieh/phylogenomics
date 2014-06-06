@@ -17,7 +17,7 @@ close FH;
 
 my $perc = "0";
 $cutoffstr = sprintf("%.2f", $cutoff);
-print "$cutoffstr\n";
+print @genes . " genes\n";
 if ($cutoffstr =~ /\d+\.(\d{2})/) {
 	$perc = $1;
 }
