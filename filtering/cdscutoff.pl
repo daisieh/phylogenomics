@@ -23,6 +23,7 @@ if ($cutoffstr =~ /\d+\.(\d{2})/) {
 }
 open OUTFH, ">", "cutoff.$perc";
 foreach my $gene (@genes) {
+	print "looking at $gene\n";
 	open FH, "<", File::Spec->catfile($genedir, $gene);
 	my $totalident = 0;
 	my $totallength = 0;
