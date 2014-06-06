@@ -28,6 +28,7 @@ foreach my $gene (@genes) {
 	my $totalident = 0;
 	my $totallength = 0;
 	foreach my $line (<FH>) {
+	print $line;
 #Potri.001G230000.1.CDS.12	5876	5995	118	123
 		my ($name, $start, $end, $ident, $length) = split (/\t/, $line);
 		if ($name =~ /\.1\.CDS\./) {
