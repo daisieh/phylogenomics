@@ -89,11 +89,9 @@ sub check_block {
 
 	# if we did get an array, but the length of the strings is 0, then return 0. (quick exit)
 	if ($seqlen == 0) {
-		print "zero\n";
 		return 0;
 	}
 
-	print ref ($seq_array) . ", $numcols, $seqlen\n";
 	# if the block is narrower than the numcols, replace numcols with the width of the block
 	if ($seqlen < $numcols) {
 		$numcols = $seqlen;
@@ -104,10 +102,12 @@ sub check_block {
 		my $col = join ("", @$seq_array);
 	if ($seqlen == 1) {
 		$block_missing = ($col =~ tr/Nn\-\?//);
+		print "block of $seqlen has $block_missing missing (max $max_ambig): ";
 		if ($block_missing < $max_ambig) {
+			print "KEEP the col\n";
 			return $seq_array;
 		} else {
-			print "deleting a col\n";
+			print "DELETE a col\n";
 			return 0;
 		}
 	}
@@ -120,6 +120,7 @@ sub check_block {
 	}
 
 	if ($block_missing < $max_ambig) {
+		print "block of $seqlen has $block_missing missing (max $max_ambig): KEEP BLOCK\n";
 		# the block is fine. No deletions.
 	} else {
 		# split this block into two parts: recurse on the first part, then the second part
