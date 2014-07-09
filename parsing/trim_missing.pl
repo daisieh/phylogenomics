@@ -32,58 +32,58 @@ my ($seqmatrix, $seqids)  = parse_fasta ( $inputfile );
 
 my @rows = ();
 my @rowids = ();
-my @rowmasks = ();
+my @final_rows = ();
 
 # first pass: remove any rows with excessive missing data
 my $deleted_rows = 0;
 foreach my $seqid (@$seqids) {
 	my $ambigs = ($seqmatrix->{$seqid} =~ tr/Nn\-\?//);
-	if ($ambigs/length ($seqmatrix->{$seqid}) < $row_thresh) {
+	my $missing_frac = $ambigs/length ($seqmatrix->{$seqid});
+	if ($missing_frac < $row_thresh) {
 		push @rows, $seqmatrix->{$seqid};
 		push @rowids, $seqid;
-		my $rowmask = "$seqmatrix->{$seqid}";
-		$rowmask =~ tr/Nn\-\?/1/;
-		$rowmask =~ tr/1/0/c;
-		push @rowmasks, $rowmask;
+		push @final_rows, "";
 	} else {
 		$deleted_rows++;
 	}
+	print "$seqid has $missing_frac missing data\n";
 }
 
 if (@rows == 0) {
 	die "EMPTY MATRIX: no sequences had less missing data than the specified threshold\n";
 }
-
+my $total_length = length($rows[0]);
+print "there are " . @final_rows . " final rows\n";
 # second pass: remove columns with excessive missing data
-my @col_counts = 0;
-for (my $i=0;$i<length($rows[0]);$i++) {
-	my $col_count = 0;
-	foreach my $row (@rowmasks) {
+# if more than $col_thresh * @final_rows Ns in a column, delete and move on.
+my $max_col_ambigs = $col_thresh * @final_rows;
+
+my $deleted_cols = 0;
+for (my $i=0;$i<$total_length;$i++) {
+	my $column = "";
+	foreach my $row (@rows) {
 		$row =~ /(.)(.*)/;
-		$col_count += $1;
 		$row = $2;
+		$column .= $1;
 	}
-	$col_counts[$i] = $col_count;
+	my $ambigs = ($column =~ tr/Nn\-\?//);
+
+	if ($ambigs < $max_col_ambigs) {
+		foreach my $row (@final_rows) {
+			$column =~ /(.)(.*)/;
+			$row .= $1;
+			$column = $2;
+		}
+	} else {
+		$deleted_cols ++;
+		print "deleting col $i\n";
+	}
 }
 
-for (my $j=0; $j< @col_counts; $j++) {
-	if (($col_counts[$j]/@rows) > $col_thresh) {
-		foreach my $row (@rows) {
-			$row =~ /(.{$j})(.)(.*)/;
-			$row = "$1#$3";
-		}
-		if (length ($rows[0]) == 0) {
-			die "EMPTY MATRIX: no base positions had less missing data than the specified threshold\n";
-		}
-	}
-}
-
-my $deleted_cols = ($rows[0] =~ tr/#//);
 print "deleted $deleted_rows rows, $deleted_cols cols\n";
 open FH, ">", "$outname.fasta";
 for (my $i=0;$i<@rows;$i++) {
-	my $row = $rows[$i];
-	$row =~ s/#//g;
+	my $row = $final_rows[$i];
 	print FH ">$rowids[$i]\n$row\n";
 }
 close FH;
