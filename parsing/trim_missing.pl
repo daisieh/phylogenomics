@@ -69,7 +69,7 @@ for (my $i=0;$i<@rows;$i++) {
 }
 close FH;
 
-# divide the matrix into the first 1000 cols:
+# divide the matrix into halves:
 # if the number of Ns is less than $max_col_ambigs, this group is fine. No deletions.
 # else divide by half, recurse.
 
@@ -77,7 +77,6 @@ sub check_block {
 	my $seq_array = shift;
 	my $max_ambig = shift;
 
-	my $block_missing = 0;
 	# if we didn't get an array, return 0. (quick exit)
 	if (($seq_array == 0) || ($seq_array == ())) {
 		print "\n";
@@ -85,8 +84,6 @@ sub check_block {
 	}
 
 	my $seqlen = length (@$seq_array[0]);
-	my $numcols = int ($seqlen / 2);
-	print "$seqlen, $numcols - ";
 
 	# if we did get an array, but the length of the strings is 0, then return 0. (quick exit)
 	if ($seqlen == 0) {
@@ -94,49 +91,38 @@ sub check_block {
 		return 0;
 	}
 
-	# perl regex limit:
-	if ($numcols > 32766) {
-		print " (regex max) ";
-		$numcols = 32766;
-	}
-
-	# actual base case:
-	# if the block is only one col wide, check for Ns and then return either the array or 0.
-	if ($seqlen == 1) {
-		my $col = join (",", @$seq_array);
-		$block_missing = ($col =~ tr/Nn\-\?//);
-		print "col has $block_missing missing (max $max_ambig): ";
-		if ($block_missing < $max_ambig) {
-			print "KEEP the col\n";
-			return $seq_array;
-		} else {
-			print "DELETE a col\n";
-			return 0;
-		}
-	}
-
-	# now for the recursive step:
 	# count the number of Ns in this block.
+	my $block_missing = 0;
 	foreach my $row (@$seq_array) {
-		$row =~ /(.{$numcols})(.*)/;
-		$block_missing += ($1 =~ tr/Nn\-\?//);
+		$block_missing += ($row =~ tr/Nn\-\?//);
 	}
 
-	print "block of $numcols has $block_missing missing (max $max_ambig): ";
+	print "block of $seqlen has $block_missing missing (max $max_ambig): ";
 	if ($block_missing < $max_ambig) {
 		print "KEEP BLOCK\n";
 		# the block is fine. No deletions.
+	} elsif ($seqlen == 1) {
+		# actual base case:
+		print "DELETE a col\n";
+		return 0;
 	} else {
 		# split this block into two parts: recurse on the first part, then the second part
 		# then merge those two finished blocks.
-		my $new_numcols = int ($numcols/2);
+		my $numcols = int ($seqlen / 2);
+
+		# perl regex limit:
+		if ($numcols > 32766) {
+			print " (regex max) ";
+			$numcols = 32766;
+		}
+
+		print "TWO BLOCKS of $numcols, ".($seqlen-$numcols)."\n";
 		my $front_block = ();
 		foreach my $row (@$seq_array) {
 			$row =~ /(.{$numcols})(.*)/;
 			push @$front_block, $1;
 			$row = $2;
 		}
-		print "TWO BLOCKS of " . length(@$front_block[0]) . ", ".length(@$seq_array[0])."\n";
 		$front_block = check_block ($front_block, $max_ambig);
 		$seq_array = check_block ($seq_array, $max_ambig);
 
