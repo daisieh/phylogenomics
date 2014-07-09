@@ -137,14 +137,13 @@ sub check_block {
 	} else {
 		# split this block into two parts: recurse on the first part, then the second part
 		# then merge those two finished blocks.
+		my $new_numcols = int ($numcols/2);
 		my $front_block = ();
 		foreach my $row (@$seq_array) {
 			$row =~ /(.{$numcols})(.*)/;
 			push @$front_block, $1;
 			$row = $2;
 		}
-
-		my $new_numcols = int ($numcols/2);
 		print "TWO BLOCKS of " . length(@$front_block[0]) . ", ".length(@$seq_array[0])."\n";
 		$front_block = check_block ($front_block, $new_numcols, $max_ambig);
 		$seq_array = check_block ($seq_array, $seqlen - $new_numcols, $max_ambig);
