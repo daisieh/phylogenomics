@@ -56,7 +56,7 @@ my $total_length = length($rows[0]);
 print "there are " . @final_rows . " final rows\n";
 # second pass: remove columns with excessive missing data
 # if more than $col_thresh * @final_rows Ns in a column, delete and move on.
-my $max_col_ambigs = $col_thresh * @final_rows;
+my $max_col_ambigs = int($col_thresh * @final_rows);
 
 my $deleted_cols = 0;
 @final_rows = @{check_block(\@rows, 1000, $max_col_ambigs)};
