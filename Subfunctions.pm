@@ -11,7 +11,20 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap subseq_from_fasta translate_seq codon_to_aa);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug);
+}
+
+my $debug = 0;
+
+sub set_debug {
+	$debug = shift;
+}
+
+sub debug {
+	my $msg = shift;
+	if ($debug) {
+		print $msg;
+	}
 }
 
 =head1
@@ -403,6 +416,27 @@ sub parse_fasta {
 
 	close (fileIN);
 	return $taxa, \@taxanames;
+}
+
+sub pad_seq_ends {
+	my $seq_block = shift;
+
+	# find the maximum length of any sequence
+	my $max_len = 0;
+	foreach my $line (@$seq_block) {
+		my $len = length ($line);
+		if ($len > $max_len) {
+			$max_len = $len;
+		}
+	}
+
+	foreach my $line (@$seq_block) {
+		if (length ($line) < $max_len) {
+			$line = $line . "n"x($max_len - length ($line));
+		}
+	}
+
+	return $seq_block;
 }
 
 =head1
