@@ -58,7 +58,8 @@ print "there are " . @final_rows . " final rows, $total_length columns\n";
 my $max_col_ambigs = int($col_thresh * @final_rows);
 
 my $deleted_cols = 0;
-@final_rows = @{check_block(\@rows, 1000, $max_col_ambigs)};
+
+@final_rows = @{check_block(\@rows, $total_length/2, $max_col_ambigs)};
 $deleted_cols = $total_length - length (@final_rows[0]);
 print "deleted $deleted_rows rows, $deleted_cols cols\n";
 open FH, ">", "$outname.fasta";
