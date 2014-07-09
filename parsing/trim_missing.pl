@@ -59,7 +59,7 @@ my $max_col_ambigs = int($col_thresh * @final_rows);
 
 my $deleted_cols = 0;
 
-@final_rows = @{check_block(\@rows, $total_length/2, $max_col_ambigs)};
+@final_rows = @{check_block(\@rows, $max_col_ambigs)};
 $deleted_cols = $total_length - length (@final_rows[0]);
 print "deleted $deleted_rows rows, $deleted_cols cols\n";
 open FH, ">", "$outname.fasta";
@@ -75,7 +75,6 @@ close FH;
 
 sub check_block {
 	my $seq_array = shift;
-	my $numcols = shift;
 	my $max_ambig = shift;
 
 	my $block_missing = 0;
@@ -86,7 +85,7 @@ sub check_block {
 	}
 
 	my $seqlen = length (@$seq_array[0]);
-
+	my $numcols = int ($seqlen / 2);
 	print "$seqlen, $numcols - ";
 
 	# if we did get an array, but the length of the strings is 0, then return 0. (quick exit)
@@ -145,8 +144,8 @@ sub check_block {
 			$row = $2;
 		}
 		print "TWO BLOCKS of " . length(@$front_block[0]) . ", ".length(@$seq_array[0])."\n";
-		$front_block = check_block ($front_block, $new_numcols, $max_ambig);
-		$seq_array = check_block ($seq_array, $seqlen - $new_numcols, $max_ambig);
+		$front_block = check_block ($front_block, $max_ambig);
+		$seq_array = check_block ($seq_array, $max_ambig);
 
 		if ($front_block == 0) {
 			return $seq_array;
