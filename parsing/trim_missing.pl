@@ -98,7 +98,7 @@ sub check_block {
 	}
 
 	print "block of $seqlen has $block_missing missing (max $max_ambig): ";
-	if ($block_missing < $max_ambig) {
+	if ($block_missing <= $max_ambig) {
 		print "KEEP BLOCK\n";
 		# the block is fine. No deletions.
 	} elsif ($seqlen == 1) {
