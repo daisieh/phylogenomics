@@ -110,8 +110,8 @@ sub check_block {
 
 	# actual base case:
 	# if the block is only one col wide, check for Ns and then return either the array or 0.
-		my $col = join ("", @$seq_array);
 	if ($seqlen == 1) {
+		my $col = join (",", @$seq_array);
 		$block_missing = ($col =~ tr/Nn\-\?//);
 		print "col has $block_missing missing (max $max_ambig): ";
 		if ($block_missing < $max_ambig) {
