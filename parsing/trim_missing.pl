@@ -46,14 +46,13 @@ foreach my $seqid (@$seqids) {
 	} else {
 		$deleted_rows++;
 	}
-	print "$seqid has $missing_frac missing data\n";
 }
 
 if (@rows == 0) {
 	die "EMPTY MATRIX: no sequences had less missing data than the specified threshold\n";
 }
 my $total_length = length($rows[0]);
-print "there are " . @final_rows . " final rows\n";
+print "there are " . @final_rows . " final rows, $total_length columns\n";
 # second pass: remove columns with excessive missing data
 # if more than $col_thresh * @final_rows Ns in a column, delete and move on.
 my $max_col_ambigs = int($col_thresh * @final_rows);
@@ -81,19 +80,23 @@ sub check_block {
 	my $block_missing = 0;
 	# if we didn't get an array, return 0. (quick exit)
 	if (($seq_array == 0) || ($seq_array == ())) {
+		print "\n";
 		return 0;
 	}
 
 	my $seqlen = length (@$seq_array[0]);
 
+	print "$seqlen, $numcols - ";
 
 	# if we did get an array, but the length of the strings is 0, then return 0. (quick exit)
 	if ($seqlen == 0) {
+		print "empty\n";
 		return 0;
 	}
 
 	# if the block is narrower than the numcols, replace numcols with the width of the block
 	if ($seqlen < $numcols) {
+		print "REPLACE";
 		$numcols = $seqlen;
 	}
 
@@ -102,7 +105,7 @@ sub check_block {
 		my $col = join ("", @$seq_array);
 	if ($seqlen == 1) {
 		$block_missing = ($col =~ tr/Nn\-\?//);
-		print "block of $seqlen has $block_missing missing (max $max_ambig): ";
+		print "col has $block_missing missing (max $max_ambig): ";
 		if ($block_missing < $max_ambig) {
 			print "KEEP the col\n";
 			return $seq_array;
@@ -119,8 +122,9 @@ sub check_block {
 		$block_missing += ($1 =~ tr/Nn\-\?//);
 	}
 
+	print "block of $numcols has $block_missing missing (max $max_ambig): ";
 	if ($block_missing < $max_ambig) {
-		print "block of $seqlen has $block_missing missing (max $max_ambig): KEEP BLOCK\n";
+		print "KEEP BLOCK\n";
 		# the block is fine. No deletions.
 	} else {
 		# split this block into two parts: recurse on the first part, then the second part
@@ -133,6 +137,7 @@ sub check_block {
 		}
 
 		my $new_numcols = int ($numcols/2);
+		print "TWO BLOCKS of " . length(@$front_block[0]) . ", ".length(@$seq_array[0])."\n";
 		$front_block = check_block ($front_block, $new_numcols, $max_ambig);
 		$seq_array = check_block ($seq_array, $seqlen - $new_numcols, $max_ambig);
 
