@@ -100,13 +100,6 @@ sub check_block {
 		$numcols = 32766;
 	}
 
-
-	# if the block is narrower than the numcols, replace numcols with the width of the block
-	if ($seqlen < $numcols) {
-		print "REPLACE";
-		$numcols = $seqlen;
-	}
-
 	# actual base case:
 	# if the block is only one col wide, check for Ns and then return either the array or 0.
 	if ($seqlen == 1) {
