@@ -4,7 +4,7 @@ use Pod::Usage;
 use File::Basename;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions qw(parse_fasta);
+use Subfunctions qw(parse_fasta pad_seq_ends debug set_debug);
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -14,12 +14,14 @@ my $runline = "running " . basename($0) . " " . join (" ", @ARGV) . "\n";
 
 my $inputfile = "";
 my $outname = "trimmed";
-my ($help, $row_thresh, $col_thresh) = 0;
+my ($help, $row_frac_missing, $col_frac_missing) = 0;
+my $debug = 0;
 
 GetOptions ('fasta|input=s' => \$inputfile,
             'outputfile=s' => \$outname,
-            'rowthreshold=f' => \$row_thresh,
-            'colthreshold=f' => \$col_thresh,
+            'rowmax=f' => \$row_frac_missing,
+            'colmax=f' => \$col_frac_missing,
+            'debug' => \$debug,
             'help' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -27,22 +29,21 @@ if ($help) {
 }
 
 print $runline;
+set_debug ($debug);
 
 my ($seqmatrix, $seqids)  = parse_fasta ( $inputfile );
 
 my @rows = ();
 my @rowids = ();
-my @final_rows = ();
 
 # first pass: remove any rows with excessive missing data
 my $deleted_rows = 0;
 foreach my $seqid (@$seqids) {
 	my $ambigs = ($seqmatrix->{$seqid} =~ tr/Nn\-\?//);
 	my $missing_frac = $ambigs/length ($seqmatrix->{$seqid});
-	if ($missing_frac < $row_thresh) {
+	if ($missing_frac < $row_frac_missing) {
 		push @rows, $seqmatrix->{$seqid};
 		push @rowids, $seqid;
-		push @final_rows, "";
 	} else {
 		$deleted_rows++;
 	}
@@ -51,17 +52,21 @@ foreach my $seqid (@$seqids) {
 if (@rows == 0) {
 	die "EMPTY MATRIX: no sequences had less missing data than the specified threshold\n";
 }
-my $total_length = length($rows[0]);
-print "there are " . @final_rows . " final rows, $total_length columns\n";
+
 # second pass: remove columns with excessive missing data
-# if more than $col_thresh * @final_rows Ns in a column, delete and move on.
-my $max_col_ambigs = int($col_thresh * @final_rows);
+# if more than $col_frac_missing * @rows Ns in a column, delete and move on.
 
-my $deleted_cols = 0;
+pad_seq_ends (\@rows);
+my $total_length = length($rows[0]);
+print ("started with " . @$seqids . " rows, $total_length columns\n");
 
-@final_rows = @{check_block(\@rows, $max_col_ambigs)};
-$deleted_cols = $total_length - length (@final_rows[0]);
-print "deleted $deleted_rows rows, $deleted_cols cols\n";
+my $max_col_ambigs = int($col_frac_missing * @rows);
+
+my @final_rows = @{check_block(\@rows, $max_col_ambigs)};
+
+my $deleted_cols = $total_length - length (@final_rows[0]);
+
+print ("deleted $deleted_rows rows, $deleted_cols columns\n");
 open FH, ">", "$outname.fasta";
 for (my $i=0;$i<@rows;$i++) {
 	my $row = $final_rows[$i];
@@ -69,17 +74,18 @@ for (my $i=0;$i<@rows;$i++) {
 }
 close FH;
 
-# divide the matrix into halves:
-# if the number of Ns is less than $max_col_ambigs, this group is fine. No deletions.
-# else divide by half, recurse.
+# recursive function:
+# if the number of Ns is less than $max_col_ambigs, this group is fine, return the array.
+# if the matrix is a single column with more than $max_col_ambigs, return 0.
+# else divide the matrix into halves, recurse on both halves, merge results.
 
 sub check_block {
 	my $seq_array = shift;
-	my $max_ambig = shift;
+	my $max_col_ambigs = shift;
 
 	# if we didn't get an array, return 0. (quick exit)
 	if (($seq_array == 0) || ($seq_array == ())) {
-		print "\n";
+		debug ("\n");
 		return 0;
 	}
 
@@ -87,7 +93,7 @@ sub check_block {
 
 	# if we did get an array, but the length of the strings is 0, then return 0. (quick exit)
 	if ($seqlen == 0) {
-		print "empty\n";
+		debug ("empty\n");
 		return 0;
 	}
 
@@ -97,13 +103,15 @@ sub check_block {
 		$block_missing += ($row =~ tr/Nn\-\?//);
 	}
 
-	print "block of $seqlen has $block_missing missing (max $max_ambig): ";
-	if ($block_missing <= $max_ambig) {
-		print "KEEP BLOCK\n";
+	debug ("block of $seqlen has $block_missing missing (max $max_col_ambigs): ");
+
+	if ($block_missing <= $max_col_ambigs) {
 		# the block is fine. No deletions.
+		debug ("KEEP BLOCK\n");
+		return $seq_array;
 	} elsif ($seqlen == 1) {
-		# actual base case:
-		print "DELETE a col\n";
+		# base case: if we're down to a single column and it still has more than $max_col_ambigs, delete it.
+		debug ("DELETE a col\n");
 		return 0;
 	} else {
 		# split this block into two parts: recurse on the first part, then the second part
@@ -112,19 +120,19 @@ sub check_block {
 
 		# perl regex limit:
 		if ($numcols > 32766) {
-			print " (regex max) ";
+			debug (" (regex max) ");
 			$numcols = 32766;
 		}
 
-		print "TWO BLOCKS of $numcols, ".($seqlen-$numcols)."\n";
+		debug ("TWO BLOCKS of $numcols, ".($seqlen-$numcols)."\n");
 		my $front_block = ();
 		foreach my $row (@$seq_array) {
 			$row =~ /(.{$numcols})(.*)/;
 			push @$front_block, $1;
 			$row = $2;
 		}
-		$front_block = check_block ($front_block, $max_ambig);
-		$seq_array = check_block ($seq_array, $max_ambig);
+		$front_block = check_block ($front_block, $max_col_ambigs);
+		$seq_array = check_block ($seq_array, $max_col_ambigs);
 
 		if ($front_block == 0) {
 			return $seq_array;
@@ -154,8 +162,8 @@ trim_missing -input fastafile -output outputfile -row row_missing_frac -col col_
 
 GetOptions ('fasta|input=s' => \$inputfile,
             'outputfile=s' => \$outname,
-            'rowthreshold=f' => \$row_thresh,
-            'colthreshold=f' => \$col_thresh,
+            'rowthreshold=f' => \$row_frac_missing,
+            'colthreshold=f' => \$col_frac_missing,
             'help' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
   -fasta|input:     fasta file of aligned sequences.
