@@ -59,27 +59,8 @@ print "there are " . @final_rows . " final rows\n";
 my $max_col_ambigs = $col_thresh * @final_rows;
 
 my $deleted_cols = 0;
-for (my $i=0;$i<$total_length;$i++) {
-	my $column = "";
-	foreach my $row (@rows) {
-		$row =~ /(.)(.*)/;
-		$row = $2;
-		$column .= $1;
-	}
-	my $ambigs = ($column =~ tr/Nn\-\?//);
-
-	if ($ambigs < $max_col_ambigs) {
-		foreach my $row (@final_rows) {
-			$column =~ /(.)(.*)/;
-			$row .= $1;
-			$column = $2;
-		}
-	} else {
-		$deleted_cols ++;
-		print "deleting col $i\n";
-	}
-}
-
+@final_rows = @{check_block(\@rows, 1000, $max_col_ambigs)};
+$deleted_cols = $total_length - length (@final_rows[0]);
 print "deleted $deleted_rows rows, $deleted_cols cols\n";
 open FH, ">", "$outname.fasta";
 for (my $i=0;$i<@rows;$i++) {
@@ -88,6 +69,85 @@ for (my $i=0;$i<@rows;$i++) {
 }
 close FH;
 
+# divide the matrix into the first 1000 cols:
+# if the number of Ns is less than $max_col_ambigs, this group is fine. No deletions.
+# else divide by half, recurse.
+
+sub check_block {
+	my $seq_array = shift;
+	my $numcols = shift;
+	my $max_ambig = shift;
+
+	my $block_missing = 0;
+	# if we didn't get an array, return 0. (quick exit)
+	if (($seq_array == 0) || ($seq_array == ())) {
+		return 0;
+	}
+
+	my $seqlen = length (@$seq_array[0]);
+
+
+	# if we did get an array, but the length of the strings is 0, then return 0. (quick exit)
+	if ($seqlen == 0) {
+		print "zero\n";
+		return 0;
+	}
+
+	print ref ($seq_array) . ", $numcols, $seqlen\n";
+	# if the block is narrower than the numcols, replace numcols with the width of the block
+	if ($seqlen < $numcols) {
+		$numcols = $seqlen;
+	}
+
+	# actual base case:
+	# if the block is only one col wide, check for Ns and then return either the array or 0.
+	if ($numcols == 1) {
+		my $col = join ("", @$seq_array);
+		$block_missing = ($col =~ tr/Nn\-\?//);
+		if ($block_missing < $max_ambig) {
+			return $seq_array;
+		} else {
+			print "deleting a col\n";
+			return 0;
+		}
+	}
+
+	# now for the recursive step:
+	# count the number of Ns in this block.
+	foreach my $row (@$seq_array) {
+		$row =~ /(.{$numcols})(.*)/;
+		$block_missing += ($1 =~ tr/Nn\-\?//);
+	}
+
+	if ($block_missing < $max_ambig) {
+		# the block is fine. No deletions.
+	} else {
+		# split this block into two parts: recurse on the first part, then the second part
+		# then merge those two finished blocks.
+		my $front_block = ();
+		foreach my $row (@$seq_array) {
+			$row =~ /(.{$numcols})(.*)/;
+			push @$front_block, $1;
+			$row = $2;
+		}
+
+		my $new_numcols = int ($numcols/2);
+		$front_block = check_block ($front_block, $new_numcols, $max_ambig);
+		$seq_array = check_block ($seq_array, $seqlen - $new_numcols, $max_ambig);
+
+		if ($front_block == 0) {
+			return $seq_array;
+		}
+		if ($seq_array == 0) {
+			return $front_block;
+		}
+
+		for (my $i=0; $i< @$seq_array; $i++) {
+			@$seq_array[$i] = @$front_block[$i] . @$seq_array[$i];
+		}
+	}
+	return $seq_array;
+}
 
 __END__
 
