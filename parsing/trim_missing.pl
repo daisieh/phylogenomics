@@ -94,6 +94,13 @@ sub check_block {
 		return 0;
 	}
 
+	# perl regex limit:
+	if ($numcols > 32766) {
+		print " (regex max) ";
+		$numcols = 32766;
+	}
+
+
 	# if the block is narrower than the numcols, replace numcols with the width of the block
 	if ($seqlen < $numcols) {
 		print "REPLACE";
