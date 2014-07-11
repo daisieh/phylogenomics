@@ -1,6 +1,0 @@
-PBAL	orange
-PTRI	blue
-PFRE	green
-PDEL	red
-PANG	yellow
-other	white
