@@ -3,8 +3,10 @@
 REF=$2;
 if [ -z $2 ];
 then
-REF="~/Populus/reference_seqs/populus.trichocarpa.cp.fasta";
+$REF="~/Populus/reference_seqs/populus.trichocarpa.cp.fasta";
 fi
+
+echo $REF;
 
 for f in $1 #or whatever files contain the formatted input files for bwa_to_bam.py
 do
