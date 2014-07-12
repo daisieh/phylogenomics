@@ -6,7 +6,7 @@ then
 $REF="~/Populus/reference_seqs/populus.trichocarpa.cp.fasta";
 fi
 
-echo $REF;
+echo "reference is $REF";
 
 for f in $1 #or whatever files contain the formatted input files for bwa_to_bam.py
 do
