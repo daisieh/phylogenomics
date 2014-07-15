@@ -58,9 +58,7 @@ while (defined $input) {
 				print FH ">$taxonlabel\n$sequence\n";
 				close FH;
 			} elsif ($taxonlabel eq $seq_name) {
-				open FH, ">", "$resultfile.fasta";
-				print FH ">$taxonlabel\n$sequence\n";
-				close FH;
+				last;
 			}
 		}
 		$sequence = "";
@@ -74,6 +72,17 @@ while (defined $input) {
 }
 
 close fileIN;
+
+if ($split_all) {
+	open FH, ">", File::Spec->catfile($output_path, "$taxonlabel.fasta");
+	print FH ">$taxonlabel\n$sequence\n";
+	close FH;
+} elsif ($taxonlabel eq $seq_name) {
+	open FH, ">", "$resultfile.fasta";
+	print FH ">$taxonlabel\n$sequence\n";
+	close FH;
+	last;
+}
 
 
 __END__
