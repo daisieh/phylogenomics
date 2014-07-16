@@ -82,7 +82,6 @@ if ($split_all) {
 	open FH, ">", "$resultfile.fasta";
 	print FH ">$taxonlabel\n$sequence\n";
 	close FH;
-	last;
 }
 
 
