@@ -64,6 +64,7 @@ while (defined $input) {
 		$sequence = "";
 		$taxonlabel = $1;
 		$taxonlabel =~ s/\s+/_/g;
+		$taxonlabel =~ s/_$//;
 	} else {
 		$input =~ /^\s*(.+)\s*$/;
 		$sequence .= "$1\n";
