@@ -107,7 +107,7 @@ __END__
 
 =head1 NAME
 
-select_one_from_fasta
+pairwise_ser2pop_cds.pl
 
 =head1 SYNOPSIS
 
@@ -118,6 +118,6 @@ GetOptions ('gfffile=s' => \$gff_file,
 
 =head1 DESCRIPTION
 
-Finds a single sequence from a fasta file and outputs to a separate file.
+Takes a gff file with Salix seqs and a corresponding fasta file with Populus seqs and prints out the pairwise CDSes for isoform 1.
 
 =cut
