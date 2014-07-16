@@ -10,9 +10,19 @@ use FindBin;
 use lib "$FindBin::Bin/..";
 use Subfunctions qw(parse_fasta);
 
-my $validatefile = shift;
-my $contigdir = shift;
-my $outdir = shift;
+my $validatefile = 0;
+my $contigdir = 0;
+my $outdir = 0;
+
+GetOptions ('validatefile=s' => \$validatefile,
+            'contigdir=s' => \$contigdir,
+            'outdir=s' => \$outdir,
+            'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+if ($help) {
+    pod2usage(-verbose => 1);
+}
+
 
 $outdir = File::Spec->rel2abs($outdir);
 make_path($outdir);
