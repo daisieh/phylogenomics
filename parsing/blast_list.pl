@@ -14,7 +14,7 @@ my $help = 0;
 my $genefile = "";
 my $outdir = "";
 my $refdir = "";
-my $fastadir = "";
+my $querydir = "";
 my $xmldir = "";
 
 if (@ARGV == 0) {
@@ -23,7 +23,7 @@ if (@ARGV == 0) {
 
 GetOptions ('reference=s' => \$refdir,
 			'genes=s' => \$genefile,
-			'fasta=s' => \$fastadir,
+			'query=s' => \$querydir,
 			'output=s' => \$outdir,
 			'xml=s' => \$xmldir,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
@@ -46,13 +46,13 @@ while (my $line = readline FH) {
 }
 
 foreach my $gene (@genes) {
-	my $fastafile = File::Spec->catfile ($fastadir, "$gene.fasta");
+	my $queryfile = File::Spec->catfile ($querydir, "$gene.fasta");
 	my $reffile = File::Spec->catfile ($refdir, "$gene.fasta");
 	my $outfile = File::Spec->catfile ($outdir, "$gene");
 
 	my $blastfile = "$outfile.xml";
 	if ($xmldir eq "") {
-		my $cmd = "blastn -query $fastafile -subject $reffile -outfmt 5 -out $blastfile -word_size 10";
+		my $cmd = "blastn -query $queryfile -subject $reffile -outfmt 5 -out $blastfile -word_size 10";
 		print "running $cmd\n";
 		system($cmd);
 	} else {
@@ -112,20 +112,19 @@ __END__
 
 =head1 NAME
 
-parse_blast
+blast_list -gene genelist.txt -ref refdir/ -query querydir/ -out outputdir/
 
 =head1 SYNOPSIS
 
 GetOptions ('reference=s' => \$refdir,
 			'genes=s' => \$genefile,
-			'fasta=s' => \$fastadir,
+			'query=s' => \$querydir,
 			'output=s' => \$outdir,
 			'xml=s' => \$xmldir,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 =head1 DESCRIPTION
 
-Parses an "outfmt 3" formatted blastn file to generate a list of regions to be used in
-Genbank annotations.
+For a list of genes, takes the corresponding ref sequence (in fasta form, parsed out from a GFF), the corresponding query sequence that you want to match to the ref (in fasta form), and outputs the blastn result and a list of best matching regions for each of the reference pieces.
 
 =cut
