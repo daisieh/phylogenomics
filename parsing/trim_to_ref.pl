@@ -18,11 +18,13 @@ my $align_file = 0;
 my $out_file = 0;
 my $help = 0;
 my $ref_out = 0;
+my $align = 0;
 
 GetOptions ('fasta|input=s' => \$align_file,
             'outputfile=s' => \$out_file,
             'reference=s' => \$ref_file,
             'include_ref' => \$ref_out,
+            'align!' => \$align,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -36,7 +38,14 @@ unless($ref_file and $align_file and $out_file) {
 print $runline;
 
 my (undef, $alnfile) = tempfile(UNLINK => 1);
-my $aligned = align_to_ref ($ref_file, $align_file, $alnfile, "mafft");
+my $aligned;
+if ($align) {
+	$aligned = align_to_ref ($ref_file, $align_file, $alnfile, "mafft");
+} else {
+	($aligned, undef) = parse_fasta ($align_file);
+	$aligned->{"reference"} = delete $aligned->{$ref_file};
+	delete $aligned->{"length"};
+}
 
 trim_to_ref ($aligned, "reference");
 
@@ -58,7 +67,7 @@ __END__
 
 =head1 NAME
 
-blast_to_ref
+trim_to_ref
 
 =head1 SYNOPSIS
 
