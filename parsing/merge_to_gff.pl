@@ -85,6 +85,7 @@ foreach my $gene (@sorted_genes) {
 
 
 	open BLASTFH, "<", File::Spec->catfile ($blastfile, $gene);
+	readline BLASTFH;
 	foreach my $line (<BLASTFH>) {
 		if ($line =~ /$gene\.gene/) {
 			next;
