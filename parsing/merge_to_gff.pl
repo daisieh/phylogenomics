@@ -113,7 +113,7 @@ __END__
 
 =head1 NAME
 
-parse_blast
+merge_to_gff
 
 =head1 SYNOPSIS
 
@@ -126,8 +126,7 @@ GetOptions ('gfffile=s' => \$gff_file,
 
 =head1 DESCRIPTION
 
-Parses an "outfmt 3" formatted blastn file to generate a list of regions to be used in
-Genbank annotations.
+Given a blast match file (from blast_list.pl, takes the original query fasta sequence and the reference gff and generates a corresponding gff file that has the homologous regions from the query fasta in gff form.
 
 =cut
 
