@@ -6,12 +6,7 @@ use Pod::Usage;
 use File::Basename;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions qw(split_seq reverse_complement meld_matrices parse_fasta);
-use lib "$FindBin::Bin";
-use Blast qw (blast_to_ref);
-use lib "../../../Sandbox/aTRAM/lib";
-use Postprocessing qw(align_to_ref trim_to_ref align_to_seq);
-
+use Subfunctions qw(split_seq reverse_complement meld_matrices parse_fasta trim_to_ref align_to_ref);
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
