@@ -80,6 +80,8 @@ foreach my $gene (@genes) {
 	}
 
 	open OUTFH, ">", $outfile or die "couldn't create $outfile";
+	print OUTFH "refname\tquery_start\tquery_end\tnum_ident\tmatch_len\n";
+
 
 	foreach my $subj (@$ref_array) {
 		$subj =~ s/\t.*$//;
