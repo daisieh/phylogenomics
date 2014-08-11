@@ -3,7 +3,7 @@
 REF=$2;
 if [ -z $2 ];
 then
-$REF="$HOME/Populus/reference_seqs/populus.trichocarpa.cp.fasta";
+REF="$HOME/Populus/reference_seqs/populus.trichocarpa.cp.fasta";
 fi
 
 echo "reference is $REF";
