@@ -33,7 +33,6 @@ def runscript(sample_string):
         smallbamfile.close()
         p2.terminate()
 
-global refname
 global lines
 #Parse Command Line
 parser = optparse.OptionParser()
@@ -42,7 +41,6 @@ parser.add_option("-p", "--processes", default=2, type="int", dest="processes", 
 parser.add_option("-n", "--number", default=5000, type="int", dest="num", help="GB to subset")
 
 (options, args) = parser.parse_args()
-refname = options.ref
 lines = options.num * 500000
 
 if options.input == "":
