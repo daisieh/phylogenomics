@@ -147,6 +147,7 @@ $labelfile:   tab-delimited file of sample ids and human-readable labels
 
 sub make_label_lookup {
     my $labelfile = shift;
+    my $reverse = shift;
     my %labels;
     if ($labelfile) {
         open FH, "<", "$labelfile" or die "make_label_lookup died: couldn't open $labelfile\n";
@@ -155,7 +156,11 @@ sub make_label_lookup {
         foreach my $line (@items) {
             (my $name, my $label) = split (/\t/,$line);
             $label =~ s/\r|\n//;
-            $labels{$name} = $label;
+    		if ($reverse) {
+    			$labels{$label} = $name;
+    		} else {
+				$labels{$name} = $label;
+			}
         }
     }
     return \%labels;

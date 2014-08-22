@@ -6,11 +6,12 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 
-my ($inputfile, $labelfile, $outfile, $simplename, $dnacode) = 0;
+my ($inputfile, $labelfile, $outfile, $simplename, $dnacode, $reverse) = 0;
 GetOptions ('input|samples=s' => \$inputfile,
             'labels|names=s' => \$labelfile,
             'simple' => \$simplename,
             'dna|code' => \$dnacode,
+            'reverse' => \$reverse,
 			'outfile=s' => \$outfile) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 unless ($inputfile && $labelfile) {
@@ -29,9 +30,13 @@ if ($outfile) {
 } else {
 	$out_fh = STDOUT;
 }
-
 my $labels;
-$labels = make_label_lookup ($labelfile);
+if ($reverse == 1) {
+	$labels = make_label_lookup ($labelfile, $reverse);
+} else {
+	$labels = make_label_lookup ($labelfile);
+}
+
 my $i=0;
 foreach my $line (@input_lines) {
 	if ($line =~ /([\(\,]+)(.*?)([\:\,\)])(.*)/) {
@@ -81,7 +86,6 @@ foreach my $line (@input_lines) {
 		$line = ">$label$remainder\n";
 	} elsif ($line =~ /^(\s*\d+\s+)(.+?)(,*)$/) {
 		# it is a TRANSLATE-type line (numbered list of taxa)
-		print "translate $line";
 		my ($beginning, $key, $remainder) = ($1,$2,$3);
 		$key = get_key($key, $dnacode);
 		my $label = $key;
@@ -100,6 +104,13 @@ foreach my $line (@input_lines) {
 		}
 		chomp $remainder;
 		$line = "$label$remainder\n";
+	} elsif ($line =~ /\s+([\w_-]+)/) {
+		my $key = get_key ($1, $dnacode);
+		my $label = $key;
+		if (exists $labels->{$key}) {
+			$label = $labels->{$key};
+		}
+		$line =~ s/$1/$label/;
 	}
  	print $out_fh "$line";
  	$i++;
