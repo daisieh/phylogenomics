@@ -28,9 +28,10 @@ my $refseq = $ref_hash->{@$ref_array[0]};
 my $reflen = length ($refseq);
 
 print "finding inverted repeats\n";
-system("blastn -query $reffile -subject $reffile -outfmt 5 -out $outfile.xml -evalue 1e-90");
+my ($fh, $refblast) = tempfile();
+system("blastn -query $reffile -subject $reffile -outfmt 5 -out $refblast.xml -evalue 1e-90");
 
-my $self_array = parse_xml ("$outfile.xml");
+my $self_array = parse_xml ("$refblast.xml");
 my @irs = ();
 foreach my $hit (@$self_array) {
 	my @hsps = sort order_by_query_start @{$hit->{"hsps"}};
