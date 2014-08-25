@@ -96,8 +96,12 @@ foreach $region (@$regions) {
 }
 close $fh;
 
-print "running blastn\n";
-system("blastn -query $contigfile -subject $refregions -outfmt 5 -out $outfile.xml -culling_limit 1 -evalue 1e-70");
+if (-e "$outfile.xml") {
+	print "skipping blastn\n";
+} else {
+	print "running blastn\n";
+	system("blastn -query $contigfile -subject $refregions -outfmt 5 -out $outfile.xml -culling_limit 1 -evalue 1e-70");
+}
 
 print "parsing results\n";
 
