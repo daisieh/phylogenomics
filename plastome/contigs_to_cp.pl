@@ -133,42 +133,23 @@ foreach $region (@$regions) {
 
 # close OUTFH;
 
+# if $a starts earlier than $b, return -1
 sub order_by_hit_start {
-	my $score = $b->{"hit-from"} - $a->{"hit-from"};
-	my $bstart = 0;
-	my $astart = 0;
-	if ($b->{"hit-from"} < $b->{"hit-to"}) {
-		$bstart = $b->{"hit-from"};
-	} else {
-		print "reversed\n";
-		$bstart = $b->{"hit-to"};
-	}
-	if ($a->{"hit-from"} < $a->{"hit-to"}) {
-		$astart = $a->{"hit-from"};
-	} else {
-		print "reversed\n";
-		$astart = $a->{"hit-to"};
-	}
-	$score = $astart - $bstart;
-	return $score;
+	my $bstart = $b->{"hit-from"};
+	my $astart = $a->{"hit-from"};
+
+	if ($astart < $bstart) { return -1; }
+	if ($astart > $bstart) { return 1; }
+	return 0;
 }
 
 sub order_by_query_start {
-	my $score = $b->{"query-from"} - $a->{"query-from"};
-	my $bstart = 0;
-	my $astart = 0;
-	if ($b->{"query-from"} < $b->{"query-to"}) {
-		$bstart = $b->{"query-from"};
-	} else {
-		$bstart = $b->{"query-to"};
-	}
-	if ($a->{"query-from"} < $a->{"query-to"}) {
-		$astart = $a->{"query-from"};
-	} else {
-		$astart = $a->{"query-to"};
-	}
-	$score = $astart - $bstart;
-	return $score;
+	my $bstart = $b->{"query-from"};
+	my $astart = $a->{"query-from"};
+
+	if ($astart < $bstart) { return -1; }
+	if ($astart > $bstart) { return 1; }
+	return 0;
 }
 
 
