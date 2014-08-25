@@ -112,10 +112,11 @@ foreach my $hit (@$hit_array) {
 	my $subject = $hit->{"subject"}->{"name"};
 	my $query = $hit->{"query"}->{"name"};
 	foreach my $hsp (@{$hit->{"hsps"}}) {
+		$hsp->{"name"} = $query;
 		if ($hsp->{"hit-from"} > $hsp->{"hit-to"}) {
 			$hsp = revcomp_hsp($hsp);
+			$hsp->{"name"} = "$query (reverse-complement)";
 		}
-		$hsp->{"name"} = $query;
 	}
 	my @hsps = sort order_by_hit_start @{$hit->{"hsps"}};
 	push @{$regions_hash->{$subject}->{"hits"}}, \@hsps;
