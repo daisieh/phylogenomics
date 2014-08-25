@@ -111,24 +111,27 @@ my $hits = {};
 foreach my $hit (@$hit_array) {
 	my $subject = $hit->{"subject"}->{"name"};
 	my $query = $hit->{"query"}->{"name"};
+	my @new_hsps = ();
 	foreach my $hsp (@{$hit->{"hsps"}}) {
 		$hsp->{"name"} = $query;
 		if ($hsp->{"hit-from"} > $hsp->{"hit-to"}) {
 			$hsp = revcomp_hsp($hsp);
 			$hsp->{"name"} = "$query (reverse-complement)";
 		}
+		push @new_hsps, $hsp;
 	}
-	my @hsps = sort order_by_hit_start @{$hit->{"hsps"}};
-	push @{$regions_hash->{$subject}->{"hits"}}, \@hsps;
-#
+	push @{$regions_hash->{$subject}->{"hits"}}, @new_hsps;
 }
 
 # open OUTFH, ">", $outfile or die "couldn't create $outfile";
 
 foreach $region (@$regions) {
 	print "Comparing to $region->{name}: " . @{$region->{"hits"}} . " hits\n";
-	foreach my $hsp (@{$region->{"hits"}}) {
-		print $hsp->{"name"} . " going from " . $hsp->{"hit-from"} . " to " . $hsp->{"hit-to"} . ", evalue " . $hsp->{"evalue"} . "\n";
+	my $reg_offset = $region->{"start"} - 1;
+	my @hsps = sort order_by_hit_start @{$region->{"hits"}};
+
+	foreach my $hsp (@hsps) {
+ 		print $hsp->{"name"} . ": " . $hsp->{"query-from"} . "-" . $hsp->{"query-to"} . " matches region " . ($hsp->{"hit-from"} + $reg_offset) . "-" . ($hsp->{"hit-to"} + $reg_offset) . ", evalue " . $hsp->{"evalue"} . "\n";
 	}
 }
 
