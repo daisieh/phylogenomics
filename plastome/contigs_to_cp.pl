@@ -109,18 +109,29 @@ my $hit_array = parse_xml ("$outfile.xml");
 my $hits = {};
 
 foreach my $hit (@$hit_array) {
-	my $subject = $hit->{"subject"}->{"name"};
-	my $query = $hit->{"query"}->{"name"};
-	my @new_hsps = ();
+	# each hit represents a contig that we want to assign to a region.
+	my $contig = {};
+	$contig->{"name"} = $hit->{"query"}->{"name"};
+
+	# push it into the appropriate region's bucket of hits.
+	my $region = $hit->{"subject"}->{"name"};
+	push @{$regions_hash->{$region}->{"hits"}}, $contig;
+	$contig->{"region"} = $region;
+
+	# each hsp represents a matching segment of this contig to this region.
 	foreach my $hsp (@{$hit->{"hsps"}}) {
-		$hsp->{"name"} = $query;
 		if ($hsp->{"hit-from"} > $hsp->{"hit-to"}) {
 			$hsp = revcomp_hsp($hsp);
-			$hsp->{"name"} = "$query (reverse-complement)";
+			$contig->{"revcomp"} = " (reverse complement)";
 		}
-		push @new_hsps, $hsp;
 	}
-	push @{$regions_hash->{$subject}->{"hits"}}, @new_hsps;
+	my @hsps = sort order_by_hit_start @{$hit->{"hsps"}};
+	my $first_hsp = $hsps[0];
+	my $last_hsp = pop @hsps;
+	$contig->{"hit-from"} = $first_hsp->{"hit-from"};
+	$contig->{"hit-to"} = $last_hsp->{"hit-to"};
+	$contig->{"query-from"} = $first_hsp->{"query-from"};
+	$contig->{"query-to"} = $last_hsp->{"query-to"};
 }
 
 # open OUTFH, ">", $outfile or die "couldn't create $outfile";
@@ -129,9 +140,8 @@ foreach $region (@$regions) {
 	print "Comparing to $region->{name}: " . @{$region->{"hits"}} . " hits\n";
 	my $reg_offset = $region->{"start"} - 1;
 	my @hsps = sort order_by_hit_start @{$region->{"hits"}};
-
 	foreach my $hsp (@hsps) {
- 		print $hsp->{"name"} . ": " . $hsp->{"query-from"} . "-" . $hsp->{"query-to"} . " matches region " . ($hsp->{"hit-from"} + $reg_offset) . "-" . ($hsp->{"hit-to"} + $reg_offset) . ", evalue " . $hsp->{"evalue"} . "\n";
+ 		print $hsp->{"name"} . $hsp->{"revcomp"} . ": " . $hsp->{"query-from"} . "-" . $hsp->{"query-to"} . " matches region " . ($hsp->{"hit-from"} + $reg_offset) . "-" . ($hsp->{"hit-to"} + $reg_offset) . "\n";
 	}
 }
 
