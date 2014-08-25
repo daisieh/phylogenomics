@@ -171,11 +171,11 @@ __END__
 
 =head1 NAME
 
-parse_blast
+contigs_to_cp.pl
 
 =head1 SYNOPSIS
 
-parse_blast [-reffile reffile] [-contigfile contigfile] [-outputfile outputfile]
+contigs_to_cp.pl [-reffile reffile] [-contigfile contigfile] [-outputfile outputfile]
 
 =head1 OPTIONS
 
@@ -185,7 +185,6 @@ parse_blast [-reffile reffile] [-contigfile contigfile] [-outputfile outputfile]
 
 =head1 DESCRIPTION
 
-Parses an "outfmt 3" formatted blastn file to generate a list of regions to be used in
-Genbank annotations.
+Aligns a list of putative cp contigs along a reference plastome.
 
 =cut
