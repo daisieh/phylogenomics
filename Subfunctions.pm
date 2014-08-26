@@ -274,6 +274,8 @@ sub disambiguate_str {
 
 sub consensus_str {
 	my $taxarray = shift;
+
+	pad_seq_ends($taxarray, "-");
 	my $result = "";
 	while (@$taxarray[0] ne "") {
 		my $currchars = "";
@@ -462,6 +464,11 @@ sub find_sequences {
 
 sub pad_seq_ends {
 	my $seq_block = shift;
+	my $char = shift;
+
+	if (!(defined $char)) {
+		$char = "n";
+	}
 
 	# find the maximum length of any sequence
 	my $max_len = 0;
@@ -474,7 +481,7 @@ sub pad_seq_ends {
 
 	foreach my $line (@$seq_block) {
 		if (length ($line) < $max_len) {
-			$line = $line . "n"x($max_len - length ($line));
+			$line = $line . $char x ($max_len - length ($line));
 		}
 	}
 
