@@ -55,7 +55,7 @@ my $regions_hash = {};
 # LSC goes from 1 to the start of @$irs[0] - 1:
 my $region = {};
 $regions_hash->{"LSC"} = $region;
-$region->{"region-name"} = "LSC";
+$region->{"name"} = "LSC";
 $region->{"start"} = 1;
 $region->{"end"} = $irs[0]->{"query-from"} - 1;
 (undef, $region->{"sequence"}, undef) = split_seq ($refseq, $region->{"start"}, $region->{"end"});
@@ -64,7 +64,7 @@ push @$regions, $region;
 # IRB goes from the start of @$irs[0] to the end of @$irs[0] (inclusive):
 $region = {};
 $regions_hash->{"IRB"} = $region;
-$region->{"region-name"} = "IRB";
+$region->{"name"} = "IRB";
 $region->{"sequence"} = $irs[0]{"hseq"};
 $region->{"start"} = $irs[0]->{"query-from"};
 $region->{"end"} = $irs[0]->{"query-to"};
@@ -73,7 +73,7 @@ push @$regions, $region;
 # SSC goes from the end of @$irs[0] + 1 to the start of @$irs[1] - 1:
 $region = {};
 $regions_hash->{"SSC"} = $region;
-$region->{"region-name"} = "SSC";
+$region->{"name"} = "SSC";
 $region->{"start"} = $irs[0]->{"query-to"} + 1;
 $region->{"end"} = $irs[1]->{"query-from"} - 1;
 (undef, $region->{"sequence"}, undef) = split_seq ($refseq, $region->{"start"}, $region->{"end"});
@@ -82,7 +82,7 @@ push @$regions, $region;
 # IRA goes from the start of @$irs[1] to the end of @$irs[1] (inclusive):
 $region = {};
 $regions_hash->{"IRA"} = $region;
-$region->{"region-name"} = "IRA";
+$region->{"name"} = "IRA";
 $region->{"sequence"} = $irs[1]{"hseq"};
 $region->{"start"} = $irs[1]->{"query-from"};
 $region->{"end"} = $irs[1]->{"query-to"};
@@ -90,7 +90,7 @@ push @$regions, $region;
 
 my ($fh, $refregions) = tempfile();
 foreach $region (@$regions) {
-	print $fh ">" . $region->{"region-name"} . "\n" . $region->{"sequence"}. "\n";
+	print $fh ">" . $region->{"name"} . "\n" . $region->{"sequence"}. "\n";
 
 	# clean up the region hash for later use.
 	delete $region->{"sequence"};
@@ -115,9 +115,9 @@ my @hit_list = ();
 foreach my $hit (@$hit_array) {
 	# each hit represents a contig that we want to assign to a region.
 	my $contig = {};
-	$contig->{"contig-name"} = $hit->{"query"}->{"name"};
+	$contig->{"name"} = $hit->{"query"}->{"name"};
 	$contig->{"length"} = $hit->{"query"}->{"length"};
-	push @hit_list, $contig->{"contig-name"};
+	push @hit_list, $contig->{"name"};
 
 	# push it into the appropriate region's bucket of hits.
 	my $region = $hit->{"subject"}->{"name"};
@@ -137,10 +137,10 @@ foreach my $hit (@$hit_array) {
 	my $first_hsp = $hsps[0];
 	my $last_hsp = pop @hsps;
 	my $regoffset = $regions_hash->{$region}->{"start"} - 1;
-	$contig->{"ref-from"} = "" . $first_hsp->{"hit-from"} + $regoffset;
-	$contig->{"ref-to"} = "" . $last_hsp->{"hit-to"} + $regoffset;
-	$contig->{"contig-from"} = $first_hsp->{"query-from"};
-	$contig->{"contig-to"} = $last_hsp->{"query-to"};
+	$contig->{"hit-from"} = "" . $first_hsp->{"hit-from"} + $regoffset;
+	$contig->{"hit-to"} = "" . $last_hsp->{"hit-to"} + $regoffset;
+	$contig->{"query-from"} = $first_hsp->{"query-from"};
+	$contig->{"query-to"} = $last_hsp->{"query-to"};
 }
 
 # put the sequences for the matching contigs back into the output hash.
@@ -157,14 +157,14 @@ close OUTFH;
 my @all_hits = ();
 foreach $region (@$regions) {
 	foreach my $contig (@{$region->{"hits"}}) {
-		$contig->{"sequence"} = $contig_seqs->{$contig->{"contig-name"}};
+		$contig->{"sequence"} = $contig_seqs->{$contig->{"name"}};
 		if (exists $contig->{"revcomp"}) {
 			delete $contig->{"revcomp"};
 			$contig->{"sequence"} = reverse_complement ($contig->{"sequence"});
-			my $old_q_to = $contig->{"contig-to"};
-			$contig->{"contig-to"} = $contig->{"contig-from"};
-			$contig->{"contig-from"} = $old_q_to;
-			$contig->{"contig-name"} .= "_rc";
+			my $old_q_to = $contig->{"query-to"};
+			$contig->{"query-to"} = $contig->{"query-from"};
+			$contig->{"query-from"} = $old_q_to;
+			$contig->{"name"} .= "_rc";
 		}
 	}
 	my @ordered_hits = sort order_by_ref_start @{$region->{"hits"}};
@@ -175,12 +175,12 @@ foreach $region (@$regions) {
 # clean up and trim sequences.
 # first, is the first LSC contig extending into the previous IR?
 # my $LSC_start = $all_hits[0];
-# if ($LSC_start->{"ref-from"} == 1) {
+# if ($LSC_start->{"hit-from"} == 1) {
 # 	print "trimming start of LSC\n";
-# 	(undef, $LSC_start->{"sequence"}, undef) = split_seq ($LSC_start->{"sequence"}, $LSC_start->{"contig-from"}, $LSC_start->{"contig-to"});
-# 	my $offset = $LSC_start->{"contig-from"} - 1;
-# 	$LSC_start->{"contig-from"} = $LSC_start->{"contig-from"} - $offset;
-# 	$LSC_start->{"contig-to"} = $LSC_start->{"contig-to"} - $offset;
+# 	(undef, $LSC_start->{"sequence"}, undef) = split_seq ($LSC_start->{"sequence"}, $LSC_start->{"query-from"}, $LSC_start->{"query-to"});
+# 	my $offset = $LSC_start->{"query-from"} - 1;
+# 	$LSC_start->{"query-from"} = $LSC_start->{"query-from"} - $offset;
+# 	$LSC_start->{"query-to"} = $LSC_start->{"query-to"} - $offset;
 # }
 
 open OUTFH, ">", "$outfile.yml";
@@ -204,7 +204,7 @@ while (@all_hits > 0) { # while there's still anything left in all_hits
 		$contig_seq1->{"sequence"} = $1;
 		$contig_end = $2;
 	}
-	print $fh1 ">" . $contig_seq1->{"contig-name"} . "_end\n$contig_end\n";
+	print $fh1 ">" . $contig_seq1->{"name"} . "_end\n$contig_end\n";
 	close $fh1;
 #
 	my $contig_seq2 = shift @all_hits;
@@ -213,7 +213,7 @@ while (@all_hits > 0) { # while there's still anything left in all_hits
 	if ($contig_seq2->{"sequence"} =~ /^(.{50})/) {
 		$contig_start = $1;
 	}
-	print $fh2 ">" . $contig_seq2->{"contig-name"} . "_start\n$contig_start\n";
+	print $fh2 ">" . $contig_seq2->{"name"} . "_start\n$contig_start\n";
 	close $fh2;
 #
 	(undef, my $temp_out) = tempfile(OPEN => 0);
@@ -225,13 +225,13 @@ while (@all_hits > 0) { # while there's still anything left in all_hits
 		my $this_hit = @$contig_hits[0]->{"hsps"}[0];
 		my $offset = ($this_hit->{"query-from"} - 1);
 		my $hit_offset = $offset - ($this_hit->{"hit-from"} - 1);
-		$contig_seq1->{"contig-name"} = $contig_seq1->{"contig-name"} . "+" . $contig_seq2->{"contig-name"};
+		$contig_seq1->{"name"} = $contig_seq1->{"name"} . "+" . $contig_seq2->{"name"};
 		$contig_seq1->{"region"} = $contig_seq1->{"region"} . "+" . $contig_seq2->{"region"};
 		$contig_start = "-" x $hit_offset . "$contig_start";
 		$contig_seq1->{"sequence"} .= consensus_str([$contig_end, $contig_start]) . $contig_seq2->{"sequence"};
 		$contig_seq1->{"length"} = length $contig_seq1->{"sequence"};
-		$contig_seq1->{"ref-to"} = $contig_seq2->{"ref-to"};
-		$contig_seq1->{"contig-to"} = $contig_seq2->{"contig-to"};
+		$contig_seq1->{"hit-to"} = $contig_seq2->{"hit-to"};
+		$contig_seq1->{"query-to"} = $contig_seq2->{"query-to"};
 		push @final_contigs, $contig_seq1;
 	} else {
 		$contig_seq1->{"sequence"} .= $contig_end;
@@ -262,8 +262,8 @@ sub order_by_hit_start {
 }
 
 sub order_by_ref_start {
-	my $bstart = $b->{"ref-from"};
-	my $astart = $a->{"ref-from"};
+	my $bstart = $b->{"hit-from"};
+	my $astart = $a->{"hit-from"};
 
 	if ($astart < $bstart) { return -1; }
 	if ($astart > $bstart) { return 1; }
