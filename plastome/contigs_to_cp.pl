@@ -4,9 +4,10 @@ use FindBin;
 use lib "$FindBin::Bin/../parsing/";
 use Blast qw (parse_xml revcomp_hsp);
 use lib "$FindBin::Bin/../";
-use Subfunctions qw (parse_fasta reverse_complement split_seq);
+use Subfunctions qw (parse_fasta reverse_complement split_seq find_sequences);
 use File::Temp qw (tempfile);
 use Data::Dumper;
+use YAML::Tiny;
 
 my $help = 0;
 my $outfile = "";
@@ -89,10 +90,14 @@ push @$regions, $region;
 
 my ($fh, $refregions) = tempfile();
 foreach $region (@$regions) {
-	# set up a hash value to receive the hits when we get them.
-	$region->{"hits"} = ();
 	print "$region->{name}\t$region->{start}\t$region->{end}\n";
 	print $fh ">$region->{name}\n$region->{sequence}\n";
+
+	# clean up the region hash for later use.
+	delete $region->{"sequence"};
+	# set up a hash value to receive the hits when we get them.
+	$region->{"hits"} = ();
+	$region->{"length"} = $region->{"end"} - $region->{"start"} + 1;
 }
 close $fh;
 
@@ -106,12 +111,14 @@ if (-e "$outfile.xml") {
 print "parsing results\n";
 
 my $hit_array = parse_xml ("$outfile.xml");
-my $hits = {};
+my @hit_list = ();
 
 foreach my $hit (@$hit_array) {
 	# each hit represents a contig that we want to assign to a region.
 	my $contig = {};
 	$contig->{"name"} = $hit->{"query"}->{"name"};
+	$contig->{"length"} = $hit->{"query"}->{"length"};
+	push @hit_list, $contig->{"name"};
 
 	# push it into the appropriate region's bucket of hits.
 	my $region = $hit->{"subject"}->{"name"};
@@ -125,25 +132,32 @@ foreach my $hit (@$hit_array) {
 			$contig->{"revcomp"} = " (reverse complement)";
 		}
 	}
+
+	# consolidate all of the matching segments into one large overall match.
 	my @hsps = sort order_by_hit_start @{$hit->{"hsps"}};
 	my $first_hsp = $hsps[0];
 	my $last_hsp = pop @hsps;
-	$contig->{"hit-from"} = $first_hsp->{"hit-from"};
-	$contig->{"hit-to"} = $last_hsp->{"hit-to"};
+	my $regoffset = $regions_hash->{$region}->{"start"} - 1;
+	$contig->{"hit-from"} = $first_hsp->{"hit-from"} + $regoffset;
+	$contig->{"hit-to"} = $last_hsp->{"hit-to"} + $regoffset;
 	$contig->{"query-from"} = $first_hsp->{"query-from"};
 	$contig->{"query-to"} = $last_hsp->{"query-to"};
 }
 
-# open OUTFH, ">", $outfile or die "couldn't create $outfile";
+# put the sequences for the matching contigs back into the output hash.
+my $contig_seqs = find_sequences ($contigfile, \@hit_list);
 
 foreach $region (@$regions) {
-	print "Comparing to $region->{name}: " . @{$region->{"hits"}} . " hits\n";
-	my $reg_offset = $region->{"start"} - 1;
-	my @hsps = sort order_by_hit_start @{$region->{"hits"}};
-	foreach my $hsp (@hsps) {
- 		print $hsp->{"name"} . $hsp->{"revcomp"} . ": " . $hsp->{"query-from"} . "-" . $hsp->{"query-to"} . " matches region " . ($hsp->{"hit-from"} + $reg_offset) . "-" . ($hsp->{"hit-to"} + $reg_offset) . "\n";
+	foreach my $contig (@{$region->{"hits"}}) {
+		$contig->{"sequence"} = $contig_seqs->{$contig->{"name"}};
 	}
+	my @ordered_hits = sort order_by_hit_start @{$region->{"hits"}};
+	$region->{"hits"} = \@ordered_hits;
 }
+
+# open OUTFH, ">", "$outfile.yml" or die "couldn't create $outfile.yml";
+
+YAML::Tiny->DumpFile("$outfile.yml", $regions);
 
 # close OUTFH;
 
@@ -185,6 +199,6 @@ contigs_to_cp.pl [-reffile reffile] [-contigfile contigfile] [-outputfile output
 
 =head1 DESCRIPTION
 
-Aligns a list of putative cp contigs along a reference plastome.
+Aligns a list of putative cp contigs along a reference plastome. Outputs a YAML file of the best-matching contigs, in order.
 
 =cut
