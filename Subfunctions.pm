@@ -11,7 +11,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str);
 }
 
 my $debug = 0;
@@ -270,6 +270,23 @@ sub disambiguate_str {
 
 	$charstr = join ("",sort(split('',$charstr)));
 	return "$charstr";
+}
+
+sub consensus_str {
+	my $taxarray = shift;
+	my $result = "";
+	while (@$taxarray[0] ne "") {
+		my $currchars = "";
+		foreach my $seq (@$taxarray) {
+			if ($seq =~ m/(.)(.*)$/) {
+				$currchars .= $1;
+				$seq = $2;
+			}
+		}
+		$currchars = disambiguate_str($currchars);
+		$result .= get_iupac_code($currchars);
+	}
+	return $result;
 }
 
 

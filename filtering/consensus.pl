@@ -2,7 +2,7 @@
 use strict;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions qw(parse_fasta disambiguate_str get_iupac_code);
+use Subfunctions qw(parse_fasta disambiguate_str get_iupac_code consensus_str);
 
 if (@ARGV < 1) {
 	die "Usage: consensus2.pl fastafile\n";
@@ -15,19 +15,11 @@ unless (-e $fastafile) {
 }
 
 my ($taxa, $taxanames) = parse_fasta ($fastafile);
-
-print ">$fastafile\n";
-while ($taxa->{@$taxanames[0]} ne "") {
-	my $currchars = "";
-	foreach my $taxon (@$taxanames) {
-		if ($taxa->{$taxon} =~ m/(.)(.*)$/) {
-			$currchars .= $1;
-			$taxa->{$taxon} = $2;
-		}
-	}
-	$currchars = disambiguate_str($currchars);
-	print get_iupac_code($currchars);
-# 	print get_allele_str($currchars) . "\n";
+my @taxarray = ();
+foreach my $taxon (@$taxanames) {
+	push @taxarray, $taxa->{$taxon};
 }
 
-print "\n";
+my $result = consensus_str(\@taxarray);
+print ">$fastafile\n";
+print "$result\n";
