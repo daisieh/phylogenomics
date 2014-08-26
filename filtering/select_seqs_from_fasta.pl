@@ -2,7 +2,7 @@ use strict;
 use File::Temp qw/ tempfile tempdir /;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions qw(parse_fasta);
+use Subfunctions qw(parse_fasta find_sequences);
 
 if (@ARGV < 2) {
 	die "Usage: sequenceretrieval.pl fastafile sequencelist\n";
@@ -29,7 +29,7 @@ foreach my $seq (<LIST_FH>) {
 }
 close LIST_FH;
 
-my $found = findsequences ($fastafile, \@seqs);
+my $found = find_sequences ($fastafile, \@seqs);
 
 open OUT_FH, ">", "$outfile";
 foreach my $seq (@seqs) {
@@ -37,21 +37,3 @@ foreach my $seq (@seqs) {
 }
 close OUT_FH;
 
-sub findsequences {
-	my $fastafile = shift;
-	my $names = shift;
-
-	unless (-e $fastafile) {
-		die "File $fastafile does not exist.\n";
-	}
-
-	my $hashed_seqs = {};
-	my ($taxa, $taxanames) = parse_fasta ($fastafile);
-
-	foreach my $name (@$names) {
-		if (exists $taxa->{$name}) {
-			$hashed_seqs->{$name} = $taxa->{$name};
-		}
-	}
-	return $hashed_seqs;
-}

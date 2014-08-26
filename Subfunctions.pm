@@ -11,7 +11,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences);
 }
 
 my $debug = 0;
@@ -422,6 +422,26 @@ sub parse_fasta {
 	close (fileIN);
 	return $taxa, \@taxanames;
 }
+
+sub find_sequences {
+	my $fastafile = shift;
+	my $names = shift;
+
+	unless (-e $fastafile) {
+		die "File $fastafile does not exist.\n";
+	}
+
+	my $hashed_seqs = {};
+	my ($taxa, $taxanames) = parse_fasta ($fastafile);
+
+	foreach my $name (@$names) {
+		if (exists $taxa->{$name}) {
+			$hashed_seqs->{$name} = $taxa->{$name};
+		}
+	}
+	return $hashed_seqs;
+}
+
 
 sub pad_seq_ends {
 	my $seq_block = shift;
