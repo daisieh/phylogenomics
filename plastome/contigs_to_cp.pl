@@ -251,6 +251,11 @@ open OUTFH, ">", "$outfile.final.yml";
 print OUTFH YAML::Tiny->Dump(@final_contigs);
 close OUTFH;
 
+open OUTFH, ">", "$outfile.draft.fasta";
+foreach my $c (@final_contigs) {
+	print OUTFH ">" . $c->{"name"} . "\n" . $c->{"sequence"} . "\n";
+}
+close OUTFH;
 # if $a starts earlier than $b, return -1
 sub order_by_hit_start {
 	my $bstart = $b->{"hit-from"};
