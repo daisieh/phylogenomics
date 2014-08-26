@@ -4,7 +4,7 @@ use FindBin;
 use lib "$FindBin::Bin/../parsing/";
 use Blast qw (parse_xml revcomp_hsp);
 use lib "$FindBin::Bin/../";
-use Subfunctions qw (parse_fasta reverse_complement split_seq find_sequences);
+use Subfunctions qw (parse_fasta reverse_complement split_seq find_sequences consensus_str);
 use File::Temp qw (tempfile);
 use Data::Dumper;
 use YAML::Tiny;
@@ -55,7 +55,7 @@ my $regions_hash = {};
 # LSC goes from 1 to the start of @$irs[0] - 1:
 my $region = {};
 $regions_hash->{"LSC"} = $region;
-$region->{"name"} = "LSC";
+$region->{"region-name"} = "LSC";
 $region->{"start"} = 1;
 $region->{"end"} = $irs[0]->{"query-from"} - 1;
 (undef, $region->{"sequence"}, undef) = split_seq ($refseq, $region->{"start"}, $region->{"end"});
@@ -64,7 +64,7 @@ push @$regions, $region;
 # IRB goes from the start of @$irs[0] to the end of @$irs[0] (inclusive):
 $region = {};
 $regions_hash->{"IRB"} = $region;
-$region->{"name"} = "IRB";
+$region->{"region-name"} = "IRB";
 $region->{"sequence"} = $irs[0]{"hseq"};
 $region->{"start"} = $irs[0]->{"query-from"};
 $region->{"end"} = $irs[0]->{"query-to"};
@@ -73,7 +73,7 @@ push @$regions, $region;
 # SSC goes from the end of @$irs[0] + 1 to the start of @$irs[1] - 1:
 $region = {};
 $regions_hash->{"SSC"} = $region;
-$region->{"name"} = "SSC";
+$region->{"region-name"} = "SSC";
 $region->{"start"} = $irs[0]->{"query-to"} + 1;
 $region->{"end"} = $irs[1]->{"query-from"} - 1;
 (undef, $region->{"sequence"}, undef) = split_seq ($refseq, $region->{"start"}, $region->{"end"});
@@ -82,7 +82,7 @@ push @$regions, $region;
 # IRA goes from the start of @$irs[1] to the end of @$irs[1] (inclusive):
 $region = {};
 $regions_hash->{"IRA"} = $region;
-$region->{"name"} = "IRA";
+$region->{"region-name"} = "IRA";
 $region->{"sequence"} = $irs[1]{"hseq"};
 $region->{"start"} = $irs[1]->{"query-from"};
 $region->{"end"} = $irs[1]->{"query-to"};
@@ -90,8 +90,7 @@ push @$regions, $region;
 
 my ($fh, $refregions) = tempfile();
 foreach $region (@$regions) {
-	print "$region->{name}\t$region->{start}\t$region->{end}\n";
-	print $fh ">$region->{name}\n$region->{sequence}\n";
+	print $fh ">" . $region->{"region-name"} . "\n" . $region->{"sequence"}. "\n";
 
 	# clean up the region hash for later use.
 	delete $region->{"sequence"};
@@ -116,9 +115,9 @@ my @hit_list = ();
 foreach my $hit (@$hit_array) {
 	# each hit represents a contig that we want to assign to a region.
 	my $contig = {};
-	$contig->{"name"} = $hit->{"query"}->{"name"};
+	$contig->{"contig-name"} = $hit->{"query"}->{"name"};
 	$contig->{"length"} = $hit->{"query"}->{"length"};
-	push @hit_list, $contig->{"name"};
+	push @hit_list, $contig->{"contig-name"};
 
 	# push it into the appropriate region's bucket of hits.
 	my $region = $hit->{"subject"}->{"name"};
@@ -138,33 +137,133 @@ foreach my $hit (@$hit_array) {
 	my $first_hsp = $hsps[0];
 	my $last_hsp = pop @hsps;
 	my $regoffset = $regions_hash->{$region}->{"start"} - 1;
-	$contig->{"hit-from"} = $first_hsp->{"hit-from"} + $regoffset;
-	$contig->{"hit-to"} = $last_hsp->{"hit-to"} + $regoffset;
-	$contig->{"query-from"} = $first_hsp->{"query-from"};
-	$contig->{"query-to"} = $last_hsp->{"query-to"};
+	$contig->{"ref-from"} = "" . $first_hsp->{"hit-from"} + $regoffset;
+	$contig->{"ref-to"} = "" . $last_hsp->{"hit-to"} + $regoffset;
+	$contig->{"contig-from"} = $first_hsp->{"query-from"};
+	$contig->{"contig-to"} = $last_hsp->{"query-to"};
 }
 
 # put the sequences for the matching contigs back into the output hash.
 my $contig_seqs = find_sequences ($contigfile, \@hit_list);
 
+# write these best seqs out:
+open OUTFH, ">", "$outfile.best.fasta";
+foreach my $key (keys %$contig_seqs) {
+	print OUTFH ">$key\n";
+	print OUTFH $contig_seqs->{$key} . "\n";
+}
+close OUTFH;
+
+my @all_hits = ();
 foreach $region (@$regions) {
 	foreach my $contig (@{$region->{"hits"}}) {
-		$contig->{"sequence"} = $contig_seqs->{$contig->{"name"}};
+		$contig->{"sequence"} = $contig_seqs->{$contig->{"contig-name"}};
+		if (exists $contig->{"revcomp"}) {
+			delete $contig->{"revcomp"};
+			$contig->{"sequence"} = reverse_complement ($contig->{"sequence"});
+			my $old_q_to = $contig->{"contig-to"};
+			$contig->{"contig-to"} = $contig->{"contig-from"};
+			$contig->{"contig-from"} = $old_q_to;
+			$contig->{"contig-name"} .= "_rc";
+		}
 	}
-	my @ordered_hits = sort order_by_hit_start @{$region->{"hits"}};
+	my @ordered_hits = sort order_by_ref_start @{$region->{"hits"}};
+	push @all_hits, @ordered_hits;
 	$region->{"hits"} = \@ordered_hits;
 }
 
-# open OUTFH, ">", "$outfile.yml" or die "couldn't create $outfile.yml";
+# clean up and trim sequences.
+# first, is the first LSC contig extending into the previous IR?
+# my $LSC_start = $all_hits[0];
+# if ($LSC_start->{"ref-from"} == 1) {
+# 	print "trimming start of LSC\n";
+# 	(undef, $LSC_start->{"sequence"}, undef) = split_seq ($LSC_start->{"sequence"}, $LSC_start->{"contig-from"}, $LSC_start->{"contig-to"});
+# 	my $offset = $LSC_start->{"contig-from"} - 1;
+# 	$LSC_start->{"contig-from"} = $LSC_start->{"contig-from"} - $offset;
+# 	$LSC_start->{"contig-to"} = $LSC_start->{"contig-to"} - $offset;
+# }
 
-YAML::Tiny->DumpFile("$outfile.yml", $regions);
+open OUTFH, ">", "$outfile.yml";
+print OUTFH YAML::Tiny->Dump($regions);
+close OUTFH;
 
-# close OUTFH;
+# do the contigs connect to each other?
+my @final_contigs = ();
+my $first_hit = shift @all_hits;
+push @final_contigs, $first_hit;
+# print "final_contigs " . Dumper(@final_contigs) . "\n";
+
+# for (my $i=0; $i < (@all_hits -1); $i++) {
+
+while (@all_hits > 0) { # while there's still anything left in all_hits
+	# compare the end of the last contig in final_contigs to the start of the next contig in all_hits
+	my $contig_seq1 = pop @final_contigs;
+	(my $fh1, my $contig1) = tempfile();
+	my $contig_end = $contig_seq1->{"sequence"};
+	if ($contig_seq1->{"sequence"} =~ /^(.*)(.{50})$/) {
+		$contig_seq1->{"sequence"} = $1;
+		$contig_end = $2;
+	}
+	print $fh1 ">" . $contig_seq1->{"contig-name"} . "_end\n$contig_end\n";
+	close $fh1;
+#
+	my $contig_seq2 = shift @all_hits;
+	(my $fh2, my $contig2) = tempfile();
+	my $contig_start = $contig_seq2->{"sequence"};
+	if ($contig_seq2->{"sequence"} =~ /^(.{50})/) {
+		$contig_start = $1;
+	}
+	print $fh2 ">" . $contig_seq2->{"contig-name"} . "_start\n$contig_start\n";
+	close $fh2;
+#
+	(undef, my $temp_out) = tempfile(OPEN => 0);
+	system ("blastn -query $contig1 -subject $contig2 -word_size 20 -outfmt 5 -out $temp_out");
+	my $contig_hits = parse_xml ("$temp_out");
+
+	# if there is a hit and the score is high enough, meld these two contigs and push that conjoined contig onto the final contigs.
+	if ((@$contig_hits > 0) && (@$contig_hits[0]->{"hsps"}[0]->{"score"} >= 20)) {
+		my $this_hit = @$contig_hits[0]->{"hsps"}[0];
+		my $offset = ($this_hit->{"query-from"} - 1);
+		my $hit_offset = $offset - ($this_hit->{"hit-from"} - 1);
+		$contig_seq1->{"contig-name"} = $contig_seq1->{"contig-name"} . "+" . $contig_seq2->{"contig-name"};
+		$contig_seq1->{"region"} = $contig_seq1->{"region"} . "+" . $contig_seq2->{"region"};
+		$contig_start = "-" x $hit_offset . "$contig_start";
+		$contig_seq1->{"sequence"} .= consensus_str([$contig_end, $contig_start]) . $contig_seq2->{"sequence"};
+		$contig_seq1->{"length"} = length $contig_seq1->{"sequence"};
+		$contig_seq1->{"ref-to"} = $contig_seq2->{"ref-to"};
+		$contig_seq1->{"contig-to"} = $contig_seq2->{"contig-to"};
+		push @final_contigs, $contig_seq1;
+	} else {
+		$contig_seq1->{"sequence"} .= $contig_end;
+		$contig_seq2->{"sequence"} = $contig_start . $contig_seq2->{"sequence"};
+		push @final_contigs, $contig_seq1;
+		push @final_contigs, $contig_seq2;
+	}
+}
+
+my $final_len = 0;
+foreach my $c (@final_contigs) {
+	$final_len += $c->{"length"};
+}
+print "final assembly has " . @final_contigs . " contigs, total length $final_len\n";
+
+open OUTFH, ">", "$outfile.final.yml";
+print OUTFH YAML::Tiny->Dump(@final_contigs);
+close OUTFH;
 
 # if $a starts earlier than $b, return -1
 sub order_by_hit_start {
 	my $bstart = $b->{"hit-from"};
 	my $astart = $a->{"hit-from"};
+
+	if ($astart < $bstart) { return -1; }
+	if ($astart > $bstart) { return 1; }
+	return 0;
+}
+
+sub order_by_ref_start {
+	my $bstart = $b->{"ref-from"};
+	my $astart = $a->{"ref-from"};
 
 	if ($astart < $bstart) { return -1; }
 	if ($astart > $bstart) { return 1; }
