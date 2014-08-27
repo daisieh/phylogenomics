@@ -3,6 +3,7 @@ use Pod::Usage;
 use FindBin;
 use lib "$FindBin::Bin/../parsing/";
 use Blast qw (parse_xml revcomp_hsp);
+use Genbank qw (parse_genbank get_sequence);
 use lib "$FindBin::Bin/../";
 use Subfunctions qw (parse_fasta reverse_complement split_seq find_sequences consensus_str);
 use File::Temp qw (tempfile);
@@ -24,13 +25,24 @@ if ($help) {
     pod2usage(-verbose => 1);
 }
 
-my ($ref_hash, $ref_array) = parse_fasta($reffile);
-my $refseq = $ref_hash->{@$ref_array[0]};
+my $refseq = "";
+if ($reffile =~ /\.gb$/) {
+	my $gb = parse_genbank($reffile);
+	$refseq = get_sequence($gb);
+	print "$refseq\n";
+} else {
+	my ($ref_hash, $ref_array) = parse_fasta($reffile);
+	$refseq = $ref_hash->{@$ref_array[0]};
+}
 my $reflen = length ($refseq);
+
+my ($reffh, $refseqfile) = tempfile();
+print $reffh ">reference\n$refseq\n";
+close $reffh;
 
 print "finding inverted repeats\n";
 my ($fh, $refblast) = tempfile();
-system("blastn -query $reffile -subject $reffile -outfmt 5 -out $refblast.xml -evalue 1e-90");
+system("blastn -query $refseqfile -subject $refseqfile -outfmt 5 -out $refblast.xml -evalue 1e-90");
 
 my $self_array = parse_xml ("$refblast.xml");
 my @irs = ();
