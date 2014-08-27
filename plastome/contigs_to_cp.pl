@@ -305,23 +305,6 @@ foreach my $c (@final_contigs) {
 }
 close OUTFH;
 
-
-# confirm ordering of outputs
-(undef, my $temp_out) = tempfile(OPEN => 0);
-system ("blastn -query $reffile -subject $outfile.draft.fasta -outfmt 5 -out $temp_out");
-my $res = parse_xml($temp_out);
-foreach my $r (@$res) {
-	my @new_hsps = ();
-	foreach my $y (@{$r->{"hsps"}}) {
-		if ($y->{"hit-frame"} == 1) {
-			push @new_hsps, $y;
-		}
-	}
-	my @sorted_hsps = sort order_by_query_start @new_hsps;
-	$r->{"hsps"} = \@sorted_hsps;
-}
-print YAML::Tiny->Dump($res) . "\n";
-
 ### Sorting functions
 
 # if $a starts earlier than $b, return -1
