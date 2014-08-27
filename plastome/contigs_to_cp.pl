@@ -139,20 +139,28 @@ foreach my $hit (@$hit_array) {
 	# each hsp represents a matching segment of this contig to this region.
 	foreach my $hsp (@{$hit->{"hsps"}}) {
 		if ($hsp->{"hit-from"} > $hsp->{"hit-to"}) {
-			$hsp = revcomp_hsp($hsp);
+			# tag this contig as being revcomped, so we can fix it when we deal with whole contigs.
 			$contig->{"revcomp"} = " (reverse complement)";
 		}
 	}
 
 	# consolidate all of the matching segments into one large overall match.
-	my @hsps = sort order_by_hit_start @{$hit->{"hsps"}};
-	my $first_hsp = $hsps[0];
-	my $last_hsp = pop @hsps;
+	my @query_ends = ();
+	my @hit_ends = ();
+	foreach my $hsp (@{$hit->{"hsps"}}) {
+		push @query_ends, $hsp->{"query-from"};
+		push @query_ends, $hsp->{"query-to"};
+		push @hit_ends, $hsp->{"hit-from"};
+		push @hit_ends, $hsp->{"hit-to"};
+	}
+	@query_ends = sort {$a <=> $b} @query_ends;
+	@hit_ends = sort {$a <=> $b} @hit_ends;
+
 	my $regoffset = $regions_hash->{$region}->{"start"} - 1;
-	$contig->{"hit-from"} = "" . $first_hsp->{"hit-from"} + $regoffset;
-	$contig->{"hit-to"} = "" . $last_hsp->{"hit-to"} + $regoffset;
-	$contig->{"query-from"} = $first_hsp->{"query-from"};
-	$contig->{"query-to"} = $last_hsp->{"query-to"};
+	$contig->{"hit-from"} = $hit_ends[0] + $regoffset;
+	$contig->{"hit-to"} = $hit_ends[@hit_ends-1] + $regoffset;
+	$contig->{"query-from"} = $query_ends[0];
+	$contig->{"query-to"} = $query_ends[@query_ends-1];
 }
 
 # put the sequences for the matching contigs back into the output hash.
@@ -173,10 +181,11 @@ foreach $region (@$regions) {
 		if (exists $contig->{"revcomp"}) {
 			delete $contig->{"revcomp"};
 			$contig->{"sequence"} = reverse_complement ($contig->{"sequence"});
-			my $old_q_to = $contig->{"query-to"};
-			$contig->{"query-to"} = $contig->{"query-from"};
-			$contig->{"query-from"} = $old_q_to;
 			$contig->{"name"} .= "_rc";
+			# flip the query's indices: the q-from is now going to be (length - q-from) and the q-to is (length - q-to)
+			my $old_qto = $contig->{"query-to"};
+			$contig->{"query-to"} = $contig->{"length"} - $contig->{"query-from"};
+			$contig->{"query-from"} = $contig->{"length"} - $old_qto;
 		}
 	}
 	my @ordered_hits = sort order_by_ref_start @{$region->{"hits"}};
