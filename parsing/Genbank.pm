@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+# WARNING: this only handles a single genbank file per program.
+# TODO: object-orient this.
+
 package Genbank;
 use strict;
 use FindBin;
@@ -15,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile set_sequence);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile set_sequence get_sequence);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -30,6 +33,10 @@ my $curr_gene = {};
 
 sub set_sequence {
 	$sequence = shift;
+}
+
+sub get_sequence {
+	return $sequence;
 }
 
 sub parse_genbank {
