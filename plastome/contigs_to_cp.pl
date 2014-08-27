@@ -163,6 +163,10 @@ foreach my $hit (@$hit_array) {
 	$contig->{"query-to"} = $query_ends[@query_ends-1];
 }
 
+open OUTFH, ">", "$outfile.raw.yml";
+print OUTFH YAML::Tiny->Dump(@$hit_array);
+close OUTFH;
+
 # put the sequences for the matching contigs back into the output hash.
 my $contig_seqs = find_sequences ($contigfile, \@hit_list);
 
