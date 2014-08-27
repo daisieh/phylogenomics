@@ -191,38 +191,46 @@ foreach $region (@$regions) {
 			$contig->{"query-to"} = $contig->{"length"} - $contig->{"query-from"};
 			$contig->{"query-from"} = $contig->{"length"} - $old_qto;
 		}
+
+		# do some cleanup of the hit and query windows.
+		# each contig's putative hit span is from the amount of query extending before the start of the match (hit-from), which is (hit-from - query-from), plus whatever portion of its length is beyond that (length - query-from + hit-from)
+		$contig->{"hit-to"} = $contig->{"hit-from"} - $contig->{"query-from"} + $contig->{"length"};
+		$contig->{"hit-from"} = $contig->{"hit-from"} - $contig->{"query-from"};
+# 		print "cleaning up " . $contig->{"name"} . ", has length " . $contig->{"length"} . " and its " . $contig->{"query-from"} . "-" . $contig->{"query-to"} . " covers the ref " . $contig->{"hit-from"} . "-" . $contig->{"hit-to"} . "\n";
 	}
-	my @ordered_hits = sort order_by_ref_start @{$region->{"hits"}};
+	my @ordered_hits = sort order_by_hit_start @{$region->{"hits"}};
 	push @all_hits, @ordered_hits;
 	$region->{"hits"} = \@ordered_hits;
 }
 
-# clean up and trim sequences.
-# first, is the first LSC contig extending into the previous IR?
-# my $LSC_start = $all_hits[0];
-# if ($LSC_start->{"hit-from"} == 1) {
-# 	print "trimming start of LSC\n";
-# 	(undef, $LSC_start->{"sequence"}, undef) = split_seq ($LSC_start->{"sequence"}, $LSC_start->{"query-from"}, $LSC_start->{"query-to"});
-# 	my $offset = $LSC_start->{"query-from"} - 1;
-# 	$LSC_start->{"query-from"} = $LSC_start->{"query-from"} - $offset;
-# 	$LSC_start->{"query-to"} = $LSC_start->{"query-to"} - $offset;
-# }
-
 open OUTFH, ">", "$outfile.yml";
-print OUTFH YAML::Tiny->Dump($regions);
+print OUTFH YAML::Tiny->Dump(@$regions);
 close OUTFH;
 
 # do the contigs connect to each other?
 my @final_contigs = ();
 my $first_hit = shift @all_hits;
 push @final_contigs, $first_hit;
-# print "final_contigs " . Dumper(@final_contigs) . "\n";
 
-# for (my $i=0; $i < (@all_hits -1); $i++) {
+# compare the end of the last contig in final_contigs to the start of the next contig in all_hits
+# while there's still anything left in all_hits
+while (@all_hits > 0) {
+	# first contig to compare is the last one in final_contigs
+	my $contig_seq1 = @final_contigs[@final_contigs - 1];
 
-while (@all_hits > 0) { # while there's still anything left in all_hits
-	# compare the end of the last contig in final_contigs to the start of the next contig in all_hits
-	my $contig_seq1 = pop @final_contigs;
+	# second contig to compare is the next unanalyzed one from all_hits
+	my $contig_seq2 = shift @all_hits;
+
+	print "comparing " . $contig_seq1->{"name"} . ", maps up to " . $contig_seq1->{"hit-to"} . ", to " . $contig_seq2->{"name"} . ", maps up to " . $contig_seq2->{"hit-to"} . " but starts at " . ($contig_seq2->{"hit-to"} - $contig_seq2->{"length"}) . "\n";
+
+	# if the second contig's putative hit range is within the first, drop it.
+	if ($contig_seq2->{"hit-to"} <= $contig_seq1->{"hit-to"}) {
+# 		print "contig 2 is within contig 1, drop it. \n";
+		next;
+	}
+
+	# compare these two contigs' ends
+	print "can we meld these contigs? ";
 	(my $fh1, my $contig1) = tempfile();
 	my $contig_end = $contig_seq1->{"sequence"};
 	if ($contig_seq1->{"sequence"} =~ /^(.*)(.{50})$/) {
@@ -231,8 +239,7 @@ while (@all_hits > 0) { # while there's still anything left in all_hits
 	}
 	print $fh1 ">" . $contig_seq1->{"name"} . "_end\n$contig_end\n";
 	close $fh1;
-#
-	my $contig_seq2 = shift @all_hits;
+
 	(my $fh2, my $contig2) = tempfile();
 	my $contig_start = $contig_seq2->{"sequence"};
 	if ($contig_seq2->{"sequence"} =~ /^(.{50})/) {
@@ -240,29 +247,45 @@ while (@all_hits > 0) { # while there's still anything left in all_hits
 	}
 	print $fh2 ">" . $contig_seq2->{"name"} . "_start\n$contig_start\n";
 	close $fh2;
-#
+
 	(undef, my $temp_out) = tempfile(OPEN => 0);
 	system ("blastn -query $contig1 -subject $contig2 -word_size 20 -outfmt 5 -out $temp_out");
 	my $contig_hits = parse_xml ("$temp_out");
 
-	# if there is a hit and the score is high enough, meld these two contigs and push that conjoined contig onto the final contigs.
 	if ((@$contig_hits > 0) && (@$contig_hits[0]->{"hsps"}[0]->{"score"} >= 20)) {
+		# if there is a hit and the score is high enough, meld these two contigs and push that conjoined contig onto the final contigs.
 		my $this_hit = @$contig_hits[0]->{"hsps"}[0];
 		my $offset = ($this_hit->{"query-from"} - 1);
 		my $hit_offset = $offset - ($this_hit->{"hit-from"} - 1);
+
+		# meld the sequence:
+		$contig_start = "-" x $hit_offset . "$contig_start"; # pad the start bit to align for consensus
+		$contig_seq1->{"sequence"} = $contig_seq1->{"sequence"} . consensus_str([$contig_end, $contig_start]) . $contig_seq2->{"sequence"};
+
+		# update the parameters for the newly-melded contig.
 		$contig_seq1->{"name"} = $contig_seq1->{"name"} . "+" . $contig_seq2->{"name"};
 		$contig_seq1->{"region"} = $contig_seq1->{"region"} . "+" . $contig_seq2->{"region"};
-		$contig_start = "-" x $hit_offset . "$contig_start";
-		$contig_seq1->{"sequence"} .= consensus_str([$contig_end, $contig_start]) . $contig_seq2->{"sequence"};
 		$contig_seq1->{"length"} = length $contig_seq1->{"sequence"};
 		$contig_seq1->{"hit-to"} = $contig_seq2->{"hit-to"};
-		$contig_seq1->{"query-to"} = $contig_seq2->{"query-to"};
-		push @final_contigs, $contig_seq1;
+		$contig_seq1->{"query-to"} = "" . ($contig_seq1->{"length"} - $contig_seq1->{"query-from"});
+		print "yes, new length is " . $contig_seq1->{"length"} . ", covers " . $contig_seq1->{"hit-from"} . "-" . $contig_seq1->{"hit-to"} . "\n";
+	} elsif (($contig_seq2->{"hit-from"} - $contig_seq1->{"hit-to"}) < 300) {
+		# if the two contigs' hit ends are within 100 bp of each other, scaffold them together by adding Ns
+		$contig_seq1->{"sequence"} .= "N" x ($contig_seq2->{"hit-from"} - $contig_seq1->{"hit-to"}) . $contig_seq2->{"sequence"};
+
+		# update the parameters for the newly-melded contig.
+		$contig_seq1->{"name"} = $contig_seq1->{"name"} . "+" . $contig_seq2->{"name"};
+		$contig_seq1->{"region"} = $contig_seq1->{"region"} . "+" . $contig_seq2->{"region"};
+		$contig_seq1->{"length"} = length $contig_seq1->{"sequence"};
+		$contig_seq1->{"hit-to"} = $contig_seq2->{"hit-to"};
+		$contig_seq1->{"query-to"} = "" . ($contig_seq1->{"length"} - $contig_seq1->{"query-from"});
+		print "maybe? new length is " . $contig_seq1->{"length"} . ", covers " . $contig_seq1->{"hit-from"} . "-" . $contig_seq1->{"hit-to"} . "\n";
 	} else {
+		# if not meldable, push the second contig onto the final contigs too.
 		$contig_seq1->{"sequence"} .= $contig_end;
 		$contig_seq2->{"sequence"} = $contig_start . $contig_seq2->{"sequence"};
-		push @final_contigs, $contig_seq1;
 		push @final_contigs, $contig_seq2;
+		print "no\n";
 	}
 }
 
