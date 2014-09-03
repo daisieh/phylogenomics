@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use strict;
 use Getopt::Long;
 use Pod::Usage;

@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use FindBin;
 use lib "$FindBin::Bin/..";
 use Subfunctions qw(make_label_lookup);

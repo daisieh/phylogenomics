@@ -1,4 +1,5 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
+
 use strict;
 use File::Basename;
 
@@ -18,7 +19,7 @@ if ($1 ne "") {
 open my $fastafile, ">$fastqfile.fasta" or die "couldn't open file for writing";
 truncate $fastafile, 0;
 
-while ($fs ne "") {	
+while ($fs ne "") {
 	#first line:
 	my $first_header = "$fs";
 	$first_header =~ s/@/>/;
@@ -30,10 +31,10 @@ while ($fs ne "") {
 
 	#third line:
 	$fs = readline $F;
-	
+
 	#fourth line:
 	$fs = readline $F;
-	
+
 	my $result = "$first_header$sequence\n";
 	print $fastafile $result;
 }

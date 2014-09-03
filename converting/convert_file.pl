@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use Bio::SeqIO;
 use Bio::Seq::RichSeq;
 use Bio::Align::Utilities qw(cat);
