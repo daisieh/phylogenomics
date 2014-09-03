@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use File::Spec qw (catfile);
 
 my $genelist = shift;

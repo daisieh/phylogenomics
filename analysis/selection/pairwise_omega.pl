@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 require "bioperl_subfuncs.pl";
 use Bio::Tools::Run::Phylo::PAML::Codeml;
 use File::Basename;

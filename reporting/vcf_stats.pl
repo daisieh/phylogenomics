@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;

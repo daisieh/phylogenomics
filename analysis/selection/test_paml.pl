@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use Bio::SeqIO;
 use Bio::Align::Utilities qw(cat);
 use Bio::Tools::Run::Phylo::PAML::Yn00;

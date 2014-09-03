@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 my $bamfile = shift;
 my $frac = shift;
 

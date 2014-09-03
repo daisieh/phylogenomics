@@ -1,3 +1,4 @@
+#!/bin/bash
 # sorts a fasta file by size of seqs, largest first.
 
 infile=$1

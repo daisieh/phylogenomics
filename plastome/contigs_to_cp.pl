@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use Getopt::Long;
 use Pod::Usage;
 use FindBin;

@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 my $inputfile = shift;
 
 open(fileIN, "<", "$inputfile")  or die "no file named $inputfile";

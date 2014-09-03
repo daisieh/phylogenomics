@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 # require "bioperl_subfuncs.pl";
 
 use CircleGraph;

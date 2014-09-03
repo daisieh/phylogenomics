@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use strict;
 use File::Basename;
 use Getopt::Long;

@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 my $genicfile = shift;
 
 open FH, "<", $genicfile;

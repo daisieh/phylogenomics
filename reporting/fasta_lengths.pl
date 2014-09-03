@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 my $file = shift;
 
 open FH, "<", $file;

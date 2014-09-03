@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use CircleGraph;
 use File::Basename;
 use Getopt::Long;

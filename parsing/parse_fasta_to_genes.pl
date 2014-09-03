@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use strict;
 use Pod::Usage;
 use File::Basename;

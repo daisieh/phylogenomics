@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use Pod::Usage;
 use File::Basename;
 use Getopt::Long;
