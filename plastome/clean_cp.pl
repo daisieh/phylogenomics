@@ -31,7 +31,6 @@ my $refseq = "";
 if ($reffile =~ /\.gb$/) {
 	my $gb = parse_genbank($reffile);
 	$refseq = get_sequence($gb);
-	print "$refseq\n";
 } else {
 	my ($ref_hash, $ref_array) = parse_fasta($reffile);
 	$refseq = $ref_hash->{@$ref_array[0]};
@@ -77,6 +76,9 @@ if ($aligned_ref =~ /(-+)$/) {
 	my $offset = length $1;
 	(undef, $aligned_seq, undef) = split_seq ($aligned_seq, 1, (length $aligned_seq) - $offset);
 }
+
+# remove remaining gaps
+$aligned_seq =~ s/-//g;
 
 open OUTFH, ">", "$outfile.cleaned.fasta";
 print OUTFH ">$contigfile\n$aligned_seq\n";
