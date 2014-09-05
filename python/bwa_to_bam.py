@@ -43,7 +43,12 @@ def runscript(sample_string):
         runcommand(cmd)
         cmd = "samtools view -S -b -u -o %s.bam %s.sam" % (sample,sample)
         runcommand(cmd)
+	# remove unmapped pairs
+        cmd = "samtools view -F 4 -b %s.bam > %s.reduced.bam" % (sample,sample)
+        runcommand(cmd)
         cmd = "rm %s.sam" % (sample)
+        runcommand(cmd)
+        cmd = "mv %s.reduced.bam %s.bam" % (sample,sample)
         runcommand(cmd)
 
 global refname
