@@ -62,7 +62,6 @@ sub parse_genbank {
 				parse_feature_desc ($feat_desc_string, \@gene_array);
 				$in_features = 0;
 				$in_sequence = 1;
-				print "starting sequence for $name\n";
 			}
 		} elsif ($in_sequence == 1) {
 			$line =~ s/\d//g;
