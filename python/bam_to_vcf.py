@@ -16,11 +16,6 @@ def stop_err( msg ):
 
 def runscript(sample_string):
     host,sample,location = sample_string.split()
-    cmd = "samtools sort %s.bam %s.sorted" % (sample,sample)
-    sys.stderr.write( "%s\n" % cmd )
-    os.system(cmd)
-    cmd = "rm %s.bam" % (sample)
-    os.system(cmd)
     cmd = "samtools mpileup -B -E -C50 -f %s -u %s.sorted.bam > %s.bcf" % (refname, sample, sample)
     os.system(cmd)
     cmd = "rm %s.sorted.bam" % (sample)
