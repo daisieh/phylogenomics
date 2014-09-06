@@ -18,8 +18,6 @@ def runscript(sample_string):
     host,sample,location = sample_string.split()
     cmd = "samtools mpileup -B -E -C50 -f %s -u %s.sorted.bam > %s.bcf" % (refname, sample, sample)
     os.system(cmd)
-    cmd = "rm %s.sorted.bam" % (sample)
-    os.system(cmd)
     cmd = "/usr/local/samtools/bcftools/bcftools view -c -I %s.bcf > %s.vcf" % (sample, sample)
     os.system(cmd)
     cmd = "rm %s.bcf" % (sample)
