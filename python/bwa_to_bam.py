@@ -53,6 +53,8 @@ def runscript(sample_string):
         # sort pairs
         cmd = "samtools sort %s.bam %s.sorted" % (sample,sample)
         runcommand(cmd)
+        cmd = "rm %s.bam" % (sample)
+        runcommand(cmd)
 
 
 global refname
