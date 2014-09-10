@@ -16,15 +16,31 @@ my $outfile = "";
 my $reffile = "";
 my $contigfile = "";
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
 
 GetOptions ('reffile=s' => \$reffile,
 			'contigfile=s' => \$contigfile,
 			'outfile=s' => \$outfile,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
-if ($help) {
+if ($help){
     pod2usage(-verbose => 1);
 }
+
+if ($reffile eq "") {
+    pod2usage(-verbose => 1, -msg => "need to specify reference file");
+}
+
+if ($contigfile eq "") {
+    pod2usage(-verbose => 1, -msg => "need to specify contig file");
+}
+
+if ($outfile eq "") {
+    pod2usage(-verbose => 1, -msg => "need to specify output path");
+}
+
 
 my $refseq = "";
 if ($reffile =~ /\.gb$/) {
