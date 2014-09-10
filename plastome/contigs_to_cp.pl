@@ -46,7 +46,6 @@ my $refseq = "";
 if ($reffile =~ /\.gb$/) {
 	my $gb = parse_genbank($reffile);
 	$refseq = get_sequence($gb);
-	print "$refseq\n";
 } else {
 	my ($ref_hash, $ref_array) = parse_fasta($reffile);
 	$refseq = $ref_hash->{@$ref_array[0]};
@@ -238,11 +237,10 @@ while (@all_hits > 0) {
 	# second contig to compare is the next unanalyzed one from all_hits
 	my $contig_seq2 = shift @all_hits;
 
-	print "comparing " . $contig_seq1->{"name"} . ", maps up to " . $contig_seq1->{"hit-to"} . ", to " . $contig_seq2->{"name"} . ", maps up to " . $contig_seq2->{"hit-to"} . " but starts at " . ($contig_seq2->{"hit-to"} - $contig_seq2->{"length"}) . "\n";
+	print "comparing " . $contig_seq1->{"name"} . ", maps " . $contig_seq1->{"hit-from"}. "-" . $contig_seq1->{"hit-to"} . ", to " . $contig_seq2->{"name"} . ", maps " . ($contig_seq2->{"hit-to"} - $contig_seq2->{"length"}) ."-". $contig_seq2->{"hit-to"} . "\n";
 
 	# if the second contig's putative hit range is within the first, drop it.
 	if ($contig_seq2->{"hit-to"} <= $contig_seq1->{"hit-to"}) {
-# 		print "contig 2 is within contig 1, drop it. \n";
 		next;
 	}
 
@@ -255,29 +253,27 @@ while (@all_hits > 0) {
 		$contig_end = $2;
 	}
 	print $fh1 ">" . $contig_seq1->{"name"} . "_end\n$contig_end\n";
-	close $fh1;
-
-	(my $fh2, my $contig2) = tempfile();
 	my $contig_start = $contig_seq2->{"sequence"};
 	if ($contig_seq2->{"sequence"} =~ /^(.{50})/) {
 		$contig_start = $1;
 	}
-	print $fh2 ">" . $contig_seq2->{"name"} . "_start\n$contig_start\n";
-	close $fh2;
-
+	print $fh1 ">" . $contig_seq2->{"name"} . "_start\n$contig_start\n";
+	close $fh1;
 	(undef, my $temp_out) = tempfile(OPEN => 0);
-	system ("blastn -query $contig1 -subject $contig2 -word_size 20 -outfmt 5 -out $temp_out");
-	my $contig_hits = parse_xml ("$temp_out");
 
-	if ((@$contig_hits > 0) && (@$contig_hits[0]->{"hsps"}[0]->{"score"} >= 20)) {
-		# if there is a hit and the score is high enough, meld these two contigs and push that conjoined contig onto the final contigs.
-		my $this_hit = @$contig_hits[0]->{"hsps"}[0];
-		my $offset = ($this_hit->{"query-from"} - 1);
-		my $hit_offset = $offset - ($this_hit->{"hit-from"} - 1);
+	system ("mafft --retree 2 --maxiterate 0 --op 10 $contig1 > $temp_out 2>/dev/null");
+	# the resulting sequences are a match if the consensus sequence has few ambiguous characters.
+	(my $aligned_bits, my $alignarray) = parse_fasta($temp_out);
+	my @seqs = ();
+	foreach my $k (@$alignarray) {
+		push @seqs, $aligned_bits->{$k};
+	}
+	my $cons_seq = consensus_str(\@seqs);
+
+	if (@{$cons_seq =~ m/[NMRWSYKVHDB]/g} < 5) { # if there are less than 5 ambiguities when we align them...
 
 		# meld the sequence:
-		$contig_start = "-" x $hit_offset . "$contig_start"; # pad the start bit to align for consensus
-		$contig_seq1->{"sequence"} = $contig_seq1->{"sequence"} . consensus_str([$contig_end, $contig_start]) . $contig_seq2->{"sequence"};
+		$contig_seq1->{"sequence"} = $contig_seq1->{"sequence"} . $cons_seq . $contig_seq2->{"sequence"};
 
 		# update the parameters for the newly-melded contig.
 		$contig_seq1->{"name"} = $contig_seq1->{"name"} . "+" . $contig_seq2->{"name"};
