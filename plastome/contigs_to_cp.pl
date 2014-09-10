@@ -269,8 +269,8 @@ while (@all_hits > 0) {
 		push @seqs, $aligned_bits->{$k};
 	}
 	my $cons_seq = consensus_str(\@seqs);
-
-	if (@{$cons_seq =~ m/[NMRWSYKVHDB]/g} < 5) { # if there are less than 5 ambiguities when we align them...
+	my @ambigs = $cons_seq =~ m/[NMRWSYKVHDB]/g;
+	if (@ambigs < 5) { # if there are less than 5 ambiguities when we align them...
 
 		# meld the sequence:
 		$contig_seq1->{"sequence"} = $contig_seq1->{"sequence"} . $cons_seq . $contig_seq2->{"sequence"};
