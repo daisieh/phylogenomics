@@ -15,6 +15,7 @@ my $help = 0;
 my $outfile = "";
 my $reffile = "";
 my $contigfile = "";
+my $join = 0;
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -23,6 +24,7 @@ if (@ARGV == 0) {
 GetOptions ('reffile=s' => \$reffile,
 			'contigfile=s' => \$contigfile,
 			'outfile=s' => \$outfile,
+			'join' => \$join,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help){
@@ -298,7 +300,7 @@ while (@all_hits > 0) {
 		$contig_seq1->{"sequence"} .= $contig_end;
 		$contig_seq2->{"sequence"} = $contig_start . $contig_seq2->{"sequence"};
 		push @final_contigs, $contig_seq2;
-		print "no\n";
+		print "no, span too large: " . $contig_seq2->{"hit-from"} ."-". $contig_seq1->{"hit-to"} . " = ". ($contig_seq2->{"hit-from"} - $contig_seq1->{"hit-to"}) . "\n";
 	}
 }
 
@@ -313,8 +315,15 @@ print OUTFH YAML::Tiny->Dump(@final_contigs);
 close OUTFH;
 
 open OUTFH, ">", "$outfile.draft.fasta";
-foreach my $c (@final_contigs) {
-	print OUTFH ">" . $c->{"name"} . "\n" . $c->{"sequence"} . "\n";
+if ($join) {
+	print OUTFH ">$outfile.draft.fasta\n";
+	foreach my $c (@final_contigs) {
+		print OUTFH $c->{"sequence"} . "NNNNNNNNNNN";
+	}
+} else {
+	foreach my $c (@final_contigs) {
+		print OUTFH ">" . $c->{"name"} . "\n" . $c->{"sequence"} . "\n";
+	}
 }
 close OUTFH;
 
