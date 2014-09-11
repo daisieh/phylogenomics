@@ -144,9 +144,7 @@ foreach my $sample (@samples) {
 	my $seq = "";
 	my @positions = @{$sample_positions{$sample}};
 	for (my $i=0;$i<@positions; $i++) {
-		my $ptr = @positions[$i];
-		my @this_pos = @$ptr;
-		my $pos = $i+1;
+		my @this_pos = @{@positions[$i]};
 		my ($depth, $ref, $alt, $pl) = @this_pos;
 		if ($depth > $cov_thresh) {
 			if ($pl =~ /,/) {
@@ -154,8 +152,7 @@ foreach my $sample (@samples) {
 				my $alleles = "$ref$alt";
 				$alleles =~ s/,//g;
 				my @genotypes = @{get_ordered_genotypes($alleles)};
-				my $j = $i+1;
-				print "$sample\t$j\t$depth\t".join(",",@pls)."\n";
+				print "$sample\t".($i+1)."\t$depth\t".join(",",@pls)."\t".join(",",@genotypes)."\n";
 				$alt = "N";
 				for (my $g=0;$g<@pls;$g++) {
 					if ($pls[$g] <= $pl_thresh) {
