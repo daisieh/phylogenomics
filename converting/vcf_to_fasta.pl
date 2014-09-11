@@ -152,6 +152,7 @@ foreach my $sample (@samples) {
 			if ($pl =~ /,/) {
 				my @pls = split(/,/, $pl);
 				my $alleles = "$ref$alt";
+				$alleles =~ s/,//g;
 				my @genotypes = @{get_ordered_genotypes($alleles)};
 				my $j = $i+1;
 				print "$sample\t$j\t$depth\t".join(",",@pls)."\n";
