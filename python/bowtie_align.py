@@ -38,7 +38,7 @@ def runscript(sample_string):
         runcommand(cmd)
         cmd = "bowtie2-build %s %s.index" % (refname,refname)
         runcommand(cmd)
-        cmd = "bowtie2 -p 8 --no-unal --no-discordant --no-mixed --no-contain --no-unal -x %s.index -1 %s.1.fastq -2 %s.2.fastq -S %s.sam" % (sample, sample, sample, sample)
+        cmd = "bowtie2 -p 8 --no-unal --no-discordant --no-mixed --no-contain --no-unal -x %s.index -1 %s.1.fastq -2 %s.2.fastq -S %s.sam" % (refname, sample, sample, sample)
         runcommand(cmd)
         cmd = "samtools view -S -b -u -o %s.bam %s.sam" % (sample,sample)
         runcommand(cmd)
