@@ -16,11 +16,7 @@ def stop_err( msg ):
 
 def runscript(sample_string):
     host,sample,location = sample_string.split()
-    cmd = "samtools mpileup -B -E -C50 -f %s -u %s.sorted.bam > %s.bcf" % (refname, sample, sample)
-    os.system(cmd)
-    cmd = "/usr/local/samtools/bcftools/bcftools view -c -I %s.bcf > %s.vcf" % (sample, sample)
-    os.system(cmd)
-    cmd = "rm %s.bcf" % (sample)
+    cmd = "$REPOS/phylogenomics/converting/bam_to_vcf.sh %s %s" % (sample, refname)
     os.system(cmd)
 
 def __main__():
@@ -41,6 +37,8 @@ def __main__():
 
     try:
         open(options.ref, "r").close()
+        cmd = "samtools faidx %s" % (refname)
+        runcommand(cmd)
     except TypeError, e:
         stop_err("Reference file not found:\n" + str(e))
 
