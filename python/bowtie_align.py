@@ -79,8 +79,6 @@ logfile = open (str(options.input+".log"), "w")
 
 try:
     open(options.ref, "r").close()
-    cmd = "samtools faidx %s" % (refname)
-    runcommand(cmd)
 except IOError as e:
     sys.exit("Reference file " + options.ref + " not found\n")
 
