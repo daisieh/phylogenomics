@@ -54,7 +54,7 @@ def runscript(sample_string):
         # sort pairs
         cmd = "samtools sort %s.bam %s.sorted" % (sample,sample)
         runcommand(cmd)
-        cmd = "rm %s.bam" % (sample)
+        cmd = "rm %s.bam %s.fastq %s.*.fastq" % (sample,sample,sample)
         runcommand(cmd)
 
 
