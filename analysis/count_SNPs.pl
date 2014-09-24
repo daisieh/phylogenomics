@@ -125,7 +125,7 @@ if ($samplefile =~ /recode\.vcf/) {
 						$total_count++;
 					}
 				}
-				if ($pl eq "255,255,0") {
+				if ($pl =~ /\d+,\d+,0/) {
 					if ($alt ne ".") {
 						$total_snps++;
 					}
