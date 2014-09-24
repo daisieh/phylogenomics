@@ -6,7 +6,7 @@ use Pod::Usage;
 
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions;
+use Subfunctions qw(combine_files);
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -15,10 +15,22 @@ if (@ARGV == 0) {
 my @files = ();
 my ($has_names, $has_header, $out_file) = 0;
 
-GetOptions ('files|input=s{2,}' => \@files,
+GetOptions ('files|input=s{1,}' => \@files,
             'names!' => \$has_names,
             'header!' => \$has_header,
             'outputfile:s' => \$out_file) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
+
+
+if (@files == 1) {
+	my $file = pop @files;
+	if (-e $file) {
+		open FH, "<", $file;
+		foreach my $line (<FH>) {
+			chomp $line;
+			push @files, $line;
+		}
+	}
+}
 
 my $result = combine_files (\@files, $has_names, $has_header, $out_file);
 
