@@ -116,17 +116,15 @@ if ($samplefile =~ /recode\.vcf/) {
 				$i++;
 			}
 			if ($line !~ /INDEL/) { # we don't handle indels; drop these lines.
-				$info =~ /DP=(.*?);/;
+				$info =~ /DP=(\d+);/;
 				my $depth = $1;
 				chomp $pl;
 				$total_read++;
-				if ($info =~ /DP=(\d+);/) {
-					if ($1 >= $cov_thresh) {
-						$total_count++;
-					}
+				if ($depth >= $cov_thresh) {
+					$total_count++;
 				}
-				if ($pl =~ /\d+,\d+,0/) {
-					if ($alt ne ".") {
+				if ($pl =~ /\d+,\d+,0$/) {
+					if (($alt ne ".") && ($ref ne "N") && ($depth >= $cov_thresh)) {
 						$total_snps++;
 					}
 				}
