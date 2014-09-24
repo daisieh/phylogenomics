@@ -18,11 +18,13 @@ my $help = 0;
 my $cov_thresh = 5;
 my $pl_thresh = 0;
 my $outfile = "";
+my $indels = 0;
 
 GetOptions ('samples|input|vcf=s' => \$samplefile,
             'outputfile=s' => \$outfile,
             'threshold|pl=i' => \$pl_thresh,
             'minimum|coverage|reads=i' => \$cov_thresh,
+            'indels' => \$indels,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -104,6 +106,7 @@ if ($samplefile =~ /recode\.vcf/) {
 		}
 
 		my @positions = ();
+		my @indels = ();
 		#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	GRA10_DNA341.bam
 		#chloroplast	1	.	A	.	84	.	DP=18;AF1=7.924e-12;CI95=1.5,0;DP4=18,0,0,0;MQ=59	PL	0
 		my $i=1;
@@ -111,53 +114,114 @@ if ($samplefile =~ /recode\.vcf/) {
 			my @this_pos = ();
 			my ($chrom,$pos,undef,$ref,$alt,$qual,$filter,$info,undef,$pl) = split (/\t/,$line);
 			while ($i < $pos) {
-				push @this_pos, @AMBIGUOUS_POS;
+				push @this_pos, $i, $qual, @AMBIGUOUS_POS;
 				push @positions, \@this_pos;
 				$i++;
 				@this_pos = ();
 			}
 			if ($line =~ /INDEL/) { # we don't handle indels; drop these lines.
-				push @this_pos, @AMBIGUOUS_POS;
-				push @positions, \@this_pos;
+				push @indels, $line;
 			} else {
 				$info =~ /DP=(.*?);/;
 				my $depth = $1;
-				$info =~ /.*?DP4=(\d+?),(\d+?),(\d+?),(\d+?);/;
 				chomp $pl;
-				push @this_pos, ($depth,$ref,$alt,$pl);
+				$ref =~ s/[Nn]/-/;
+				push @this_pos, ($pos,$qual,$depth,$ref,$alt,$pl);
 				push @positions, \@this_pos;
+				$i++;
 			}
 			$line = readline VCF_FH;
-			$i++;
 		}
 
 		close VCF_FH;
 
 		print "processed sample $name with length " . @positions . "\n";
 		$sample_positions{$name} = \@positions;
+		$sample_positions{$name."_indels"} = \@indels;
 		push @samples, $name;
 	}
 }
-
 my $result_str = "";
 foreach my $sample (@samples) {
 	my $seq = "";
 	my @positions = @{$sample_positions{$sample}};
+	my @indels = @{$sample_positions{$name."_indels"}};
+	if ($indels == 1) {
+		foreach my $line (@indels) {
+	# FRE13_HapA.plastome.3.aln.fasta	2	.	TGGG	TGGTTCATGGG	143	.	INDEL;DP=21;VDB=0.0000;AF1=1;AC1=2;DP4=0,0,11,0;MQ=36;FQ=-67.5	PL	184,33,0
+			my ($chrom,$pos,undef,$ref,$alt,$qual,$filter,$info,undef,$pl) = split (/\t/,$line);
+			chomp $pl;
+			my @pls = split(/,/, $pl);
+			my @alts = split(/,/, $alt);
+			my $alleles = "0";
+			for (my $i=1;$i<=@alts;$i++) {
+				$alleles = $alleles.$i;
+			}
+			unshift @alts, $ref;
+			my @genotypes = @{get_ordered_genotypes($alleles)};
+			my $genotype = "";
+			for (my $i=0;$i<@pls;$i++) {
+				if ($pls[$i] == 0) {
+					$genotype = $genotypes[$i];
+					$genotype =~ /(.)(.)/;
+					if ($1 != $2) {
+						$genotype = "";
+					} else {
+						$genotype = $alts[$genotype];
+					}
+				}
+			}
+
+			my ($snppos, $snpqual, $depth, $snpref, $snpalt, $snppl) = @{@positions[$pos-1]};
+			print "$pos\t$depth\t$qual\t$snpqual\tindels: $genotype\n";
+			if ($snppl =~ /0/) {
+				$genotype = $snpref;
+			} else {
+				$genotype = "N";
+			}
+			my @pls = split(/,/, $snppl);
+			my $alleles = "$ref$alt";
+			$alleles =~ s/,//g;
+			my @genotypes = @{get_ordered_genotypes($alleles)};
+			my @newpos = ($pos, $qual, $depth, $genotype, "N", 0);
+			@positions[$pos-1] = \@newpos;
+		}
+	}
 	for (my $i=0;$i<@positions; $i++) {
-		my @this_pos = @{@positions[$i]};
-		my ($depth, $ref, $alt, $pl) = @this_pos;
+		my ($pos, $qual, $depth, $ref, $alt, $pl) = @{@positions[$i]};
 		if ($depth > $cov_thresh) {
 			if ($pl =~ /,/) {
 				my @pls = split(/,/, $pl);
 				my $alleles = "$ref$alt";
 				$alleles =~ s/,//g;
+				my @alts = ($ref,$alt);
 				my @genotypes = @{get_ordered_genotypes($alleles)};
-				print "$sample\t".($i+1)."\t$depth\t".join(",",@pls)."\t".join(",",@genotypes)."\n";
-				$alt = "N";
-				for (my $g=0;$g<@pls;$g++) {
-					if ($pls[$g] <= $pl_thresh) {
-						$alt = get_iupac_code($genotypes[$g]);
+				my $genotype = "";
+				for (my $i=0;$i<@pls;$i++) {
+					if ($pls[$i] == 0) {
+						$genotypes[$i] =~ /(.)(.)/;
+						if ($1 eq $2) {
+							$genotype = $1;
+						} else {
+							$genotype = $genotypes[$i];
+						}
 					}
+				}
+
+# 				print "$pos\t$depth\t$qual\t$genotype\n";
+				$alt = "N";
+				my $genotype = "";
+				my @sort_pls = sort @pls;
+				my $smallest_pl = shift @sort_pls;
+				for (my $g=0;$g<@pls;$g++) {
+					if ($pls[$g] == $smallest_pl) {
+						$genotype = $genotypes[$g];
+						$genotype =~ s/-//g;
+						$alt = get_iupac_code($genotype);
+					}
+				}
+				if ($alt !~ /[AGCT]/) {
+					print "$pos\t$depth\t$qual\t$genotype = $alt\n";
 				}
 				$seq .= $alt;
 			} elsif ($pl <= $pl_thresh) {
@@ -166,11 +230,15 @@ foreach my $sample (@samples) {
 				$seq .= "N";
 			}
 		} else {
-			$seq .= "n";
+			print "$pos has depth $depth\n";
+			if ($indels != 1) {
+				$seq .= "n";
+			}
 		}
 	}
 
 	$result_str .= ">$sample\n$seq\n";
+
 }
 
 if (@samples == 1) {
@@ -186,6 +254,7 @@ if ($outfile eq "") {
 	print FH "$result_str";
 	close FH;
 }
+
 
 
 __END__
