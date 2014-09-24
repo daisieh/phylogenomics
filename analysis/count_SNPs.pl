@@ -29,7 +29,7 @@ if ($help) {
     pod2usage(-verbose => 1);
 }
 
-print $runline;
+# print $runline;
 
 my $name;
 my @samples = ();
@@ -120,8 +120,12 @@ if ($samplefile =~ /recode\.vcf/) {
 				my $depth = $1;
 				chomp $pl;
 				$total_read++;
-				if ($pl eq "0") {
-					$total_count++;
+				if ($info =~ /DP=(\d+);/) {
+					if ($1 >= $cov_thresh) {
+						$total_count++;
+					}
+				}
+				if ($pl eq "255,255,0") {
 					if ($alt ne ".") {
 						$total_snps++;
 					}
