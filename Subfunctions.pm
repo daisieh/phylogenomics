@@ -272,23 +272,98 @@ sub disambiguate_str {
 	return "$charstr";
 }
 
+# returns the consensus sequence as a string: wraps the recursive implementation
 sub consensus_str {
-	my $taxarray = shift;
+	my $seq_array = shift;
+	pad_seq_ends ($seq_array,"-");
 
-	pad_seq_ends($taxarray, "-");
-	my $result = "";
-	while (@$taxarray[0] ne "") {
-		my $currchars = "";
-		foreach my $seq (@$taxarray) {
-			if ($seq =~ m/(.)(.*)$/) {
-				$currchars .= $1;
-				$seq = $2;
-			}
-		}
-		$currchars = disambiguate_str($currchars);
-		$result .= get_iupac_code($currchars);
+	return shift @{consensus($seq_array)};
+}
+
+# recursive implementation: returns an array with one element, the final consensus sequence.
+sub consensus {
+	my $seq_array = shift;
+
+	# if we didn't get an array, return 0. (quick exit)
+	if (($seq_array == 0) || ($seq_array == ())) {
+		debug ("\n");
+		return 0;
 	}
-	return $result;
+
+	my $seqlen = length (@$seq_array[0]);
+
+	# if we did get an array, but the length of the strings is 0, then return 0. (quick exit)
+	if ($seqlen == 0) {
+		debug ("empty\n");
+		return 0;
+	}
+
+	# remove any blank sequences:
+	my @new_seqs = ();
+	while (@$seq_array > 0) {
+		my $seq = shift @$seq_array;
+		if ($seq !~ /^-+$/) {
+			push @new_seqs, $seq;
+		} else {
+			debug ("remove empty seq\n");
+		}
+	}
+	$seq_array = \@new_seqs;
+
+	# check to see if all sequences are identical:
+	my $identical = 1;
+	my $curr_seq = @$seq_array[0];
+	foreach my $seq (@$seq_array) {
+		if ($seq ne $curr_seq) {
+			$identical = 0;
+		}
+	}
+
+
+	if ($identical) {
+		debug ("IDENTICAL\n");
+		my @result = ();
+		push @result, $curr_seq;
+		return \@result;
+	} elsif ($seqlen == 1) {
+		# base case: single character; get consensus.
+		my @result = ();
+		push @result, get_iupac_code($seq_array);
+		debug ("CONSENSUS of " . join(",",@$seq_array) . " is " . $result[0] . "\n");
+		return \@result;
+	} else {
+		# split this block into two parts: recurse on the first part, then the second part
+		# then merge those two finished blocks.
+		my $numcols = int ($seqlen / 2);
+
+		# perl regex limit:
+		if ($numcols > 32766) {
+			debug (" (regex max) ");
+			$numcols = 32766;
+		}
+
+		debug ("TWO BLOCKS of $numcols, ".($seqlen-$numcols)."\n");
+		my $front_block = ();
+		foreach my $seq (@$seq_array) {
+			$seq =~ /(.{$numcols})(.*)/;
+			push @$front_block, $1;
+			$seq = $2;
+		}
+		$front_block = consensus ($front_block);
+		$seq_array = consensus ($seq_array);
+
+		if ($front_block == 0) {
+			return $seq_array;
+		}
+		if ($seq_array == 0) {
+			return $front_block;
+		}
+
+		for (my $i=0; $i< @$seq_array; $i++) {
+			@$seq_array[$i] = @$front_block[$i] . @$seq_array[$i];
+		}
+	}
+	return $seq_array;
 }
 
 
@@ -346,8 +421,6 @@ sub get_iupac_code {
 	# regularize the input first, so that it's an alphabetical, no-dups, sorted uc string
 	my $charstr = get_allele_str ($arg);
 	$charstr =~ tr/A-Z//s;
-
-
 	if (length($charstr) == 1) {
 		return $charstr;
 	}
