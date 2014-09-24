@@ -137,7 +137,8 @@ if ($samplefile =~ /recode\.vcf/) {
 
 		close VCF_FH;
 
-		print "sample $name has $total_snps SNPs of $total_count bp, total bp read $total_read / $i\n";
+# 		print "sample $name has $total_snps SNPs of $total_count bp, total bp read $total_read / $i\n";
+		print "$name\t$total_snps\n";
 	}
 }
 
