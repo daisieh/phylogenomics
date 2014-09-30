@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile set_sequence get_sequence);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile set_sequence get_sequence get_name);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -30,6 +30,7 @@ my $in_sequence = 0;
 my $feat_desc_string = "";
 my $sequence = "";
 my $curr_gene = {};
+my $gb_name = "";
 
 sub set_sequence {
 	$sequence = shift;
@@ -39,13 +40,18 @@ sub get_sequence {
 	return $sequence;
 }
 
+sub get_name {
+	return $gb_name;
+}
+
+
 sub parse_genbank {
 	my $gbfile = shift;
 
 	open FH, "<", $gbfile;
 
 	my @gene_array = ();
-	my $name = "";
+# 	my $name = "";
 	$line = readline FH;
 	while (defined $line) {
 		if ($line =~ /^\s+$/) {
@@ -54,7 +60,7 @@ sub parse_genbank {
 			last;
 		} elsif ($line =~ /^\S/) { # we're looking at a new section
 			if ($line =~ /DEFINITION\s+(.*)$/) { # if line has the definition, keep this.
-				$name = $1;
+				$gb_name = $1;
 			} elsif ($line =~ /FEATURES/) { # if we hit a line that says FEATURES, we're starting the features.
 				$in_features = 1;
 			} elsif ($line =~ /ORIGIN/) { # if we hit a line that says ORIGIN, we have sequence
