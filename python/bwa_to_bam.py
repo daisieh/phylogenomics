@@ -33,19 +33,21 @@ def runscript(sample_string):
         smallbamfile.close()
         p2.terminate()
         runbwa(smallbamfile, sample)
+        cmd = "rm %s.bam" % (sample)
+        runcommand(cmd)
         return
     else:
         runbwa(location,sample)
 
 def runbwa(bamfile,sample):
-        cmd = "bwa aln -b1 %s %s > %s.1.sai" % (refname,smallbamfilename,sample)
+        cmd = "bwa aln -b1 %s %s > %s.1.sai" % (refname,bamfile,sample)
         print >>sys.stdout, cmd
         runcommand(cmd)
-        cmd = "bwa aln -b2 %s %s > %s.2.sai" % (refname,smallbamfilename,sample)
+        cmd = "bwa aln -b2 %s %s > %s.2.sai" % (refname,bamfile,sample)
         runcommand(cmd)
-        cmd = "bwa sampe %s %s.1.sai %s.2.sai %s.small.bam %s.small.bam > %s.sam" % (refname,sample,sample,sample,sample,sample)
+        cmd = "bwa sampe %s %s.1.sai %s.2.sai %s %s > %s.sam" % (refname,sample,sample,bamfile,bamfile,sample)
         runcommand(cmd)
-        cmd = "rm %s.1.sai; rm %s.2.sai; rm %s.small.bam" % (sample,sample,sample)
+        cmd = "rm %s.1.sai; rm %s.2.sai;" % (sample,sample,sample)
         runcommand(cmd)
         cmd = "samtools view -S -b -u -o %s.bam %s.sam" % (sample,sample)
         runcommand(cmd)
@@ -58,8 +60,6 @@ def runbwa(bamfile,sample):
         runcommand(cmd)
         # sort pairs
         cmd = "samtools sort %s.bam %s.sorted" % (sample,sample)
-        runcommand(cmd)
-        cmd = "rm %s.bam" % (sample)
         runcommand(cmd)
 
 
