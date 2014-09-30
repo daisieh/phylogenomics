@@ -42,7 +42,6 @@ def __main__():
     except TypeError, e:
         stop_err("Reference file not found:\n" + str(e))
 
-    print ("options.ref\n")
     assign_ref(options.ref)
 
     pool = Pool(processes=int(options.processes))
