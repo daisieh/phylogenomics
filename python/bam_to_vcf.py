@@ -38,7 +38,7 @@ def __main__():
     try:
         open(options.ref, "r").close()
         cmd = "samtools faidx %s" % (refname)
-        runcommand(cmd)
+        os.system(cmd)
     except TypeError, e:
         stop_err("Reference file not found:\n" + str(e))
 
