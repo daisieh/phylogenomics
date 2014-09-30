@@ -15,7 +15,6 @@ def runcommand(cmd):
         sys.exit ("Execution of "+cmd+" failed: "+str(e))
 
 
-
 def runscript(sample_string):
     if sample_string.strip() == "":
         return
@@ -23,6 +22,7 @@ def runscript(sample_string):
         print >>sys.stdout, "sample", sample_string
         host,sample,location = sample_string.split()
 
+    if lines != 0:
         p1 = Popen(["samtools", "view", location], stdout=PIPE, stderr=logfile)
         p2 = Popen(["head", "-n", str(lines)], stdin=p1.stdout, stdout=PIPE)
 
@@ -32,6 +32,12 @@ def runscript(sample_string):
         p3.communicate()
         smallbamfile.close()
         p2.terminate()
+        runbwa(smallbamfile, sample)
+        return
+    else:
+        runbwa(location,sample)
+
+def runbwa(bamfile,sample):
         cmd = "bwa aln -b1 %s %s > %s.1.sai" % (refname,smallbamfilename,sample)
         print >>sys.stdout, cmd
         runcommand(cmd)
