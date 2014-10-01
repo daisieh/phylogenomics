@@ -136,9 +136,11 @@ sub check_block {
 		$seq_array = check_block ($seq_array, $max_col_ambigs);
 
 		if ($front_block == 0) {
+			debug ("front block 0\n");
 			return $seq_array;
 		}
 		if ($seq_array == 0) {
+			debug ("seq_array 0\n");
 			return $front_block;
 		}
 
@@ -146,6 +148,7 @@ sub check_block {
 			@$seq_array[$i] = @$front_block[$i] . @$seq_array[$i];
 		}
 	}
+	debug ("done\n");
 	return $seq_array;
 }
 
