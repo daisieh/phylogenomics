@@ -23,6 +23,7 @@ def runscript(sample_string):
         host,sample,location = sample_string.split()
 
     if lines != 0:
+        print >>sys.stdout, "subsampling ", str(lines), " lines"
         p1 = Popen(["samtools", "view", location], stdout=PIPE, stderr=logfile)
         p2 = Popen(["head", "-n", str(lines)], stdin=p1.stdout, stdout=PIPE)
 
@@ -37,6 +38,7 @@ def runscript(sample_string):
         runcommand(cmd)
         return
     else:
+        print >>sys.stdout, "no subsampling"
         runbwa(location,sample)
 
 def runbwa(bamfile,sample):
