@@ -33,7 +33,7 @@ def runscript(sample_string):
         p3.communicate()
         smallbamfile.close()
         p2.terminate()
-        runbwa(smallbamfile, sample)
+        runbwa(smallbamfilename, sample)
         cmd = "rm %s.bam" % (sample)
         runcommand(cmd)
         return
