@@ -49,7 +49,7 @@ def runbwa(bamfile,sample):
         runcommand(cmd)
         cmd = "bwa sampe %s %s.1.sai %s.2.sai %s %s > %s.sam" % (refname,sample,sample,bamfile,bamfile,sample)
         runcommand(cmd)
-        cmd = "rm %s.1.sai; rm %s.2.sai;" % (sample,sample,sample)
+        cmd = "rm %s.1.sai; rm %s.2.sai;" % (sample,sample)
         runcommand(cmd)
         cmd = "samtools view -S -b -u -o %s.bam %s.sam" % (sample,sample)
         runcommand(cmd)
