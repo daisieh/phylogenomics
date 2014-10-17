@@ -58,6 +58,8 @@ def runbwa(bamfile,sample):
         runcommand(cmd)
         cmd = "rm %s.sam" % (sample)
         runcommand(cmd)
+        cmd = "rm %s" % (bamfile)
+        runcommand(cmd)
         cmd = "mv %s.reduced.bam %s.bam" % (sample,sample)
         runcommand(cmd)
         # sort pairs
