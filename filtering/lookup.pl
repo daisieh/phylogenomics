@@ -44,3 +44,27 @@ close FH;
 foreach my $item (@items_to_find) {
 	print $dictionary->{$item};
 }
+
+
+__END__
+
+=head1 NAME
+
+lookup
+
+=head1 SYNOPSIS
+
+lookup.pl -lookup lookupfile -subject subjectfile -match matchcol
+
+=head1 OPTIONS
+
+  -lookup:          list of items to find.
+  -subject:         tab-delimited file to find items in.
+  -match:           column number of the subject file that is to be matched (1-indexed)
+
+=head1 DESCRIPTION
+
+Return only the requested items from a subject tab-delimited table file.
+
+=cut
+
