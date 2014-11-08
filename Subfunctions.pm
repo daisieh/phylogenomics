@@ -1,5 +1,6 @@
 package Subfunctions;
 use strict;
+use Data::Dumper;
 
 
 BEGIN {
@@ -86,15 +87,75 @@ sub combine_files {
     my $result = "";
     my @labels = ();
     my $num_entries = scalar @{@inputs[0]};
+    my $inputhash = {};
+    for (my $i = 0; $i < @files; $i++) {
+        if (scalar @{@inputs[$i]} != $num_entries) {
+            die "Error: files have different numbers of inputs. " . scalar @{@inputs[$i]} . "!=" . $num_entries;
+        }
+        if ($has_header) {
+            my @heads = split /\t/, (@{@inputs[$i]}[0]);
+            @{@inputs[$i]}[0] = join ("\t", @heads);
+        }
+    }
+	if ($has_names) {
+		my $hashref = {};
+		for (my $j=0; $j<$inputs[0]; $j++) {
+			print ">$inputs[0]\n";
+# 			$hashref->{$inputs[0]
+		}
+	}
+
+    for (my $j = 0; $j < $num_entries; $j++) {
+        if ($has_names) {
+            my $entry = @{@inputs[0]}[$j];
+            $entry =~ /(.+?)\t(.*)/;
+            $result .= "$1\t";
+        }
+        for (my $i = 0; $i < @files; $i++) {
+            my $entry = @{@inputs[$i]}[$j];
+            $entry =~ s/\n//g;
+            if ($has_names) {
+                $entry =~ /(.+?)\t(.*)/;
+                $entry = $2;
+            }
+            $result .= $entry . "\t";
+        }
+        if ($has_header && $has_names && ($j==0)) {
+            #clean up the header row
+            $result =~ s/^.*?\|//;
+        }
+        $result .= "\n";
+    }
+    return $result;
+}
+
+sub combine_files_old {
+    my $fileptr = shift;
+    my $has_names = shift;
+    my $has_header = shift;
+    my $out_file = shift;
+
+    my @files = @$fileptr;
+
+    if (@files < 1) { die "no files provided."; }
+
+    my @inputs;
+    for (my $i=0; $i<@files; $i++) {
+        open FH, "<", @files[$i] or die "can't open @files[$i]\n";
+        my @data = <FH>;
+        close FH;
+        push @inputs, \@data;
+    }
+
+    my $result = "";
+    my @labels = ();
+    my $num_entries = scalar @{@inputs[0]};
     for (my $i = 0; $i < @files; $i++) {
         if (scalar @{@inputs[$i]} != $num_entries) {
             die "Error: files have different numbers of inputs." . scalar @{@inputs[$i]};
         }
         if ($has_header) {
             my @heads = split /\t/, (@{@inputs[$i]}[0]);
-#             foreach $head (@heads) {
-#                 $head = @files[$i] . "|" . $head;
-#             }
             @{@inputs[$i]}[0] = join ("\t", @heads);
         }
     }
@@ -497,7 +558,11 @@ sub parse_fasta {
 	while (defined $input) {
 		if ($input =~ /^>(.+?)\s*$/) {
 			$taxonlabel = $1;
-			push @taxanames, $taxonlabel;
+			if (exists $taxa->{$taxonlabel}) {
+				$taxa->{$taxonlabel} = "";
+			} else {
+				push @taxanames, $taxonlabel;
+			}
 			if ($length > 0) {
 				# we are at the next taxon; push the last one onto the taxon array.
 				$taxa->{"length"} = $length;
