@@ -48,7 +48,7 @@ print "found the RAxML run\n";
 
 open FH, "<", "RAxML_info.$inputname";
 $raxml_data->{"params"} = "";
-# $raxml_data->{"input"} = "";
+$raxml_data->{"input"} = "";
 my $line = readline FH;
 while ($line) {
 	if ($line =~ /^\s+$/) {
@@ -75,9 +75,9 @@ $raxml_data->{"characters"} = $taxa;
 
 ##### write in the best tree
 open FH, "<", "RAxML_bipartitions.$inputname";
-$raxml_data->{"besttree"} = "";
+$raxml_data->{"trees"}->{"besttree"} = "";
 foreach my $line (<FH>) {
-	$raxml_data->{"besttree"} .= $line;
+	$raxml_data->{"trees"}->{"besttree"} .= $line;
 }
 close FH;
 
@@ -87,14 +87,14 @@ open OUT_FH, ">", $outfile;
 print OUT_FH "#NEXUS\n\n";
 
 # print OUT_FH  write_nexus_character_block ($raxml_data->{"characters"}, $raxml_data->{"taxa"});
-
+# print OUT_FH write_nexus_taxa_block ($raxml_data->{"taxa"});
 
 my @lines = split(/\n/,$raxml_data->{"params"});
 foreach my $line (@lines) {
 	print OUT_FH "[ ".$line." ]\n";
 }
 
-print OUT_FH write_nexus_trees_block ($raxml_data->{"besttree"}, $raxml_data->{"taxa"});
+print OUT_FH write_nexus_trees_block ($raxml_data->{"trees"}, $raxml_data->{"taxa"});
 
 close OUT_FH;
 
