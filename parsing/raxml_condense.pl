@@ -106,13 +106,12 @@ lookup
 
 =head1 SYNOPSIS
 
-lookup.pl -lookup lookupfile -subject subjectfile -match matchcol
+raxml_condense.pl -input raxml_input -out nexus_output
 
 =head1 OPTIONS
 
-  -lookup:          list of items to find.
-  -subject:         tab-delimited file to find items in.
-  -match:           column number of the subject file that is to be matched (1-indexed)
+  -input:          list of items to find.
+  -output:         tab-delimited file to find items in.
 
 =head1 DESCRIPTION
 
