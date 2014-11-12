@@ -161,13 +161,6 @@ sub parse_nexus {
 
 =head1
 
-B<Arbitrary collection of helper subfunctions that don't have another home.>
-
-=cut
-
-
-=head1
-
 B<String $nexus_str convert_aln_to_nexus ( SimpleAlign $aln )>
 
 Takes a taxon hash (and optional taxon array) and returns a NEXUS-formatted string representing the alignment.
@@ -214,7 +207,7 @@ sub write_nexus_taxa_block {
 	my $taxa_names = shift;
 
 	my $result = "begin TAXA;\n";
-	$result .= "Dimensions ntax=" . @$taxa_names . "\n";
+	$result .= "Dimensions ntax=" . @$taxa_names . ";\n";
 	my $taxlabels = "";
 	for (my $i=1; $i<= @$taxa_names; $i++) {
 		$result .= "[$i " . @$taxa_names[$i-1] . "]\n";
@@ -225,18 +218,31 @@ sub write_nexus_taxa_block {
 }
 
 sub write_nexus_trees_block {
-	my $newick_string = shift;
+	my $trees = shift;
 	my $taxa_names = shift;
 	my $result = "begin TREES;\n";
-	$result .= "tree besttree = ";
-	$result .= "$newick_string";
+
+	my $treeblock = "";
+	foreach my $k (keys %$trees) {
+		$treeblock .= "Tree $k = $trees->{$k}";
+		if ($treeblock !~ /;$/) {
+			$treeblock .= ";";
+		}
+		$treeblock .= "\n";
+	}
+
+	my $translate = "";
 	if ($taxa_names) {
+		my @trans_arr = ();
 		for (my $i=1; $i<= @$taxa_names; $i++) {
 			my $taxon = @$taxa_names[$i-1];
-			$result =~ s/$taxon/$i/g;
+			$treeblock =~ s/$taxon/$i/g;
+			push @trans_arr, "$i $taxon";
 		}
+		$translate = "Translate\n" . join (",\n", @trans_arr) . ";\n";
 	}
-	$result .= ";\nEnd;\n\n";
+	$result .= "$translate$treeblock";
+	$result .= "\nEnd;\n\n";
 	return $result;
 }
 
