@@ -12,7 +12,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_nexus meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_phylip meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str);
 }
 
 my $debug = 0;
@@ -628,143 +628,53 @@ sub pad_seq_ends {
 
 =head1
 
-B<(\%taxa, \@taxanames) parse_nexus ( Filehandle $inputfile )>
+B<(\%taxa, \@taxanames) parse_phylip ( String $inputfile )>
 
-Given a NEXUS file as input, returns a hash containing all the sequences, keyed by the
+Given a phylip file as input, returns a hash containing all the sequences, keyed by the
 values of the taxanames array.
 
-$inputfile:   NEXUS file to parse.
+$inputfile:   phylip file to parse.
 
 =cut
 
-
-
-sub parse_nexus {
+sub parse_phylip {
 	my $inputfile = shift;
 
 	my $taxa = {};
 	my @taxonlabels = ();
-	my $gapchar = "-";
-	my $interleave = 0;
-	my $nchar = 0;
-	my $ntax = 0;
 
-	open (fileIN, "$inputfile") or die "no file named $inputfile";
-	my @inputs = <fileIN>;
+	open FH, "<", $inputfile;
 
-	my $input = "";
-	if ($inputs[1] eq "") {
-		$input = $inputs[0];
-		$input =~ s/\r/\n/gs;
-	} else {
-		foreach my $line (@inputs) {
-			$input .= "$line";
+	my $line = readline FH;
+	while ($line =~ /^\s*$/) {
+		$line = readline FH;
+	}
+	$line =~ /\s*(\d+)\s+(\d+)/;
+	my $num_taxa = $1;
+	my $num_chars = $2;
+	my $count = 0;
+	while ($line = readline FH) {
+		if ($line =~ /^\s*$/) {
+			next;
 		}
-	}
-	close (fileIN);
 
-	#remove comment blocks
-	$input =~ s/\[.*?\]//sg;
-
-	#find blocks:
-	my $blocks = {};
-	while ($input =~ /Begin (.+?);(.+?)End;/isg) {
-		my $blockname = uc($1);
-		my $block = $2;
-		$blocks->{$blockname} = $block;
-	}
-
-	my @blocks_to_process = qw (TAXA CHARACTERS DATA);
-	foreach my $blockname (@blocks_to_process) {
-		if (exists $blocks->{$blockname}) {
-			my $statements = {};
-			while ($blocks->{$blockname} =~ /\s*(.+?)\s+(.+?);/isg) {
-				my $statementname = uc($1);
-				my $statement = $2;
-				$statements->{$statementname} = $statement;
-			}
-			$blocks->{$blockname} = $statements;
-		}
-	}
-
-	# look for TAXA block:
-	if (exists $blocks->{"TAXA"}) {
-		@taxonlabels = split (/\s+/, $blocks->{"TAXA"}->{"TAXLABELS"});
-	}
-
-	# look for CHARACTERS or DATA block:
-	my $datablock;
-	if (exists $blocks->{"CHARACTERS"}) {
-		$datablock = $blocks->{"CHARACTERS"};
-	} elsif (exists $blocks->{"DATA"}) {
-		$datablock = $blocks->{"DATA"};
-	}
-
-	if ($datablock) {
-		$ntax = scalar @taxonlabels;
-		if (exists $datablock->{"FORMAT"}) {
-			my @params = ();
-			my $paramline = "$datablock->{'FORMAT'}";
-			while ($paramline =~ /(.+?)\s*=\s*(\S+)\s*(.*)/) {
-				push @params, (uc($1)."=".uc($2));
-				$paramline = $3;
-			}
-			foreach my $param (@params) {
-				if ($param =~ /GAP=(.*)/) {
-					$gapchar = $1;
-				} elsif ($param =~ /INTERLEAVE=(.*)/) {
-					if ($1 =~ /YES/) {
-						$interleave = 1;
-					}
-				}
-			}
-		}
-		if (exists $datablock->{"DIMENSIONS"}) {
-			my @params = ();
-			my $paramline = "$datablock->{'DIMENSIONS'}";
-			while ($paramline =~ /(.+?)\s*=\s*(\S+)\s*(.*)/) {
-				push @params, (uc($1)."=".uc($2));
-				$paramline = $3;
-			}
-			foreach my $param (@params) {
-				if ($param =~ /NTAX=(.*)/) {
-					if (($ntax > 0) && ($1 != $ntax)) {
-						die "ntax in dimensions does not match ntax in taxa block.\n";
-					}
-					$ntax = $1;
-				} elsif ($param =~ /NCHAR=(.*)/) {
-					$nchar = $1;
-				}
-			}
-		}
-		if (exists $datablock->{"MATRIX"}) {
-			my $matrix = "$datablock->{'MATRIX'}";
-			my @lines = split (/\n/, $matrix);
-			foreach my $line (@lines) {
-				if ($line =~ /\s*(\S+)\s+(\S+)/) {
-					my $currtaxon = $1;
-					my $currdata = $2;
-					$currtaxon =~ s/\'//g;
-					$currtaxon =~ s/\"//g;
-					$currdata =~ s/$gapchar/-/g;
-					if (exists $taxa->{$currtaxon}) {
-						$taxa->{$currtaxon} = $taxa->{$currtaxon} . $currdata;
-					} else {
-						$taxa->{$currtaxon} = $currdata;
-					}
-				}
-			}
-			foreach my $taxon (keys %$taxa) {
-				if (length($taxa->{$taxon}) != $nchar) {
-					die "Characters specified for $taxon do not match $nchar.";
-				}
-
+		# if we haven't seen all of the taxa labels
+		if (@taxonlabels < $num_taxa) {
+			$line =~ /^(.+?)\s+(.*)$/;
+			my $taxon = $1;
+			my $chars = $2;
+			$chars =~ s/\s//g;
+			$taxa->{$taxon} = $chars;
+			push @taxonlabels, $taxon;
+		} else {
+			$line =~ s/\s//g;
+			$taxa->{$taxonlabels[$count++]} .= $line;
+			if ($count == $num_taxa) {
+				$count = 0;
 			}
 		}
 	}
-
-	$taxa->{"length"} = $nchar;
-
+	close FH;
 	return $taxa, \@taxonlabels;
 }
 
