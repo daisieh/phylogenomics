@@ -17,6 +17,9 @@ my $outfile = "";
 my $reffile = "";
 my $contigfile = "";
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
 
 GetOptions ('reffile=s' => \$reffile,
 			'contigfile=s' => \$contigfile,
