@@ -3,7 +3,7 @@ use strict;
 use Data::Dumper;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions qw(debug set_debug);
+use Subfunctions qw(debug set_debug pad_seq_ends);
 
 
 BEGIN {
@@ -187,6 +187,8 @@ sub write_nexus_character_block {
 	foreach my $t (@$taxarray) {
 		push @working_seqs, "$taxa_hash->{$t}";
 	}
+
+	my @working_seqs = @{pad_seq_ends (\@working_seqs, "-")};
 
 	my $nchar = length($working_seqs[0]);
 	while ((length $working_seqs[0]) >= $blocksize) {
