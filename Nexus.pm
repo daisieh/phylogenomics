@@ -197,6 +197,11 @@ sub write_nexus_character_block {
 			$nexblock .= "$1\n";
 		}
 	}
+	for (my $i=0; $i < @$taxarray; $i++) {
+		$nexblock .= "" . @$taxarray[$i] . "\t";
+		$nexblock .= "$working_seqs[$i]\n";
+	}
+
 	$result .= "Begin CHARACTERS;\nDimensions nchar=$nchar;\n";
 	$result .= "Format datatype=dna gap=- interleave=yes;\n";
  	$result .= "Matrix\n$nexblock;\nEnd;\n\n";
