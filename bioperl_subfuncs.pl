@@ -1,6 +1,9 @@
 use Bio::AlignIO;
 use Bio::SeqIO;
 use Bio::Align::Utilities qw(cat);
+use FindBin;
+use lib "$FindBin::Bin/..";
+use Nexus qw(write_nexus_character_block write_nexus_taxa_block);
 
 =head1
 
@@ -19,34 +22,21 @@ Takes a SimpleAlign object and returns a NEXUS-formatted string representing the
 
 sub convert_aln_to_nexus {
 	my $aln = shift;
-	my $blocksize=2000;
-	my $nexblock = "";
-	my $result = "";
-	my $ntax = 0;
-	my $nchar = 1;
-	my $i = 1;
-	my $flag = 1;
-	my $len;
-	while ($flag) {
-		$ntax=0;
-		foreach my $seq ( $aln->each_seq()) {
-			$len = $seq->length;
-			if ($i > $len - $blocksize) { $flag = 0; $blocksize = $len - $i + 1;}
-			my $name = $seq->display_name;
-			$name =~ s/-/_/g;
-			$nexblock .= "" . $name . "\t";
-			$nchar = length($seq->seq());
-			my $seq_str = $seq->subseq($i, $i+$blocksize-1);
-			$nexblock .= "$seq_str\n";
-			$ntax++;
-		}
-		$nexblock .= "\n";
-		$i += $blocksize;
-	}
-	$result .= "#NEXUS\n\nBegin DATA;\nDimensions ntax=$ntax nchar=$nchar;\n";
-	$result .= "Format datatype=dna gap=- interleave=yes;\n";
- 	$result .= "Matrix\n$nexblock\n;\nEnd;\n";
 
+	my $taxa_hash = {};
+	my @taxa_names = ();
+
+	foreach my $seq ( $aln->each_seq()) {
+		my $name = $seq->display_name;
+		$name =~ s/-/_/g;
+
+		$taxa_hash->{$name} = $seq->seq();
+		push @taxa_names, $name;
+	}
+	my $result = "#NEXUS\n\n";
+
+	$result .= write_nexus_taxa_block (\@taxa_names);
+	$result .= write_nexus_character_block ($taxa_hash, \@taxa_names);
 	return $result;
 }
 
