@@ -61,7 +61,8 @@ if (!(-s "RAxML_info.$inputname")) {
 	# make sure that the phylip taxa names are accounted for:
 	$raxml_data->{"taxa"} = ();
 	my @x = split (/\n/, $phylip_str, @{$raxml_data->{"fulltaxa"}} + 2);
-	shift pop @x;
+	shift @x;
+	pop @x;
 	print Dumper (@x);
 
 	$inputname = fileparse ($raxml_input);
