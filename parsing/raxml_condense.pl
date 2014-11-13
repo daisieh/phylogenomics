@@ -59,7 +59,6 @@ if (!(-x "RAxML_info.$inputname")) {
 	close $fh;
 	$inputname = fileparse ($raxml_input);
 	print "$raxml_input, $inputname\n";
-	system ("cat $raxml_input");
 # 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
 	my $cmd = "raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105";
 	print $cmd . "\n";
