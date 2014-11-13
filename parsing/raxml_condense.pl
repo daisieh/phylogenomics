@@ -54,7 +54,7 @@ if (!(-x "RAxML_info.$inputname")) {
 	}
 
 	# write out a temporary phylip file for input:
-	my ($fh, $raxml_input) = tempfile(UNLINK => 1);
+	my ($fh, $raxml_input) = tempfile(UNLINK => 0);
 	print $fh write_phylip ($raxml_data->{"characters"}, $raxml_data->{"taxa"});
 	close $fh;
 	$inputname = fileparse ($raxml_input);
