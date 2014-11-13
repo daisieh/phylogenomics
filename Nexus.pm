@@ -232,7 +232,7 @@ sub write_nexus_trees_block {
 		push @name_blocks, $block;
 	}
 	print Dumper(@name_blocks);
- 	my $taxa_names = shift @name_blocks;
+#  	my $taxa_names = shift @name_blocks;
 	my $result = "begin TREES;\n";
 
 	my $treeblock = "";
@@ -245,15 +245,20 @@ sub write_nexus_trees_block {
 	}
 
 	my $translate = "";
-	if ($taxa_names) {
-		my @trans_arr = ();
+	my @trans_arr = ();
+
+	foreach my $taxa_names (@name_blocks) {
 		for (my $i=1; $i<= @$taxa_names; $i++) {
 			my $taxon = @$taxa_names[$i-1];
 			$treeblock =~ s/$taxon/$i/g;
-			push @trans_arr, "$i $taxon";
+			if (!(exists $trans_arr[$i])) {
+				push @trans_arr, "$i $taxon";
+			} else {
+				$trans_arr[$i] .= " $taxon";
+			}
 		}
-		$translate = "Translate\n" . join (",\n", @trans_arr) . ";\n";
 	}
+	$translate = "Translate\n" . join (",\n", @trans_arr) . ";\n";
 	$result .= "$translate$treeblock";
 	$result .= "\nEnd;\n\n";
 	return $result;
