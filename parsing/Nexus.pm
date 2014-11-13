@@ -236,7 +236,7 @@ sub write_nexus_trees_block {
 
 	my $treeblock = "";
 	foreach my $tree (@$tree_array) {
-		my $k = shift (keys @$tree);
+		my $k = shift (keys %$tree);
 		$treeblock .= "Tree $k = $tree->{$k}";
 		if ($treeblock !~ /;$/) {
 			$treeblock .= ";";
