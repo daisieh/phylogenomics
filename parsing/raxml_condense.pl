@@ -4,9 +4,11 @@ use strict;
 use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
+use File::Temp qw(tempfile);
+use File::Basename qw(fileparse);
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions qw(parse_phylip pad_seq_ends debug set_debug consensus_str);
+use Subfunctions qw(write_phylip parse_phylip parse_fasta pad_seq_ends debug set_debug consensus_str);
 use Nexus qw(write_nexus_character_block write_nexus_trees_block write_nexus_taxa_block);
 
 my $help = 0;
@@ -34,17 +36,40 @@ if ($outfile !~ /\.nex$/) {
 }
 
 my $raxml_data = {};
-$raxml_data->{"name"} = "RAxML_%.$inputname";
-$raxml_data->{"input"} = $inputname;
+# $raxml_data->{"name"} = "RAxML_%.$inputname";
+# $raxml_data->{"input"} = $inputname;
 
 if (!(-x "RAxML_info.$inputname")) {
-	print "running RAxML for the input file...\n";
+	print "running RAxML for the input file $inputname...\n";
 	if ($inputname =~ /\.fa.*$/) {
 		# it's a fasta file, convert to phylip...
+		my ($taxa, $taxanames) = parse_fasta($inputname);
+		$raxml_data->{"taxa"} = $taxanames;
+		$raxml_data->{"characters"} = $taxa;
+	} elsif ($inputname =~ /\.phy.*$/) {
+		# it's a phylip file...
+		my ($taxa, $taxanames) = parse_phylip($inputname);
+		print Dumper($taxa);
+		$raxml_data->{"taxa"} = $taxanames;
+		$raxml_data->{"characters"} = $taxa;
 	}
+
+	# write out a temporary phylip file for input:
+	my ($fh, $raxml_input) = tempfile();
+	print $fh write_phylip ($raxml_data->{"characters"}, $raxml_data->{"taxa"});
+	close $fh;
+	$inputname = fileparse ($raxml_input);
+	print "$raxml_input, $inputname\n";
+	system ("cat $raxml_input");
+# 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
+	system ("raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105");
 }
 
-print "found the RAxML run\n";
+if (!(-x "RAxML_info.$inputname")) {
+	print "Couldn't find the RAxML run RAxML_info.$inputname";
+	exit;
+}
+print "found the RAxML run RAxML_info.$inputname\n";
 
 open FH, "<", "RAxML_info.$inputname";
 $raxml_data->{"params"} = "";
@@ -59,7 +84,7 @@ while ($line) {
 		}
 		$line =~ /-s\s(.+?)\s/;
 		$raxml_data->{"input"} = $1;
-		print "$raxml_data->{input} is the input file\n";
+		print "$raxml_data->{input} is the input file\n$line";
 	} elsif ($raxml_data->{"input"} eq "") {
 		$raxml_data->{"params"} .= $line;
 	}
@@ -67,11 +92,12 @@ while ($line) {
 }
 close FH;
 
-##### write in the input file
-my ($taxa, $taxon_names) = parse_phylip($raxml_data->{"input"});
-$raxml_data->{"taxa"} = $taxon_names;
-$raxml_data->{"characters"} = $taxa;
-
+##### write in the input file if it hasn't already been read:
+if (!(exists $raxml_data->{"characters"})) {
+	my ($taxa, $taxon_names) = parse_phylip($raxml_data->{"input"});
+	$raxml_data->{"taxa"} = $taxon_names;
+	$raxml_data->{"characters"} = $taxa;
+}
 
 ##### write in the best tree
 open FH, "<", "RAxML_bipartitions.$inputname";
