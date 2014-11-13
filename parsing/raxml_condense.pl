@@ -130,7 +130,7 @@ foreach my $line (@lines) {
 	print OUT_FH "[ ".$line." ]\n";
 }
 
-print OUT_FH write_nexus_trees_block ($raxml_data->{"trees"}, $raxml_data->{"taxa"}, $raxml_data->{"fulltaxa"});
+print OUT_FH write_nexus_trees_block ($raxml_data->{"trees"}, $raxml_data->{"fulltaxa"}, $raxml_data->{"taxa"});
 
 close OUT_FH;
 
