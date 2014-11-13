@@ -108,19 +108,26 @@ if (!(exists $raxml_data->{"characters"})) {
 	$raxml_data->{"characters"} = $taxa;
 }
 
+##### trees:
+$raxml_data->{"trees"} = ();
+
 ##### write in the best tree
 open FH, "<", "RAxML_bipartitions.$inputname";
-$raxml_data->{"trees"}->{"besttree"} = "";
+my $tree = {};
+$tree->{"besttree"} = "";
 foreach my $line (<FH>) {
-	$raxml_data->{"trees"}->{"besttree"} .= $line;
+	$tree->{"besttree"} .= $line;
 }
+push @{$raxml_data->{"trees"}}, $tree;
 close FH;
 
 ##### write in the bootstrap trees
 open FH, "<", "RAxML_bootstrap.$inputname";
 my $i = 1;
 foreach my $line (<FH>) {
-	$raxml_data->{"trees"}->{"bootstrap$i"} = $line;
+	$tree = {};
+	$tree->{"bootstrap$i"} = $line;
+	push @{$raxml_data->{"trees"}}, $tree;
 	$i++;
 }
 close FH;
