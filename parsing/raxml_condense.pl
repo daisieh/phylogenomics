@@ -60,9 +60,9 @@ if (!(-s "RAxML_info.$inputname")) {
 	close $fh;
 	# make sure that the phylip taxa names are accounted for:
 	$raxml_data->{"taxa"} = ();
-	my @x = split (/\t/, $phylip_str);
+	my @x = split (/\n/, $phylip_str, @{$raxml_data->{"fulltaxa"}} + 1);
 	shift @x;
-	print "hi" . Dumper(@x) . "ho";
+	print Dumper (@x);
 
 	$inputname = fileparse ($raxml_input);
 # 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
