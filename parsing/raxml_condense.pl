@@ -60,7 +60,8 @@ if (!(-s "RAxML_info.$inputname")) {
 	close $fh;
 	# make sure that the phylip taxa names are accounted for:
 	$raxml_data->{"taxa"} = ();
-	(undef, my @x) = split (/\t/, $phylip_str);
+	my @x = split (/\t/, $phylip_str, @{$raxml_data->{"fulltaxa"}} + 1);
+	shift @x;
 	print Dumper (@x);
 
 	$inputname = fileparse ($raxml_input);
