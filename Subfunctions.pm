@@ -556,8 +556,9 @@ sub parse_fasta {
 	my $taxonlabel = "";
 	my $sequence = "";
 	while (defined $input) {
-		if ($input =~ /^>(.+?)\s*$/) {
+		if ($input =~ /^>(.+)$/) {
 			$taxonlabel = $1;
+			$taxonlabel =~ s/[\s\\\/,;-\.]/_/g;
 			if (exists $taxa->{$taxonlabel}) {
 				$taxa->{$taxonlabel} = "";
 			} else {
