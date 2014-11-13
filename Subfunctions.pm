@@ -699,12 +699,14 @@ sub write_phylip {
 	my @trunc_names = ();
 	foreach my $t (@$taxanames) {
 		push @workingseqs, $taxa->{$t};
-		if ($t =~ /^(.{10}).*$/) {
-			push @trunc_names, $1;
+		my $working_t = $t;
+		$working_t =~ s/\s/_/g;
+		if ($working_t =~ /^(.{10}).*$/) {
+			$working_t = $1;
 		} else {
-			my $padded_t = $t . " " x (10 - length $t);
-			push @trunc_names, $padded_t;
+			$working_t .= $working_t . " " x (10 - length $working_t);
 		}
+		push @trunc_names, $working_t;
 	}
 
 	my $nchar = pad_seq_ends(\@workingseqs);
