@@ -251,7 +251,7 @@ sub write_nexus_trees_block {
 		for (my $i=1; $i<= @$taxa_names; $i++) {
 			my $taxon = @$taxa_names[$i-1];
 			$treeblock =~ s/$taxon/$i/g;
-			if (!(exists $trans_arr[$i])) {
+			if (!(exists $trans_arr[$i-1])) {
 				push @trans_arr, "$i $taxon";
 			} else {
 				$trans_arr[$i-1] .= " $taxon";
