@@ -226,7 +226,13 @@ sub write_nexus_taxa_block {
 
 sub write_nexus_trees_block {
 	my $trees = shift;
-	my $taxa_names = shift;
+
+	my @name_blocks = ();
+	while (my $block = shift) {
+		push @name_blocks, $block;
+	}
+	print Dumper(@name_blocks);
+ 	my $taxa_names = shift @name_blocks;
 	my $result = "begin TREES;\n";
 
 	my $treeblock = "";
