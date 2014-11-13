@@ -242,7 +242,6 @@ sub write_nexus_trees_block {
 		if ($treeblock !~ /;$/) {
 			$treeblock .= ";";
 		}
-		$treeblock .= "\n";
 	}
 
 	my $translate = "";
