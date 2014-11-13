@@ -558,7 +558,7 @@ sub parse_fasta {
 	while (defined $input) {
 		if ($input =~ /^>(.+)$/) {
 			$taxonlabel = $1;
-			$taxonlabel =~ s/[\s\\\/,;\-\.]*/_/g;
+			$taxonlabel =~ s/[\s\\\/,;\-\.]+/_/g;
 			if (exists $taxa->{$taxonlabel}) {
 				$taxa->{$taxonlabel} = "";
 			} else {
