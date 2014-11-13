@@ -36,11 +36,10 @@ if ($outfile !~ /\.nex$/) {
 }
 
 my $raxml_data = {};
-# $raxml_data->{"name"} = "RAxML_%.$inputname";
-# $raxml_data->{"input"} = $inputname;
-
+my $running = 0;
 if (!(-s "RAxML_info.$inputname")) {
 	print "running RAxML for the input file $inputname...\n";
+	$running = 1;
 	if ($inputname =~ /\.fa.*$/) {
 		# it's a fasta file, convert to phylip...
 		my ($taxa, $taxanames) = parse_fasta($inputname);
@@ -67,7 +66,6 @@ if (!(-s "RAxML_info.$inputname")) {
 		$name =~ /^(.+?)\s/;
 		push @{$raxml_data->{"taxa"}}, $1;
 	}
-	print Dumper($raxml_data->{"taxa"});
 	$inputname = fileparse ($raxml_input);
 # 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
 	my $cmd = "raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105";
@@ -133,6 +131,10 @@ foreach my $line (@lines) {
 print OUT_FH write_nexus_trees_block ($raxml_data->{"trees"}, $raxml_data->{"fulltaxa"}, $raxml_data->{"taxa"});
 
 close OUT_FH;
+
+if ($running) {
+	system ("rm *.$inputname");
+}
 
 __END__
 
