@@ -9,6 +9,7 @@ use File::Basename qw(fileparse);
 use FindBin;
 use lib "$FindBin::Bin/..";
 use Subfunctions qw(write_phylip parse_phylip parse_fasta pad_seq_ends debug set_debug consensus_str);
+use lib "$FindBin::Bin";
 use Nexus qw(write_nexus_character_block write_nexus_trees_block write_nexus_taxa_block);
 
 my $help = 0;
@@ -115,6 +116,14 @@ foreach my $line (<FH>) {
 }
 close FH;
 
+##### write in the bootstrap trees
+open FH, "<", "RAxML_bootstrap.$inputname";
+my $i = 1;
+foreach my $line (<FH>) {
+	$raxml_data->{"trees"}->{"bootstrap$i"} = $line;
+	$i++;
+}
+close FH;
 
 ##### write out the NEXUS file
 open OUT_FH, ">", $outfile;
