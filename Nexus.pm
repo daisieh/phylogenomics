@@ -188,7 +188,7 @@ sub write_nexus_character_block {
 		push @working_seqs, "$taxa_hash->{$t}";
 	}
 
-	my @working_seqs = @{pad_seq_ends (\@working_seqs, "-")};
+	pad_seq_ends (\@working_seqs, "-");
 
 	my $nchar = length($working_seqs[0]);
 	while ((length $working_seqs[0]) >= $blocksize) {
