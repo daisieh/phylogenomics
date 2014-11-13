@@ -12,7 +12,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta parse_phylip meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta write_fasta parse_phylip write_phylip meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str);
 }
 
 my $debug = 0;
@@ -580,6 +580,18 @@ sub parse_fasta {
 	return $taxa, \@taxanames;
 }
 
+sub write_fasta {
+	my $taxa = shift;
+	my $taxanames = shift;
+
+	my $result = "";
+	foreach my $t (@$taxanames) {
+		$result .= ">$t\n$taxa->{$t}\n";
+	}
+
+	return $result;
+}
+
 sub find_sequences {
 	my $fastafile = shift;
 	my $names = shift;
@@ -623,7 +635,7 @@ sub pad_seq_ends {
 		}
 	}
 
-	return $seq_block;
+	return $max_len;
 }
 
 =head1
@@ -676,6 +688,59 @@ sub parse_phylip {
 	}
 	close FH;
 	return $taxa, \@taxonlabels;
+}
+
+sub write_phylip {
+	my $taxa = shift;
+	my $taxanames = shift;
+
+	my $result = "";
+	my @workingseqs = ();
+	my @trunc_names = ();
+	foreach my $t (@$taxanames) {
+		push @workingseqs, $taxa->{$t};
+		if ($t =~ /^(.{10}).*$/) {
+			push @trunc_names, $1;
+		} else {
+			my $padded_t = $t . " " x (10 - length $t);
+			push @trunc_names, $padded_t;
+		}
+	}
+
+	my $nchar = pad_seq_ends(\@workingseqs);
+	my $ntax = @$taxanames;
+
+	#first line is ntax nchar
+	$result .= "$ntax $nchar\n";
+
+	my $blocksize = 60;
+	#print the first set of chars with names
+	for (my $i=0; $i < @$taxanames; $i++) {
+		my $seq = $workingseqs[$i];
+		if ($seq =~ /^(.{$blocksize})(.*)$/) {
+			$seq = $1;
+			$workingseqs[$i] = $2;
+		} else {
+			$workingseqs[$i] = "";
+		}
+		$seq =~ s/(.{10})/$1 /g;
+		$result .= "$trunc_names[$i] $seq\n";
+	}
+	while (length $workingseqs[0] > 0) {
+		$result .= "\n";
+		for (my $i=0; $i < @$taxanames; $i++) {
+			my $seq = $workingseqs[$i];
+			if ($seq =~ /^(.{$blocksize})(.*)$/) {
+				$seq = $1;
+				$workingseqs[$i] = $2;
+			} else {
+				$workingseqs[$i] = "";
+			}
+			$seq =~ s/(.{10})/$1 /g;
+			$result .= " "x11 ."$seq\n";
+		}
+	}
+	return $result;
 }
 
 sub line_wrap {
