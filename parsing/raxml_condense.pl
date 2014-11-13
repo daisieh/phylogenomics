@@ -62,7 +62,7 @@ if (!(-s "RAxML_info.$inputname")) {
 	$raxml_data->{"taxa"} = ();
 	my @x = split (/\t/, $phylip_str);
 	shift @x;
-	print Dumper (@x);
+	print $phylip_str . Dumper(@x);
 
 	$inputname = fileparse ($raxml_input);
 # 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
