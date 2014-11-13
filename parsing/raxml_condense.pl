@@ -49,24 +49,25 @@ if (!(-x "RAxML_info.$inputname")) {
 	} elsif ($inputname =~ /\.phy.*$/) {
 		# it's a phylip file...
 		my ($taxa, $taxanames) = parse_phylip($inputname);
-		print Dumper($taxa);
 		$raxml_data->{"taxa"} = $taxanames;
 		$raxml_data->{"characters"} = $taxa;
 	}
 
 	# write out a temporary phylip file for input:
-	my ($fh, $raxml_input) = tempfile();
+	my ($fh, $raxml_input) = tempfile(UNLINK => 1);
 	print $fh write_phylip ($raxml_data->{"characters"}, $raxml_data->{"taxa"});
 	close $fh;
 	$inputname = fileparse ($raxml_input);
 	print "$raxml_input, $inputname\n";
 	system ("cat $raxml_input");
 # 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
-	system ("raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105");
+	my $cmd = "raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105";
+	print $cmd . "\n";
+	system ($cmd);
 }
 
 if (!(-x "RAxML_info.$inputname")) {
-	print "Couldn't find the RAxML run RAxML_info.$inputname";
+	print "Couldn't find the RAxML run RAxML_info.$inputname\n";
 	exit;
 }
 print "found the RAxML run RAxML_info.$inputname\n";
