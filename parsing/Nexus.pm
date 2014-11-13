@@ -226,6 +226,11 @@ sub write_nexus_taxa_block {
 
 sub write_nexus_trees_block {
 	my $trees = shift;
+	my $tree_order = shift;
+
+	if ($tree_order == undef) {
+		$tree_order = keys %$trees;
+	}
 
 	my @name_blocks = ();
 	while (my $block = shift) {
@@ -235,7 +240,7 @@ sub write_nexus_trees_block {
 	my $result = "begin TREES;\n";
 
 	my $treeblock = "";
-	foreach my $k (keys %$trees) {
+	foreach my $k (@$tree_order) {
 		$treeblock .= "Tree $k = $trees->{$k}";
 		if ($treeblock !~ /;$/) {
 			$treeblock .= ";";
