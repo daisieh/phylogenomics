@@ -254,7 +254,7 @@ sub write_nexus_trees_block {
 			if (!(exists $trans_arr[$i])) {
 				push @trans_arr, "$i $taxon";
 			} else {
-				$trans_arr[$i] .= " $taxon";
+				$trans_arr[$i-1] .= " $taxon";
 			}
 		}
 	}
