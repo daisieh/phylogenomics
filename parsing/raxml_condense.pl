@@ -39,33 +39,38 @@ my $raxml_data = {};
 # $raxml_data->{"name"} = "RAxML_%.$inputname";
 # $raxml_data->{"input"} = $inputname;
 
-if (!(-x "RAxML_info.$inputname")) {
+if (!(-s "RAxML_info.$inputname")) {
 	print "running RAxML for the input file $inputname...\n";
 	if ($inputname =~ /\.fa.*$/) {
 		# it's a fasta file, convert to phylip...
 		my ($taxa, $taxanames) = parse_fasta($inputname);
-		$raxml_data->{"taxa"} = $taxanames;
+		$raxml_data->{"fulltaxa"} = $taxanames;
 		$raxml_data->{"characters"} = $taxa;
 	} elsif ($inputname =~ /\.phy.*$/) {
 		# it's a phylip file...
 		my ($taxa, $taxanames) = parse_phylip($inputname);
-		$raxml_data->{"taxa"} = $taxanames;
+		$raxml_data->{"fulltaxa"} = $taxanames;
 		$raxml_data->{"characters"} = $taxa;
 	}
 
 	# write out a temporary phylip file for input:
-	my ($fh, $raxml_input) = tempfile(UNLINK => 0);
-	print $fh write_phylip ($raxml_data->{"characters"}, $raxml_data->{"taxa"});
+	my ($fh, $raxml_input) = tempfile();
+	my $phylip_str = write_phylip ($raxml_data->{"characters"}, $raxml_data->{"fulltaxa"});
+	print $fh $phylip_str;
 	close $fh;
+	# make sure that the phylip taxa names are accounted for:
+	$raxml_data->{"taxa"} = ();
+	(undef, my @x) = split (/\t/, $phylip_str);
+	print Dumper ($x);
+
 	$inputname = fileparse ($raxml_input);
-	print "$raxml_input, $inputname\n";
 # 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
 	my $cmd = "raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105";
 	print $cmd . "\n";
 	system ($cmd);
 }
 
-if (!(-x "RAxML_info.$inputname")) {
+if (!(-s "RAxML_info.$inputname")) {
 	print "Couldn't find the RAxML run RAxML_info.$inputname\n";
 	exit;
 }
@@ -120,7 +125,7 @@ foreach my $line (@lines) {
 	print OUT_FH "[ ".$line." ]\n";
 }
 
-print OUT_FH write_nexus_trees_block ($raxml_data->{"trees"}, $raxml_data->{"taxa"});
+print OUT_FH write_nexus_trees_block ($raxml_data->{"trees"}, $raxml_data->{"taxa"}, $raxml_data->{"fulltaxa"});
 
 close OUT_FH;
 
