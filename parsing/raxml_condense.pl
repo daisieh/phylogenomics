@@ -59,12 +59,15 @@ if (!(-s "RAxML_info.$inputname")) {
 	print $fh $phylip_str;
 	close $fh;
 	# make sure that the phylip taxa names are accounted for:
+	my @phynames = split (/\n/, $phylip_str, @{$raxml_data->{"fulltaxa"}} + 2);
+	shift @phynames;
+	pop @phynames;
 	$raxml_data->{"taxa"} = ();
-	my @x = split (/\n/, $phylip_str, @{$raxml_data->{"fulltaxa"}} + 2);
-	shift @x;
-	pop @x;
-	print Dumper (@x);
-
+	foreach my $name (@phynames) {
+		$name =~ /^(.+?)\s/;
+		push @{$raxml_data->{"taxa"}}, $1;
+	}
+	print Dumper($raxml_data->{"taxa"});
 	$inputname = fileparse ($raxml_input);
 # 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
 	my $cmd = "raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105";
