@@ -15,7 +15,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(parse_nexus write_nexus_character_block write_nexus_taxa_block write_nexus_trees_block);
+	our @EXPORT_OK   = qw(parse_nexus write_nexus_character_block write_nexus_taxa_block write_nexus_trees_block clean_nexus_taxa_names);
 }
 
 
@@ -159,13 +159,17 @@ sub parse_nexus {
 	return $taxa, \@taxonlabels;
 }
 
-=head1
+sub clean_nexus_taxa_names {
+	my $taxarray = shift;
 
-B<String $nexus_str convert_aln_to_nexus ( SimpleAlign $aln )>
+	my $cleanedtaxarray = ();
+	foreach my $taxon (@$taxarray) {
+		my $cleanedtaxon = $taxon =~ s/-/_/gr;
+		push @$cleanedtaxarray, $cleanedtaxon;
+	}
 
-Takes a taxon hash (and optional taxon array) and returns a NEXUS-formatted string representing the alignment.
-
-=cut
+	return $cleanedtaxarray;
+}
 
 sub write_nexus_character_block {
 	my $taxa_hash = shift;
@@ -188,19 +192,21 @@ sub write_nexus_character_block {
 		push @working_seqs, "$taxa_hash->{$t}";
 	}
 
+	my $cleanedtaxarray = clean_nexus_taxa_names($taxarray);
+
 	pad_seq_ends (\@working_seqs, "-");
 
 	my $nchar = length($working_seqs[0]);
 	while ((length $working_seqs[0]) >= $blocksize) {
-		for (my $i=0; $i < @$taxarray; $i++) {
+		for (my $i=0; $i < @$cleanedtaxarray; $i++) {
 			$working_seqs[$i] =~ /^(.{$blocksize})(.*)$/;
 			$working_seqs[$i] = $2;
-			$nexblock .= "" . @$taxarray[$i] . "\t";
+			$nexblock .= "" . @$cleanedtaxarray[$i] . "\t";
 			$nexblock .= "$1\n";
 		}
 	}
-	for (my $i=0; $i < @$taxarray; $i++) {
-		$nexblock .= "" . @$taxarray[$i] . "\t";
+	for (my $i=0; $i < @$cleanedtaxarray; $i++) {
+		$nexblock .= "" . @$cleanedtaxarray[$i] . "\t";
 		$nexblock .= "$working_seqs[$i]\n";
 	}
 
@@ -213,13 +219,15 @@ sub write_nexus_character_block {
 sub write_nexus_taxa_block {
 	my $taxa_names = shift;
 
+	my $cleanedtaxarray = clean_nexus_taxa_names($taxa_names);
+
 	my $result = "begin TAXA;\n";
-	$result .= "Dimensions ntax=" . @$taxa_names . ";\n";
+	$result .= "Dimensions ntax=" . @$cleanedtaxarray . ";\n";
 	my $taxlabels = "";
-	for (my $i=1; $i<= @$taxa_names; $i++) {
-		$result .= "[$i " . @$taxa_names[$i-1] . "]\n";
+	for (my $i=1; $i<= @$cleanedtaxarray; $i++) {
+		$result .= "[$i " . @$cleanedtaxarray[$i-1] . "]\n";
 	}
-	$result .= "TaxLabels " . join(" ", @$taxa_names) . ";\nEnd;\n\n";
+	$result .= "TaxLabels " . join(" ", @$cleanedtaxarray) . ";\nEnd;\n\n";
 
 	return $result;
 }
