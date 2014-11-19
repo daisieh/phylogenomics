@@ -103,11 +103,11 @@ foreach my $line (<PED_FH>) {
 close PED_FH;
 print "mapping genotypes...\n";
 foreach my $indiv_id (@$indiv_array) {
-	print "looking at $indiv_id\n";
 	my $indiv = $individuals->{$indiv_id};
 	my $alleles = "$indiv->{alleles}";
 	$alleles =~ s/\s+//g;
 	my $genotype = "";
+	print "looking at $indiv_id with " . (length $alleles)/2 . " alleles\n";
 	while ($alleles ne "") {
 		$alleles =~ /(..)(.*)/;
 		my $snppair = $1;
