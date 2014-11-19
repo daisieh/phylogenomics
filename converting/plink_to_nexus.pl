@@ -51,7 +51,7 @@ if ($inputped !~ /\.ped$/) {
 	pod2usage(-msg => "File $inputped is not a .ped file.", -exitval => 2);
 }
 
-
+print "processing .map file...\n";
 my $snps = ();
 open MAP_FH, "<", $inputmap;
 # map file:
@@ -101,8 +101,7 @@ foreach my $line (<PED_FH>) {
 	}
 }
 close PED_FH;
-
-print "processing .map file...\n";
+print "mapping genotypes...\n";
 foreach my $indiv_id (@$indiv_array) {
 	my $indiv = $individuals->{$indiv_id};
 	my $alleles = "$indiv->{alleles}";
