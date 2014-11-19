@@ -117,7 +117,7 @@ foreach my $indiv_id (@$indiv_array) {
  		} else {
 			$genotype .= get_iupac_code($snppair);
 		}
-		print "$genotype\n";
+		print (length $genotype) . "\n";
 	}
 	$indiv->{"genotype"} = $genotype;
 	print "$indiv_id\t$genotype\n";
