@@ -85,6 +85,7 @@ open PED_FH, "<", $inputped;
 # col 5: sex (1 if male, 2 if female, 0 if unknown)
 # col 6: phenotype (a coded value for association genetics)
 # next cols are pairs of allelic values corresponding to the mapped snps, 0 for missing data
+print "processing .ped file...\n";
 foreach my $line (<PED_FH>) {
 	if ($line =~ /^(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.+?)\s+(.*)$/) {
 		my $indiv_hash = {};
@@ -100,9 +101,8 @@ foreach my $line (<PED_FH>) {
 	}
 }
 close PED_FH;
-# print "individuals " . Dumper ($individuals);
-# print "snps " . Dumper ($snps);
 
+print "processing .map file...\n";
 foreach my $indiv_id (@$indiv_array) {
 	my $indiv = $individuals->{$indiv_id};
 	my $alleles = "$indiv->{alleles}";
@@ -119,6 +119,7 @@ foreach my $indiv_id (@$indiv_array) {
 		}
 	}
 	$indiv->{"genotype"} = $genotype;
+	print "$indiv_id\t$genotype\n";
 	if ((length $genotype) != $total_snp_count) {
 		print "$indiv->{individual_id} has an incorrect number of snps specified in the ped file: ". (length $genotype) . " instead of $total_snp_count.\n";
 		exit;
@@ -128,6 +129,7 @@ foreach my $indiv_id (@$indiv_array) {
 # print "individuals " .Dumper ($individuals);
 
 # write out as nexus:
+print "writing output to $outfile\n";
 my $nexusstring = "#NEXUS\n\n";
 
 $nexusstring .= write_nexus_taxa_block($indiv_array);
@@ -137,7 +139,6 @@ foreach my $indiv_id (@$indiv_array) {
 }
 $nexusstring .= write_nexus_character_block($taxahash, $indiv_array);
 
-print "writing output to $outfile\n";
 open OUT_FH, ">", $outfile;
 print OUT_FH $nexusstring;
 close OUT_FH;
