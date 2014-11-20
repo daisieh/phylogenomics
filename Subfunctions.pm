@@ -359,18 +359,6 @@ sub consensus {
 		return 0;
 	}
 
-	# remove any blank sequences:
-	my @new_seqs = ();
-	while (@$seq_array > 0) {
-		my $seq = shift @$seq_array;
-		if ($seq !~ /^-+$/) {
-			push @new_seqs, $seq;
-		} else {
-			debug ("remove empty seq\n");
-		}
-	}
-	$seq_array = \@new_seqs;
-
 	# check to see if all sequences are identical:
 	my $identical = 1;
 	my $curr_seq = @$seq_array[0];
