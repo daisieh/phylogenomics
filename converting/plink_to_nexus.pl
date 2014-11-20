@@ -9,7 +9,7 @@ use File::Basename qw(fileparse);
 use FindBin;
 use lib "$FindBin::Bin/..";
 use lib "$FindBin::Bin/../parsing";
-use Subfunctions qw(debug set_debug get_iupac_code);
+use Subfunctions qw(debug set_debug get_iupac_code consensus_str);
 use Nexus qw(write_nexus_character_block write_nexus_trees_block write_nexus_taxa_block);
 
 my $help = 0;
@@ -106,28 +106,23 @@ foreach my $indiv_id (@$indiv_array) {
 	my $indiv = $individuals->{$indiv_id};
 	my $alleles = "$indiv->{alleles}";
 	$alleles =~ s/\s+//g;
-	my $genotype = "";
+	$alleles =~ s/0/-/g; # replace any 0's with -'s.
 	print "looking at $indiv_id with " . (length $alleles)/2 . " alleles\n";
-	while ($alleles ne "") {
-		$alleles =~ /(..)(.*)/;
-		my $snppair = $1;
-		$alleles = $2;
- 		if ($snppair eq "00") {
- 			$genotype .= "-";
- 		} else {
-			$genotype .= get_iupac_code($snppair);
-		}
-		print "length " .(length $genotype) . "\n";
-	}
+	$indiv->{"paternal"} = ($alleles =~ s/([A-Za-z\-])[A-Za-z\-]/$1\./gr);
+	$indiv->{"paternal"} =~ s/\.//g;
+	$indiv->{"maternal"} = ($alleles =~ s/[A-Za-z\-]([A-Za-z\-])/\.$1/gr);
+	$indiv->{"maternal"} =~ s/\.//g;
+	my @seqarray = ($indiv->{"paternal"}, $indiv->{"maternal"});
+	my $genotype = consensus_str(\@seqarray);
 	$indiv->{"genotype"} = $genotype;
-	print "$indiv_id\t$genotype\n";
+	print $indiv->{"paternal"}."\n".$indiv->{"maternal"}."\n".$indiv->{"genotype"}."\n";
 	if ((length $genotype) != $total_snp_count) {
 		print "$indiv->{individual_id} has an incorrect number of snps specified in the ped file: ". (length $genotype) . " instead of $total_snp_count.\n";
 		exit;
 	}
 }
 
-# print "individuals " .Dumper ($individuals);
+#  print "individuals " .Dumper ($individuals);
 
 # write out as nexus:
 print "writing output to $outfile\n";
