@@ -16,6 +16,7 @@ my $help = 0;
 my $outfile = "";
 my $inputmap = "";
 my $inputped = "";
+my $inputname = "";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -23,6 +24,7 @@ if (@ARGV == 0) {
 
 GetOptions ('map=s' => \$inputmap,
 			'ped=s' => \$inputped,
+			'input=s' => \$inputname,
 			'output=s' => \$outfile,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
@@ -40,7 +42,12 @@ if ($outfile !~ /\.nex$/) {
 }
 
 if (($inputmap eq "") && ($inputped eq "")) {
-	pod2usage(-msg => "Both an input .ped and an input .map file are required.", -exitval => 2);
+	if ($inputname eq "") {
+		pod2usage(-msg => "Both an input .ped and an input .map file are required.", -exitval => 2);
+	} else {
+		$inputmap = "$inputname.map";
+		$inputped = "$inputname.ped";
+	}
 }
 
 if ($inputmap !~ /\.map$/) {
@@ -49,6 +56,14 @@ if ($inputmap !~ /\.map$/) {
 
 if ($inputped !~ /\.ped$/) {
 	pod2usage(-msg => "File $inputped is not a .ped file.", -exitval => 2);
+}
+
+unless (-e $inputped) {
+	pod2usage(-msg => "File $inputped does not exist.", -exitval => 2);
+}
+
+unless (-e $inputmap) {
+	pod2usage(-msg => "File $inputmap does not exist.", -exitval => 2);
 }
 
 print "processing .map file...\n";
@@ -138,4 +153,28 @@ $nexusstring .= write_nexus_character_block($taxahash, $indiv_array);
 open OUT_FH, ">", $outfile;
 print OUT_FH $nexusstring;
 close OUT_FH;
+
+
+__END__
+
+=head1 NAME
+
+plink_to_nexus
+
+=head1 SYNOPSIS
+
+plink_to_nexus [-map mapfile -ped pedfile] [-input inputname] [-output outputname]
+
+
+=head1 OPTIONS
+    -input:         filename of ped/map file (if both share a name w/o the file extension)
+    -ped:           filename of ped file (must specify -map as well)
+    -map:           filename of map file (must specify -ped as well)
+	-outputfile:    name of output file (will have extension .nex)
+
+=head1 DESCRIPTION
+
+Takes a pair of plink-formatted .map/.ped files and converts them to a nexus file.
+
+=cut
 
