@@ -1,8 +1,6 @@
 package Nexus;
 use strict;
 use Data::Dumper;
-use FindBin;
-use lib "$FindBin::Bin/..";
 use Subfunctions qw(debug set_debug pad_seq_ends);
 
 
@@ -18,8 +16,15 @@ BEGIN {
 	our @EXPORT_OK   = qw(parse_nexus write_nexus_character_block write_nexus_taxa_block write_nexus_trees_block clean_nexus_taxa_names);
 }
 
-
 =head1
+
+Nexus data structure:
+$nexushash->{"characters"}: a hash of character strings keyed by taxon names
+$nexushash->{"taxa"}: an array of taxon names
+$nexushash->{"trees"}: an array of newick trees
+$nexushash->{"charlabels"}: if specified, the names of the characters
+$nexushash->{"ntax"}: number of taxa
+$nexushash->{"nchar"}: number of characters
 
 B<(\%taxa, \@taxanames) parse_nexus ( String $inputfile )>
 
@@ -33,12 +38,10 @@ $inputfile:   NEXUS file to parse.
 sub parse_nexus {
 	my $inputfile = shift;
 
-	my $taxa = {};
-	my @taxonlabels = ();
+	my $nexushash = {};
 	my $gapchar = "-";
 	my $interleave = 0;
 	my $nchar = 0;
-	my $ntax = 0;
 
 	open fileIN, "<", "$inputfile" or die "no file named $inputfile";
 	my @inputs = <fileIN>;
@@ -80,7 +83,9 @@ sub parse_nexus {
 
 	# look for TAXA block:
 	if (exists $blocks->{"TAXA"}) {
-		@taxonlabels = split (/\s+/, $blocks->{"TAXA"}->{"TAXLABELS"});
+		@{$nexushash->{"taxa"}} = split (/\s+/, $blocks->{"TAXA"}->{"TAXLABELS"});
+		$nexushash->{"ntax"} = scalar @{$nexushash->{"taxa"}};
+		Subfunctions::debug ("processing TAXA block, found $nexushash->{ntax} taxa\n");
 	}
 
 	# look for CHARACTERS or DATA block:
@@ -92,7 +97,7 @@ sub parse_nexus {
 	}
 
 	if ($datablock) {
-		$ntax = scalar @taxonlabels;
+		$nexushash->{"ntax"} = scalar @{$nexushash->{"taxa"}};
 		if (exists $datablock->{"FORMAT"}) {
 			my @params = ();
 			my $paramline = "$datablock->{'FORMAT'}";
@@ -119,16 +124,17 @@ sub parse_nexus {
 			}
 			foreach my $param (@params) {
 				if ($param =~ /NTAX=(.*)/) {
-					if (($ntax > 0) && ($1 != $ntax)) {
+					if (($nexushash->{"ntax"} > 0) && ($1 != $nexushash->{"ntax"})) {
 						die "ntax in dimensions does not match ntax in taxa block.\n";
 					}
-					$ntax = $1;
+					$nexushash->{"ntax"} = $1;
 				} elsif ($param =~ /NCHAR=(.*)/) {
 					$nchar = $1;
 				}
 			}
 		}
 		if (exists $datablock->{"MATRIX"}) {
+			my $taxa = $nexushash->{"characters"};
 			my $matrix = "$datablock->{'MATRIX'}";
 			my @lines = split (/\n/, $matrix);
 			foreach my $line (@lines) {
@@ -138,10 +144,10 @@ sub parse_nexus {
 					$currtaxon =~ s/\'//g;
 					$currtaxon =~ s/\"//g;
 					$currdata =~ s/$gapchar/-/g;
-					if (exists $taxa->{$currtaxon}) {
-						$taxa->{$currtaxon} = $taxa->{$currtaxon} . $currdata;
+					if (exists $nexushash->{"characters"}->{$currtaxon}) {
+						$nexushash->{"characters"}->{$currtaxon} .= $currdata;
 					} else {
-						$taxa->{$currtaxon} = $currdata;
+						$nexushash->{"characters"}->{$currtaxon} = $currdata;
 					}
 				}
 			}
@@ -149,14 +155,13 @@ sub parse_nexus {
 				if (length($taxa->{$taxon}) != $nchar) {
 					die "Characters specified for $taxon do not match $nchar.";
 				}
-
 			}
 		}
 	}
 
-	$taxa->{"length"} = $nchar;
-
-	return $taxa, \@taxonlabels;
+	$nexushash->{"nchar"} = $nchar;
+	Subfunctions::debug (Dumper($nexushash));
+	return $nexushash;
 }
 
 sub clean_nexus_taxa_names {
@@ -269,8 +274,6 @@ sub write_nexus_trees_block {
 	$result .= "\nEnd;\n\n";
 	return $result;
 }
-
-
 
 # must return 1 for the file overall.
 1;

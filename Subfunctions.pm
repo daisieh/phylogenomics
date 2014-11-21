@@ -1,5 +1,7 @@
 package Subfunctions;
 use strict;
+use lib "parsing";
+use Nexus qw(parse_nexus);
 use Data::Dumper;
 
 
@@ -848,7 +850,8 @@ sub meld_sequence_files {
 	foreach my $inputfile (@inputfiles) {
 		push @matrixnames, $inputfile;
 		if ($inputfile =~ /\.nex/) {
-			($matrices->{ $inputfile }, undef) = parse_nexus ($inputfile);
+			my $nexushash = parse_nexus ($inputfile);
+			$matrices->{ $inputfile } = $nexushash->{"characters"};
 		} elsif ($inputfile =~/\.fa/) {
 			($matrices->{ $inputfile }, undef) = parse_fasta ($inputfile);
 		} else {
