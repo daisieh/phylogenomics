@@ -6,7 +6,7 @@ use Pod::Usage;
 use File::Basename;
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Subfunctions;
+use Subfunctions qw(meld_sequence_files set_debug);
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -18,10 +18,12 @@ my @inputfiles = ();
 my $outname = "melded";
 my $outformat = "nex";
 my $help = 0;
+my $debug = 0;
 
 GetOptions ('files|input=s{2,}' => \@inputfiles,
             'outputfile=s' => \$outname,
             'format=s' => \$outformat,
+            'debug' => \$debug,
             'help' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
@@ -29,6 +31,10 @@ if ($help) {
 }
 
 print $runline;
+
+if ($debug) {
+	set_debug($debug);
+}
 
 my ($res1, $res2) = meld_sequence_files(\@inputfiles);
 my %mastertaxa = %{$res1};
