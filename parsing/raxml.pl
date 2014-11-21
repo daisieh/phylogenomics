@@ -7,10 +7,10 @@ use Data::Dumper;
 use File::Temp qw(tempfile);
 use File::Basename qw(fileparse);
 use FindBin;
-use lib "$FindBin::Bin/..";
-use Subfunctions qw(write_phylip parse_phylip parse_fasta pad_seq_ends debug set_debug consensus_str);
 use lib "$FindBin::Bin";
 use Nexus qw(write_nexus_character_block write_nexus_trees_block write_nexus_taxa_block);
+use lib "$FindBin::Bin/..";
+use Subfunctions qw(write_phylip parse_phylip parse_fasta pad_seq_ends debug set_debug consensus_str);
 
 my $help = 0;
 my $outfile = "";
@@ -36,9 +36,13 @@ if ($outfile !~ /\.nex$/) {
 	$outfile = "$outfile.nex";
 }
 
+
 my $raxml_data = {};
 my $running = 0;
-if (!(-s "RAxML_info.$inputname")) {
+($inputname, my $inputpath, undef) = fileparse ($inputname);
+my $raxmlinfofile = File::Spec->catpath( undef, $inputpath, "RAxML_info.$inputname" );
+print "looking for existing RAxML run $raxmlinfofile...\n";
+if (!(-e $raxmlinfofile)) {
 	print "running RAxML for the input file $inputname...\n";
 	$running = 1;
 	if ($inputname =~ /\.fa.*$/) {
@@ -72,15 +76,17 @@ if (!(-s "RAxML_info.$inputname")) {
 	my $cmd = "raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105";
 	print $cmd . "\n";
 	system ($cmd);
+	$raxmlinfofile = File::Spec->catpath( undef, $inputpath, "RAxML_info.$inputname" );
 }
 
-if (!(-s "RAxML_info.$inputname")) {
-	print "Couldn't find the RAxML run RAxML_info.$inputname\n";
+
+if (!(-s $raxmlinfofile)) {
+	print "Couldn't find the RAxML run $raxmlinfofile\n";
 	exit;
 }
-print "found the RAxML run RAxML_info.$inputname\n";
+print "found the RAxML run $raxmlinfofile\n";
 
-open FH, "<", "RAxML_info.$inputname";
+open FH, "<", $raxmlinfofile;
 $raxml_data->{"params"} = "";
 $raxml_data->{"input"} = "";
 my $line = readline FH;
@@ -103,15 +109,23 @@ close FH;
 
 ##### write in the input file if it hasn't already been read:
 if (!(exists $raxml_data->{"characters"})) {
-	my ($taxa, $taxon_names) = parse_phylip($raxml_data->{"input"});
-	$raxml_data->{"taxa"} = $taxon_names;
-	$raxml_data->{"characters"} = $taxa;
+	if (-e $raxml_data->{"input"}) {
+		print "loading input file $raxml_data->{input}\n";
+		my ($taxa, $taxon_names) = parse_phylip($raxml_data->{"input"});
+		$raxml_data->{"taxa"} = $taxon_names;
+		$raxml_data->{"characters"} = $taxa;
+	} else {
+		print "Input file $raxml_data->{input} could not be found.\n";
+		exit;
+	}
 }
+
 
 ##### trees:
 $raxml_data->{"trees"} = ();
 
 ##### write in the best tree
+print "loading in best tree from RAxML_bipartitions.$inputname\n";
 open FH, "<", "RAxML_bipartitions.$inputname";
 my $tree = {};
 $tree->{"besttree"} = "";
@@ -121,7 +135,8 @@ foreach my $line (<FH>) {
 push @{$raxml_data->{"trees"}}, $tree;
 close FH;
 
-##### write in the bootstrap trees
+#### write in the bootstrap trees
+print "loading in bootstrap trees from RAxML_bootstrap.$inputname\n";
 open FH, "<", "RAxML_bootstrap.$inputname";
 my $i = 1;
 foreach my $line (<FH>) {
@@ -133,18 +148,24 @@ foreach my $line (<FH>) {
 close FH;
 
 ##### write out the NEXUS file
+print "writing out nexus file $outfile\n";
 open OUT_FH, ">", $outfile;
 print OUT_FH "#NEXUS\n\n";
 
-# print OUT_FH  write_nexus_character_block ($raxml_data->{"characters"}, $raxml_data->{"taxa"});
-# print OUT_FH write_nexus_taxa_block ($raxml_data->{"taxa"});
+# print OUT_FH write_nexus_character_block ($raxml_data);
+# print OUT_FH write_nexus_taxa_block ($raxml_data);
 
 my @lines = split(/\n/,$raxml_data->{"params"});
 foreach my $line (@lines) {
 	print OUT_FH "[ ".$line." ]\n";
 }
+if (exists $raxml_data->{"fulltaxa"}) {
+	$raxml_data->{"alttaxa"} = ();
+	push @{$raxml_data->{"alttaxa"}}, $raxml_data->{"taxa"};
+	$raxml_data->{"taxa"} = delete $raxml_data->{"fulltaxa"};
+}
 
-print OUT_FH write_nexus_trees_block ($raxml_data->{"trees"}, $raxml_data->{"fulltaxa"}, $raxml_data->{"taxa"});
+print OUT_FH write_nexus_trees_block ($raxml_data);
 
 close OUT_FH;
 
@@ -160,7 +181,7 @@ lookup
 
 =head1 SYNOPSIS
 
-raxml_condense.pl -input raxml_input -out nexus_output
+raxml.pl -input raxml_input -out nexus_output
 
 =head1 OPTIONS
 

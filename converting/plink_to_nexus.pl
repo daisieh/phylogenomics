@@ -32,15 +32,6 @@ if ($help){
     pod2usage(-verbose => 1);
 }
 
-if ($outfile eq "") {
-	$inputped =~ /(.+)\.ped/;
-	$outfile = "$1.nex";
-}
-
-if ($outfile !~ /\.nex$/) {
-	$outfile = "$outfile.nex";
-}
-
 if (($inputmap eq "") && ($inputped eq "")) {
 	if ($inputname eq "") {
 		pod2usage(-msg => "Both an input .ped and an input .map file are required.", -exitval => 2);
@@ -64,6 +55,15 @@ unless (-e $inputped) {
 
 unless (-e $inputmap) {
 	pod2usage(-msg => "File $inputmap does not exist.", -exitval => 2);
+}
+
+if ($outfile eq "") {
+	$inputped =~ /(.+)\.ped/;
+	$outfile = "$1.nex";
+}
+
+if ($outfile !~ /\.nex$/) {
+	$outfile = "$outfile.nex";
 }
 
 print "processing .map file...\n";
@@ -143,12 +143,15 @@ foreach my $indiv_id (@$indiv_array) {
 print "writing output to $outfile\n";
 my $nexusstring = "#NEXUS\n\n";
 
-$nexusstring .= write_nexus_taxa_block($indiv_array);
-my $taxahash = {};
-foreach my $indiv_id (@$indiv_array) {
-	$taxahash->{$indiv_id} = $individuals->{$indiv_id}->{"genotype"};
+my $nexushash = {};
+$nexushash->{"characters"} = {};
+$nexushash->{"taxa"} = $indiv_array;
+foreach my $indiv_id (@{$nexushash->{"taxa"}}) {
+	$nexushash->{"characters"}->{$indiv_id} = $individuals->{$indiv_id}->{"genotype"};
 }
-$nexusstring .= write_nexus_character_block($taxahash, $indiv_array);
+
+$nexusstring .= write_nexus_taxa_block($nexushash);
+$nexusstring .= write_nexus_character_block($nexushash);
 
 open OUT_FH, ">", $outfile;
 print OUT_FH $nexusstring;

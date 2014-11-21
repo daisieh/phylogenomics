@@ -646,7 +646,7 @@ sub parse_phylip {
 	my $taxa = {};
 	my @taxonlabels = ();
 
-	open FH, "<", $inputfile;
+	open FH, "<", $inputfile or die "couldn't find file $inputfile";
 
 	my $line = readline FH;
 	while ($line =~ /^\s*$/) {

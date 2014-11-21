@@ -23,20 +23,21 @@ Takes a SimpleAlign object and returns a NEXUS-formatted string representing the
 sub convert_aln_to_nexus {
 	my $aln = shift;
 
-	my $taxa_hash = {};
-	my @taxa_names = ();
+	my $nexus_hash = {};
+	$nexus_hash->{"characters"} = {};
+	$nexus_hash->{"taxa"} = ();
 
 	foreach my $seq ( $aln->each_seq()) {
 		my $name = $seq->display_name;
 		$name =~ s/-/_/g;
 
-		$taxa_hash->{$name} = $seq->seq();
-		push @taxa_names, $name;
+		$nexus_hash->{"characters"}->{$name} = $seq->seq();
+		push @{$nexus_hash->{"taxa"}}, $name;
 	}
 	my $result = "#NEXUS\n\n";
 
-	$result .= write_nexus_taxa_block (\@taxa_names);
-	$result .= write_nexus_character_block ($taxa_hash, \@taxa_names);
+	$result .= write_nexus_taxa_block ($nexus_hash);
+	$result .= write_nexus_character_block ($nexus_hash);
 	return $result;
 }
 

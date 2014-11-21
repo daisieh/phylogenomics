@@ -25,6 +25,7 @@ $nexushash->{"trees"}: an array of newick trees
 $nexushash->{"charlabels"}: if specified, the names of the characters
 $nexushash->{"ntax"}: number of taxa
 $nexushash->{"nchar"}: number of characters
+$nexushash->{"alttaxa"}: an array of alternate taxon name arrays
 
 B<(\%taxa, \@taxanames) parse_nexus ( String $inputfile )>
 
@@ -177,8 +178,9 @@ sub clean_nexus_taxa_names {
 }
 
 sub write_nexus_character_block {
-	my $taxa_hash = shift;
-	my $taxarray = shift;
+	my $nexushash = shift;
+	my $taxa_hash = $nexushash->{"characters"};
+	my $taxarray = $nexushash->{"taxa"};
 	my $blocksize=2000;
 	my $nexblock = "";
 	my $result = "";
@@ -199,7 +201,7 @@ sub write_nexus_character_block {
 
 	my $cleanedtaxarray = clean_nexus_taxa_names($taxarray);
 
-	pad_seq_ends (\@working_seqs, "-");
+	Subfunctions::pad_seq_ends (\@working_seqs, "-");
 
 	my $nchar = length($working_seqs[0]);
 	while ((length $working_seqs[0]) >= $blocksize) {
@@ -222,7 +224,8 @@ sub write_nexus_character_block {
 }
 
 sub write_nexus_taxa_block {
-	my $taxa_names = shift;
+	my $nexushash = shift;
+	my $taxa_names = $nexushash->{"taxa"};
 
 	my $cleanedtaxarray = clean_nexus_taxa_names($taxa_names);
 
@@ -238,11 +241,13 @@ sub write_nexus_taxa_block {
 }
 
 sub write_nexus_trees_block {
-	my $tree_array = shift; # an array of trees
+	my $nexushash = shift;
+	my $tree_array = $nexushash->{"trees"}; # an array of trees
 
 	my @name_blocks = ();
-	while (my $block = shift) {
-		push @name_blocks, $block;
+	push @name_blocks, $nexushash->{"taxa"};
+	if (exists $nexushash->{"alttaxa"}) {
+		push @name_blocks, @{$nexushash->{"alttaxa"}};
 	}
 
 	my $result = "begin TREES;\n";
@@ -266,6 +271,8 @@ sub write_nexus_trees_block {
 			$treeblock =~ s/$taxon/$i/g;
 			if (!(exists $trans_arr[$i-1])) {
 				push @trans_arr, "$i $taxon";
+			} else {
+				$trans_arr[$i-1] .= " $taxon";
 			}
 		}
 	}
