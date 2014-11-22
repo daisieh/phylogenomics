@@ -179,27 +179,29 @@ sub clean_nexus_taxa_names {
 
 sub write_nexus_character_block {
 	my $nexushash = shift;
-	my $taxa_hash = $nexushash->{"characters"};
-	my $taxarray = $nexushash->{"taxa"};
 	my $blocksize=2000;
 	my $nexblock = "";
-	my $result = "";
 	my $nchar = 1;
 	my $i = 1;
 	my $flag = 1;
 	my $len;
 
-	if ($taxarray == undef) {
-		$taxarray = (keys %$taxa_hash);
+	unless (exists $nexushash->{"characters"}) {
+		print "write_nexus_character_block: no characters specified.\n";
+		exit;
 	}
+
+	unless (exists $nexushash->{"taxa"}) {
+		$nexushash->{"taxa"} = (keys %{$nexushash->{"characters"}});
+	}
+
+	my $cleanedtaxarray = clean_nexus_taxa_names($nexushash->{"taxa"});
 
 	#copy working versions
 	my @working_seqs = ();
-	foreach my $t (@$taxarray) {
-		push @working_seqs, "$taxa_hash->{$t}";
+	foreach my $t (@{$nexushash->{"taxa"}}) {
+		push @working_seqs, "$nexushash->{characters}->{$t}";
 	}
-
-	my $cleanedtaxarray = clean_nexus_taxa_names($taxarray);
 
 	Subfunctions::pad_seq_ends (\@working_seqs, "-");
 
@@ -217,7 +219,19 @@ sub write_nexus_character_block {
 		$nexblock .= "$working_seqs[$i]\n";
 	}
 
-	$result .= "Begin CHARACTERS;\nDimensions nchar=$nchar;\n";
+	my $charstatelabels = "";
+	if (exists $nexushash->{"charlabels"}) {
+		my @charstate_arr = ();
+		my $taxa_names = $nexushash->{"charlabels"};
+		for (my $i=1; $i<= @{$nexushash->{"charlabels"}}; $i++) {
+			my $taxon = @{$nexushash->{"charlabels"}}[$i-1];
+			push @charstate_arr, "$i $taxon";
+		}
+		$charstatelabels = "CharStateLabels\n" . join (", ", @charstate_arr) . ";\n";
+	}
+
+	my $result = "Begin CHARACTERS;\nDimensions nchar=$nchar;\n";
+	$result .= "$charstatelabels";
 	$result .= "Format datatype=dna gap=- interleave=yes;\n";
  	$result .= "Matrix\n$nexblock;\nEnd;\n\n";
 	return $result;
@@ -225,18 +239,24 @@ sub write_nexus_character_block {
 
 sub write_nexus_taxa_block {
 	my $nexushash = shift;
-	my $taxa_names = $nexushash->{"taxa"};
 
-	my $cleanedtaxarray = clean_nexus_taxa_names($taxa_names);
+	unless (exists $nexushash->{"taxa"}) {
+		print "write_nexus_taxa_block: no taxa specified.\n";
+		exit;
+	}
+
+	my $cleanedtaxarray = clean_nexus_taxa_names($nexushash->{"taxa"});
+
+	my $taxlabels = "";
+	for (my $i=1; $i<= @$cleanedtaxarray; $i++) {
+		$taxlabels .= "[$i " . @$cleanedtaxarray[$i-1] . "]\n";
+	}
+	$taxlabels .= "TaxLabels " . join(" ", @$cleanedtaxarray) . ";";
 
 	my $result = "begin TAXA;\n";
 	$result .= "Dimensions ntax=" . @$cleanedtaxarray . ";\n";
-	my $taxlabels = "";
-	for (my $i=1; $i<= @$cleanedtaxarray; $i++) {
-		$result .= "[$i " . @$cleanedtaxarray[$i-1] . "]\n";
-	}
-	$result .= "TaxLabels " . join(" ", @$cleanedtaxarray) . ";\nEnd;\n\n";
-
+	$result .= "$taxlabels\n";
+	$result .= "End;\n\n";
 	return $result;
 }
 
@@ -244,13 +264,20 @@ sub write_nexus_trees_block {
 	my $nexushash = shift;
 	my $tree_array = $nexushash->{"trees"}; # an array of trees
 
-	my @name_blocks = ();
-	push @name_blocks, $nexushash->{"taxa"};
-	if (exists $nexushash->{"alttaxa"}) {
-		push @name_blocks, @{$nexushash->{"alttaxa"}};
+	unless (exists $nexushash->{"trees"}) {
+		print "write_nexus_trees_block: no trees specified.\n";
+		exit;
 	}
 
-	my $result = "begin TREES;\n";
+	my @name_blocks = ();
+	if (exists $nexushash->{"taxa"}) {
+		# push the one primary name block
+		push @name_blocks, $nexushash->{"taxa"};
+	}
+	if (exists $nexushash->{"alttaxa"}) {
+		# push all of the possible alternate name blocks
+		push @name_blocks, @{$nexushash->{"alttaxa"}};
+	}
 
 	my $treeblock = "";
 	foreach my $tree (@$tree_array) {
@@ -263,20 +290,23 @@ sub write_nexus_trees_block {
 	}
 
 	my $translate = "";
-	my @trans_arr = ();
-
-	foreach my $taxa_names (@name_blocks) {
-		for (my $i=1; $i<= @$taxa_names; $i++) {
-			my $taxon = @$taxa_names[$i-1];
-			$treeblock =~ s/$taxon/$i/g;
-			if (!(exists $trans_arr[$i-1])) {
-				push @trans_arr, "$i $taxon";
-			} else {
-				$trans_arr[$i-1] .= " $taxon";
+	if (@name_blocks > 0) {
+		my @trans_arr = ();
+		foreach my $taxa_names (@name_blocks) {
+			for (my $i=1; $i<= @$taxa_names; $i++) {
+				my $taxon = @$taxa_names[$i-1];
+				$treeblock =~ s/$taxon/$i/g;
+				if (!(exists $trans_arr[$i-1])) {
+					push @trans_arr, "$i $taxon";
+				} else {
+					$trans_arr[$i-1] .= " $taxon";
+				}
 			}
 		}
+		$translate = "Translate\n" . join (",\n", @trans_arr) . ";\n";
 	}
-	$translate = "Translate\n" . join (",\n", @trans_arr) . ";\n";
+
+	my $result = "begin TREES;\n";
 	$result .= "$translate$treeblock";
 	$result .= "\nEnd;\n\n";
 	return $result;

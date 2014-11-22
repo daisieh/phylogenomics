@@ -1,6 +1,5 @@
 package Subfunctions;
 use strict;
-use lib "parsing";
 use Nexus qw(parse_nexus);
 use Data::Dumper;
 
