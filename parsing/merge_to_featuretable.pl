@@ -2,9 +2,8 @@
 
 use Data::Dumper;
 use FindBin;
-use lib "$FindBin::Bin/";
+use lib "$FindBin::Bin/../lib";
 use Genbank;
-use lib "$FindBin::Bin/../";
 use Subfunctions qw(parse_fasta);
 
 my $regionfile = shift;

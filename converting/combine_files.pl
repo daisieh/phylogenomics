@@ -5,7 +5,7 @@ use Getopt::Long;
 use Pod::Usage;
 
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw(combine_files);
 
 if (@ARGV == 0) {

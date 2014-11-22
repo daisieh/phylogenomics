@@ -5,9 +5,8 @@ use Pod::Usage;
 use File::Spec;
 use File::Path qw (make_path);
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw (split_seq disambiguate_str get_iupac_code subseq_from_fasta parse_fasta);
-use lib "$FindBin::Bin/../parsing";
 use GFF qw (feature_to_seq parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
 
 my $gff_file = "";

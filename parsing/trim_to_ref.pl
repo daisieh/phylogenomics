@@ -5,7 +5,7 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw(split_seq reverse_complement meld_matrices parse_fasta trim_to_ref align_to_ref);
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);

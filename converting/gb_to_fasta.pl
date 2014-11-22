@@ -4,7 +4,7 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 use FindBin;
-use lib "$FindBin::Bin/../parsing";
+use lib "$FindBin::Bin/../lib";
 use Genbank qw(parse_genbank get_sequence get_name);
 
 if (@ARGV == 0) {

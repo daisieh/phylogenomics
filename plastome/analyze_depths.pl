@@ -5,7 +5,7 @@ use Getopt::Long;
 use Pod::Usage;
 require "bioperl_subfuncs.pl";
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions;
 require "circlegraphs.pl";
 

@@ -5,10 +5,10 @@ use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
 require "bioperl_subfuncs.pl";
-use FindBin;
-use lib "$FindBin::Bin/..";
-use Subfunctions;
 require "circlegraphs.pl";
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use Subfunctions;
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);

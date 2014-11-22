@@ -2,10 +2,9 @@
 use Getopt::Long;
 use Pod::Usage;
 use FindBin;
-use lib "$FindBin::Bin/../parsing/";
+use lib "$FindBin::Bin/../lib";
 use Blast qw (parse_xml revcomp_hsp);
 use Genbank qw (parse_genbank get_sequence);
-use lib "$FindBin::Bin/../";
 use Subfunctions qw (parse_fasta reverse_complement split_seq find_sequences consensus_str);
 use File::Temp qw (tempfile);
 use Data::Dumper;

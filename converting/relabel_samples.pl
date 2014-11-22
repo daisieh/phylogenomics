@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw(make_label_lookup);
 
 use File::Basename;

@@ -7,9 +7,8 @@ use Data::Dumper;
 use File::Temp qw(tempfile);
 use File::Basename qw(fileparse);
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../lib";
 use Nexus qw(write_nexus_character_block write_nexus_trees_block write_nexus_taxa_block);
-use lib "$FindBin::Bin/..";
 use Subfunctions qw(write_phylip parse_phylip parse_fasta pad_seq_ends debug set_debug consensus_str);
 
 my $help = 0;

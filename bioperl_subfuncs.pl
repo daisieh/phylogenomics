@@ -2,7 +2,7 @@ use Bio::AlignIO;
 use Bio::SeqIO;
 use Bio::Align::Utilities qw(cat);
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/lib";
 use Nexus qw(write_nexus_character_block write_nexus_taxa_block);
 
 =head1

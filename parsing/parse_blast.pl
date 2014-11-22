@@ -3,9 +3,8 @@
 use Getopt::Long;
 use Pod::Usage;
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../lib";
 use Blast qw (parse_xml);
-use lib "$FindBin::Bin/../";
 use Subfunctions qw (parse_fasta);
 use Data::Dumper;
 

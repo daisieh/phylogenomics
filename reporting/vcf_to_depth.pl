@@ -4,7 +4,7 @@ use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw(sample_list vcf_to_depth);
 
 if (@ARGV == 0) {

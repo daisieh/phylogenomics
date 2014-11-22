@@ -5,9 +5,8 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw(split_seq reverse_complement meld_matrices);
-use lib "$FindBin::Bin";
 use Blast qw (blast_to_ref);
 
 

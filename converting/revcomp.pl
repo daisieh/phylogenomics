@@ -2,9 +2,9 @@
 
 use strict;
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw (reverse_complement);
-use File::Temp qw/ tempfile tempdir /;
+use File::Temp qw (tempfile tempdir);
 
 my $input_file = shift;
 if (-e $input_file) {

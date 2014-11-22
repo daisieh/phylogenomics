@@ -7,7 +7,7 @@ use File::Spec qw (rel2abs);
 use File::Temp qw (tempfile);
 use File::Path qw (make_path);
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw(parse_fasta);
 
 my $validatefile = 0;

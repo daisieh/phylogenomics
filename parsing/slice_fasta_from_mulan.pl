@@ -4,7 +4,7 @@ use Bio::SeqIO;
 use Bio::Align::Utilities qw(cat);
 
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions;
 
 my $inputfile = @ARGV[0];

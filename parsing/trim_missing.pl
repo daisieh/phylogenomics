@@ -4,7 +4,7 @@ use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
 use FindBin;
-use lib "$FindBin::Bin/..";
+use lib "$FindBin::Bin/../lib";
 use Subfunctions qw(parse_fasta pad_seq_ends debug set_debug);
 
 if (@ARGV == 0) {
