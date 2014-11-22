@@ -19,7 +19,7 @@ my $inputped = "";
 my $inputname = "";
 
 if (@ARGV == 0) {
-    pod2usage(-verbose => 1);
+    pod2usage(-verbose => 2);
 }
 
 GetOptions ('map=s' => \$inputmap,
@@ -29,7 +29,7 @@ GetOptions ('map=s' => \$inputmap,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help){
-    pod2usage(-verbose => 1);
+    pod2usage(-verbose => 2);
 }
 
 if (($inputmap eq "") && ($inputped eq "")) {
