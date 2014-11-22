@@ -571,12 +571,20 @@ sub parse_fasta {
 }
 
 sub write_fasta {
-	my $taxa = shift;
-	my $taxanames = shift;
+	my $fastahash = shift;
+
+	unless (exists $fastahash->{"characters"}) {
+		print "write_fasta: no sequences specified.\n";
+		exit;
+	}
+
+	unless (exists $fastahash->{"names"}) {
+		$fastahash->{"names"} = (keys %{$fastahash->{"characters"}});
+	}
 
 	my $result = "";
-	foreach my $t (@$taxanames) {
-		$result .= ">$t\n$taxa->{$t}\n";
+	foreach my $t (@{$fastahash->{"names"}}) {
+		$result .= ">$t\n$fastahash->{characters}->{$t}\n";
 	}
 
 	return $result;
