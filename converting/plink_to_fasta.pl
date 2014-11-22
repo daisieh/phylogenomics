@@ -4,12 +4,9 @@ use strict;
 use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
-use File::Temp qw(tempfile);
-use File::Basename qw(fileparse);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Subfunctions qw(debug set_debug get_iupac_code consensus_str write_fasta);
-use Nexus qw(write_nexus_character_block write_nexus_trees_block write_nexus_taxa_block);
 use Plink qw(parse_plink);
 
 my $help = 0;
@@ -17,6 +14,7 @@ my $outfile = "";
 my $inputmap = "";
 my $inputped = "";
 my $inputname = "";
+my ($maternal, $paternal, $consensus) = 0;
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 2);
@@ -26,6 +24,9 @@ GetOptions ('map=s' => \$inputmap,
 			'ped=s' => \$inputped,
 			'input=s' => \$inputname,
 			'output=s' => \$outfile,
+			'maternal' => \$maternal,
+			'paternal' => \$paternal,
+			'consensus' => \$consensus,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help){
@@ -79,7 +80,13 @@ $fastahash->{"names"} = $plink_hash->{"names"};
 # set up characters block:
 $fastahash->{"characters"} = {};
 foreach my $indiv_id (@{$fastahash->{"names"}}) {
-	$fastahash->{"characters"}->{$indiv_id} = $plink_hash->{"individuals"}->{$indiv_id}->{"genotype"};
+	if ($maternal) {
+		$fastahash->{"characters"}->{$indiv_id} = $plink_hash->{"individuals"}->{$indiv_id}->{"maternal"};
+	} elsif ($paternal) {
+		$fastahash->{"characters"}->{$indiv_id} = $plink_hash->{"individuals"}->{$indiv_id}->{"paternal"};
+	} else {
+		$fastahash->{"characters"}->{$indiv_id} = $plink_hash->{"individuals"}->{$indiv_id}->{"genotype"};
+	}
 }
 
 my $result = write_fasta ($fastahash);
@@ -92,11 +99,11 @@ __END__
 
 =head1 NAME
 
-plink_to_nexus
+plink_to_fasta
 
 =head1 SYNOPSIS
 
-plink_to_nexus [-map mapfile -ped pedfile] [-input inputname] [-output outputname]
+plink_to_fasta [-map mapfile -ped pedfile] [-input inputname] [-output outputname]
 
 
 =head1 OPTIONS
@@ -107,7 +114,7 @@ plink_to_nexus [-map mapfile -ped pedfile] [-input inputname] [-output outputnam
 
 =head1 DESCRIPTION
 
-Takes a pair of plink-formatted .map/.ped files and converts them to a nexus file.
+Takes a pair of plink-formatted .map/.ped files and converts them to a fasta file.
 
 =cut
 
