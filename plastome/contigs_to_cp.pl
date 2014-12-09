@@ -67,7 +67,7 @@ foreach my $hit (@$self_array) {
 	my @hsps = sort order_by_query_start @{$hit->{"hsps"}};
 	foreach my $hsp (@hsps) {
 		# only look at identical pieces that are smaller than the entire reference
-		if (($hsp->{"query-to"} - $hsp->{"query-from"}) < ($reflen - 1)) {
+		if ((($hsp->{"query-to"} - $hsp->{"query-from"}) < ($reflen - 1)) && (($hsp->{"query-to"} - $hsp->{"query-from"}) > 10000)) {
 			push @irs, $hsp;
 		}
 	}
