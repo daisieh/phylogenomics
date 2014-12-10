@@ -159,8 +159,8 @@ foreach my $line (@lines) {
 	print OUT_FH "[ ".$line." ]\n";
 }
 if (exists $raxml_data->{"fulltaxa"}) {
-	$raxml_data->{"alttaxa"} = ();
-	push @{$raxml_data->{"alttaxa"}}, $raxml_data->{"taxa"};
+# 	$raxml_data->{"alttaxa"} = ();
+# 	push @{$raxml_data->{"alttaxa"}}, $raxml_data->{"taxa"};
 	$raxml_data->{"taxa"} = delete $raxml_data->{"fulltaxa"};
 }
 
