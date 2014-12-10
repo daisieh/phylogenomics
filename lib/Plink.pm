@@ -38,6 +38,8 @@ These come from the map file:
 		->{"genetic_map_position"}: 0 (position in a genetic map)
 		->{"base_pair"}: position in the physical map (base pair)
 	$plink_hash->{"snp_names"}: an array of the names of the snps
+	$plink_hash->{"chromosome"}: a hash of arrays, keyed by chromosome name
+		each array has the base pair location of the snps in order
 =cut
 
 sub parse_plink {
@@ -129,11 +131,22 @@ sub parse_map {
 			$snp_hash->{"name"} = "$2";
 			$snp_hash->{"genetic_map_position"} = $3;
 			$snp_hash->{"base_pair"} = $4;
+			$plink_hash->{"snps"}->{$snp_hash->{"name"}} = $snp_hash;
+			if (!(exists $plink_hash->{"chromosomes"}->{$snp_hash->{"chromosome"}})) {
+				$plink_hash->{"chromosomes"}->{$snp_hash->{"chromosome"}} = ();
+			}
+			my $snp_pair = {};
+# 			$snp_pair->{"name"} = $snp_hash->{"name"};
+			$snp_pair->{"base_pair"} = $snp_hash->{"base_pair"};
+			push @{$plink_hash->{"chromosomes"}->{$snp_hash->{"chromosome"}}}, $snp_hash->{"base_pair"};
+			push @{$plink_hash->{"snp_names"}}, $snp_hash->{"name"};
 		}
-		$plink_hash->{"snps"}->{$snp_hash->{"name"}} = $snp_hash;
-		push @{$plink_hash->{"snp_names"}}, $snp_hash->{"name"};
 	}
 	close MAP_FH;
+	foreach my $chr (keys %{$plink_hash->{"chromosomes"}}) {
+		my @list = sort {$a <=> $b} @{$plink_hash->{"chromosomes"}->{$chr}};
+		$plink_hash->{"chromosomes"}->{$chr} = \@list;
+	}
 	return $plink_hash;
 }
 

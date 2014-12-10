@@ -13,7 +13,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(parse_nexus write_nexus_character_block write_nexus_taxa_block write_nexus_trees_block clean_nexus_taxa_names);
+	our @EXPORT_OK   = qw(parse_nexus write_nexus_character_block write_nexus_taxa_block write_nexus_trees_block write_nexus_sets_block clean_nexus_taxa_names);
 }
 
 =head1
@@ -26,13 +26,11 @@ $nexushash->{"charlabels"}: if specified, the names of the characters
 $nexushash->{"ntax"}: number of taxa
 $nexushash->{"nchar"}: number of characters
 $nexushash->{"alttaxa"}: an array of alternate taxon name arrays
-
-B<(\%taxa, \@taxanames) parse_nexus ( String $inputfile )>
-
-Given a NEXUS file as input, returns a hash containing all the sequences, keyed by the
-values of the taxanames array.
-
-$inputfile:   NEXUS file to parse.
+$nexushash->{"sets"}: a hash of sets, which are hashed by their set type.
+	->{"charset"}: an array of hashes, each representing a charset.
+		->{"name"}
+		->{"start"}
+		->{"end"}
 
 =cut
 
@@ -259,6 +257,30 @@ sub write_nexus_taxa_block {
 	$result .= "End;\n\n";
 	return $result;
 }
+
+sub write_nexus_sets_block {
+	my $nexushash = shift;
+
+	unless (exists $nexushash->{"sets"}) {
+		print "write_nexus_taxa_block: no taxa specified.\n";
+		exit;
+	}
+
+	my $setblock = "";
+	foreach my $settype (keys %{$nexushash->{"sets"}}) {
+		my $sets = $nexushash->{"sets"}->{$settype};
+		foreach my $set (@$sets) {
+			$setblock .= "$settype " . $set->{"name"} . " = " . $set->{"start"} . "-" . $set->{"end"} . ";\n";
+		}
+	}
+
+	my $result = "begin SETS;\n";
+	$result .= "$setblock";
+	$result .= "End;\n\n";
+	return $result;
+}
+
+
 
 sub write_nexus_trees_block {
 	my $nexushash = shift;

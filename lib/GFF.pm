@@ -17,7 +17,105 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(feature_to_seq parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
+	our @EXPORT_OK   = qw(feature_to_seq parse_gff_file parse_gff_block parse_attributes export_gff_block read_gff_block write_gff_file set_gff_sequence);
+}
+
+=head1
+
+GFF data structure:
+$gff_array: an array of genes in a GFF file
+$gff_gene_hash: for each gene, a hash
+	->{"ID"}
+	->{"source"}: 	where the annotation is from
+	->{"score"}:
+	->{'Name'}
+	->{'start'}: 	gene start
+	->{'end'}:		gene end
+	->{'seqid'}:	scaffold/LG name
+	->{'phase'}
+	->{'strand'}
+	->{'type'}:		gene, CDS, etc
+	->{'attributes'}
+	->{"mRNA"}: 	an array of hashes, keyed by number, each representing a transcript
+		 'ID' => 'Potri.001G000300.1.v3.0',
+		 'score' => '.',
+		 'CDS' => {
+					'1' => {
+							 'phase' => '0',
+							 'strand' => '+',
+							 'score' => '.',
+							 'attributes' => {
+											   'pacid' => '27045442',
+											   'Parent' => 'Potri.001G000300.1.v3.0'
+											 },
+							 'end' => 228,
+							 'start' => 19
+						   }
+				  },
+		 'end' => 470,
+		 'phase' => '.',
+		 'three_prime_UTR' => {
+								'1' => {
+										 'phase' => '.',
+										 'strand' => '+',
+										 'score' => '.',
+										 'attributes' => {
+														   'pacid' => '27045442',
+														   'Parent' => 'Potri.001G000300.1.v3.0'
+														 },
+										 'end' => 470,
+										 'start' => 229
+									   }
+							  },
+		 'strand' => '+',
+		 'five_prime_UTR' => {
+							   '1' => {
+										'phase' => '.',
+										'strand' => '+',
+										'score' => '.',
+										'attributes' => {
+														  'pacid' => '27045442',
+														  'Parent' => 'Potri.001G000300.1.v3.0'
+														},
+										'end' => 18,
+										'start' => 1
+									  }
+							 },
+		 'attributes' => {
+						   'pacid' => '27045442',
+						   'longest' => '1',
+						   'Parent' => 'Potri.001G000300.v3.0'
+						 },
+		 'Name' => 'Potri.001G000300.1',
+		 'start' => 1
+	   }
+},
+
+=cut
+
+
+sub parse_gff_file {
+	my $gff_file = shift;
+
+	my $gff_array = ();
+	open my $gff_fh, "<", $gff_file;
+	my $line = "";
+	while ($line = readline $gff_fh) {
+		if ($line =~ /^##/) {
+			next;
+		}
+		my ($seqid, $source, $type, $start, $end, $score, $strand, $phase, $attributes) = split(/\t/, $line);
+		if ($type eq "gene") {
+			$attributes =~ /ID=(.+?);/;
+			my $gene = $1;
+			seek($gff_fh, -length($line), 1);
+			my $gff_block = parse_gff_block (read_gff_block ($gff_fh, $gene));
+
+			push @$gff_array, $gff_block;
+		}
+	}
+	close $gff_fh;
+	return $gff_array;
 }
 
 sub read_gff_block {
@@ -52,7 +150,6 @@ sub read_gff_block {
 			$gff_block .= $line;
 		}
 	}
-
 	return $gff_block;
 }
 
