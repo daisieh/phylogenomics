@@ -314,15 +314,18 @@ sub write_nexus_trees_block {
 	my $translate = "";
 	if (@name_blocks > 0) {
 		my @trans_arr = ();
+		my $taxa_names = $nexushash->{"taxa"};
+		for (my $i=1; $i<= @$taxa_names; $i++) {
+			my $taxon = @$taxa_names[$i-1];
+			if (!(exists $trans_arr[$i-1])) {
+				push @trans_arr, "$i $taxon";
+			}
+		}
+
 		foreach my $taxa_names (@name_blocks) {
 			for (my $i=1; $i<= @$taxa_names; $i++) {
 				my $taxon = @$taxa_names[$i-1];
 				$treeblock =~ s/$taxon/$i/g;
-				if (!(exists $trans_arr[$i-1])) {
-					push @trans_arr, "$i $taxon";
-				} else {
-					$trans_arr[$i-1] .= " $taxon";
-				}
 			}
 		}
 		$translate = "Translate\n" . join (",\n", @trans_arr) . ";\n";
