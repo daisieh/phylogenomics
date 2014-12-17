@@ -9,7 +9,8 @@ my $help = 0;
 my $outfile = "";
 my $lookupfile = "";
 my $subjectfile = "";
-my $match = 0;
+my $lmatch = 1;
+my $smatch = 1;
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -17,7 +18,8 @@ if (@ARGV == 0) {
 
 GetOptions ('lookup=s' => \$lookupfile,
 			'subject=s' => \$subjectfile,
-			'match=i' => \$match,
+			'smatch=i' => \$smatch,
+			'lmatch=i' => \$lmatch,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help){
@@ -29,7 +31,8 @@ my @items_to_find = ();
 open FIND_FH, "<", $lookupfile;
 foreach my $line (<FIND_FH>) {
 	chomp $line;
-	push @items_to_find, $line;
+	my @bits = split(/\t/,$line);
+	push @items_to_find, $bits[$lmatch-1];
 }
 close FIND_FH;
 
@@ -37,7 +40,7 @@ my $dictionary = {};
 open FH, "<", $subjectfile;
 foreach my $line (<FH>) {
 	my @items = split (/\t/, $line);
-	my $key = $items[$match-1];
+	my $key = $items[$smatch-1];
 	$dictionary->{$key} = $line;
 }
 close FH;
@@ -60,7 +63,8 @@ lookup.pl -lookup lookupfile -subject subjectfile -match matchcol
 
   -lookup:          list of items to find.
   -subject:         tab-delimited file to find items in.
-  -match:           column number of the subject file that is to be matched (1-indexed)
+  -lmatch:          column number of the lookup file that is to be matched (1-indexed)
+  -smatch:          column number of the subject file that is to be matched (1-indexed)
 
 =head1 DESCRIPTION
 
