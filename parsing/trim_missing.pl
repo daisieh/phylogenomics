@@ -56,14 +56,14 @@ if (@rows == 0) {
 
 # second pass: remove columns with excessive missing data
 # if more than $col_frac_missing * @rows Ns in a column, delete and move on.
-
+my $temp = length($rows[0]);
 pad_seq_ends (\@rows);
 my $total_length = length($rows[0]);
-print ("started with " . @$seqids . " rows, $total_length columns\n");
+print ("started with " . @$seqids . " rows, ($temp) $total_length columns\n");
 
 my $max_col_ambigs = int($col_frac_missing * @rows);
-
-my @final_rows = @{check_block(\@rows, $max_col_ambigs)};
+my $temp_ptr = check_block(\@rows, $max_col_ambigs);
+my @final_rows = @$temp_ptr;
 
 my $deleted_cols = $total_length - length (@final_rows[0]);
 
@@ -86,10 +86,10 @@ sub check_block {
 
 	# if we didn't get an array, return 0. (quick exit)
 	if (($seq_array == 0) || ($seq_array == ())) {
-		debug ("\n");
+		debug ("nothing\n");
 		return 0;
 	}
-
+	debug ("starting with " . $seq_array . "\n");
 	my $seqlen = length (@$seq_array[0]);
 
 	# if we did get an array, but the length of the strings is 0, then return 0. (quick exit)
@@ -125,22 +125,24 @@ sub check_block {
 			$numcols = 32766;
 		}
 
-		debug ("TWO BLOCKS of $numcols, ".($seqlen-$numcols)."\n");
+# 		debug ("TWO BLOCKS of $numcols, ".($seqlen-$numcols)."\n");
 		my $front_block = ();
 		foreach my $row (@$seq_array) {
 			$row =~ /(.{$numcols})(.*)/;
 			push @$front_block, $1;
 			$row = $2;
 		}
+		debug ("TWO BLOCKS of $numcols, " . $front_block . ", " . $seq_array . "\n");
+# 		debug ("front block " . $front_block . "\n");
 		$front_block = check_block ($front_block, $max_col_ambigs);
 		$seq_array = check_block ($seq_array, $max_col_ambigs);
-
+		debug (" now " . $front_block . ", back block " . $seq_array . "\n");
 		if ($front_block == 0) {
-			debug ("front block 0\n");
+			debug ("front block return 0\n");
 			return $seq_array;
 		}
 		if ($seq_array == 0) {
-			debug ("seq_array 0\n");
+			debug ("seq_array return 0\n");
 			return $front_block;
 		}
 
@@ -148,7 +150,7 @@ sub check_block {
 			@$seq_array[$i] = @$front_block[$i] . @$seq_array[$i];
 		}
 	}
-	debug ("done\n");
+	debug ("done, return ".$seq_array."\n");
 	return $seq_array;
 }
 
