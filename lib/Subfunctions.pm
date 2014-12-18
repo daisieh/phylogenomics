@@ -98,13 +98,6 @@ sub combine_files {
             @{@inputs[$i]}[0] = join ("\t", @heads);
         }
     }
-	if ($has_names) {
-		my $hashref = {};
-		for (my $j=0; $j<$inputs[0]; $j++) {
-			print ">$inputs[0]\n";
-# 			$hashref->{$inputs[0]
-		}
-	}
 
     for (my $j = 0; $j < $num_entries; $j++) {
         if ($has_names) {
