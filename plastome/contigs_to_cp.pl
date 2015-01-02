@@ -186,10 +186,10 @@ close OUTFH;
 
 # put the sequences for the matching contigs back into the output hash.
 my $contig_seqs = find_sequences ($contigfile, \@hit_list);
-
 # write these best seqs out:
 open OUTFH, ">", "$outfile.best.fasta";
 foreach my $key (keys %$contig_seqs) {
+	print "$key\n";
 	print OUTFH ">$key\n";
 	print OUTFH $contig_seqs->{$key} . "\n";
 }

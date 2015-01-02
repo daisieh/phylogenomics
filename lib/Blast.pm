@@ -222,7 +222,7 @@ sub parse_xml {
 				$hsp_hash->{"query-frame"} = $hsp->{"Hsp_query-frame"}[0];
 				$hsp_hash->{"score"} = $hsp->{"Hsp_score"}[0];
 				$hsp_hash->{"align-len"} = $hsp->{"Hsp_align-len"}[0];
-				$hsp_hash->{"midline"} = $hsp->{"Hsp_midline"}[0];
+# 				$hsp_hash->{"midline"} = $hsp->{"Hsp_midline"}[0];
 			}
 		}
 	}

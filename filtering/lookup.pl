@@ -6,7 +6,6 @@ use Pod::Usage;
 use Data::Dumper;
 
 my $help = 0;
-my $outfile = "";
 my $lookupfile = "";
 my $subjectfile = "";
 my $lmatch = 1;
@@ -35,15 +34,16 @@ foreach my $line (<FIND_FH>) {
 	push @items_to_find, $bits[$lmatch-1];
 }
 close FIND_FH;
-
 my $dictionary = {};
 open FH, "<", $subjectfile;
 foreach my $line (<FH>) {
+# print ">" . $line;
 	my @items = split (/\t/, $line);
 	my $key = $items[$smatch-1];
 	$dictionary->{$key} = $line;
 }
 close FH;
+# print Dumper($dictionary);
 foreach my $item (@items_to_find) {
 	print $dictionary->{$item};
 }

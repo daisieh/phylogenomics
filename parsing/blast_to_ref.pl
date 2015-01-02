@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 use strict;
-use File::Temp qw/ tempfile tempdir /;
+use File::Temp qw (tempfile tempdir);
 use Getopt::Long;
 use Pod::Usage;
 use File::Basename;
