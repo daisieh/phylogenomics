@@ -4,7 +4,9 @@ use Bio::SeqIO;
 use Bio::Seq::RichSeq;
 use Bio::Align::Utilities qw(cat);
 use Bio::AlignIO;
-
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use Subfunctions qw(combine_files);
 require "bioperl_subfuncs.pl";
 
 my $usage  = "convert_file.pl in_file out_file\n";
