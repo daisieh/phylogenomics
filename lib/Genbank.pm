@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile set_sequence get_sequence get_name);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile set_sequence get_sequence get_name write_features_as_fasta write_features_as_table);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -93,6 +93,65 @@ sub parse_genbank {
 	return \@gene_array;
 }
 
+sub write_features_as_table {
+	my $gene_array = shift;
+
+	my $result = "";
+	my $gene_id = 0;
+	foreach my $gene (@$gene_array) {
+		if ($gene->{"type"} eq "gene") {
+			my $interval_str = flatten_interval ($gene->{"region"});
+			my $geneseq = sequence_for_interval ($interval_str);
+			my $genename = $gene->{"qualifiers"}->{"gene"};
+			foreach my $feat (@{$gene->{"contains"}}) {}
+			my $interval_str = flatten_interval ($gene->{"region"});
+			my @gene_interval = ($interval_str);
+			$result .= "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
+			foreach my $feat (@{$gene->{"contains"}}) {
+				$result .= "$gene_id\t" . stringify_feature ($feat->{"region"}, $feat);
+			}
+			$gene_id++;
+		}
+	}
+	return $result;
+}
+
+sub write_features_as_fasta {
+	my $gene_array = shift;
+
+	my $result = "";
+	my $gene_id = 0;
+	foreach my $gene (@$gene_array) {
+		if ($gene->{"type"} eq "gene") {
+			my $interval_str = flatten_interval ($gene->{"region"});
+			my $geneseq = sequence_for_interval ($interval_str);
+			my $genename = $gene->{"qualifiers"}->{"gene"};
+			foreach my $feat (@{$gene->{"contains"}}) {
+				my $feat_id = 0;
+				foreach my $reg (@{$feat->{"region"}}) {
+					my $strand = "+";
+					my ($start, $end) = split (/\.\./, $reg);
+					if ($end < $start) {
+						$strand = "-";
+						my $oldend = $start;
+						$start = $end;
+						$end = $oldend;
+					}
+					my $regseq = sequence_for_interval ($reg);
+					my $featname = $feat->{"type"};
+					$result .= ">$gene_id"."_$feat_id"."_$genename"."_$featname($strand)\t$start\t$end\n$regseq\n";
+					$feat_id++;
+				}
+			}
+			my $interval_str = flatten_interval ($gene->{"region"});
+			my @gene_interval = ($interval_str);
+			$gene_id++;
+		}
+	}
+	return $result;
+}
+
+
 sub parse_regionfile {
 	my $regionfile = shift;
 
@@ -108,7 +167,6 @@ sub parse_regionfile {
 			# 	0_0_trnH_tRNA(-)	4	77
 			my ($id, $sub, $name, $type, $strand, $start, $end) = ($1, $2, $3, $4, $5, $6, $7);
 			if ($id == 0) { # first gene
-				print "first gene $id $name\n";
 				$curr_gene_hash = {};
 				push @gene_index_array, $id;
 				push @gene_array, $curr_gene_hash;
