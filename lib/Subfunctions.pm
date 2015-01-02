@@ -528,6 +528,7 @@ $inputfile:   fasta file to parse.
 
 sub parse_fasta {
 	my $fastafile = shift;
+	my $no_substitution = shift;
 
 	my $taxa = {};
 	my @taxanames = ();
@@ -541,7 +542,9 @@ sub parse_fasta {
 		if ($input =~ /^>(.+)$/) {
 			$taxonlabel = $1;
 			$taxonlabel =~ s/\s+$//;
-			$taxonlabel =~ s/[\s\\\/,;\-]+/_/g;
+			if (!defined $no_substitution) {
+				$taxonlabel =~ s/[\s\\\/,;\-]+/_/g;
+			}
 			if (exists $taxa->{$taxonlabel}) {
 				$taxa->{$taxonlabel} = "";
 			} else {
