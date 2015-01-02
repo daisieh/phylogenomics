@@ -2,19 +2,21 @@
 
 use Getopt::Long;
 use Pod::Usage;
+use File::Temp qw (tempfile tempdir);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Blast qw (parse_xml);
+use Genbank qw (parse_genbank write_features_as_fasta);
 use Subfunctions qw (parse_fasta);
 use Data::Dumper;
 
 my $help = 0;
 my $outfile = "";
-my $reffile = "";
+my $gbfile = "";
 my $fastafile = "";
 
 
-GetOptions ('reffile=s' => \$reffile,
+GetOptions ('reference=s' => \$gbfile,
 			'fastafile=s' => \$fastafile,
 			'outfile=s' => \$outfile,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
@@ -23,12 +25,24 @@ if ($help) {
     pod2usage(-verbose => 1);
 }
 
-print "running blastn\n";
-system("blastn -query $fastafile -subject $reffile -outfmt 5 -out $outfile.xml -word_size 10");
+
+if ($gbfile !~ /\.gb$/) {
+	print "reference file needs to be a fully annotated Genbank file.\n";
+	exit;
+}
+
+my $gene_array = parse_genbank($gbfile);
+
+open FAS_FH, ">", "$gbfile.fasta";
+print FAS_FH write_features_as_fasta ($gene_array);
+close FAS_FH;
+my ($ref_hash, $ref_array) = parse_fasta ("$gbfile.fasta", 1);
+
+print "running blastn -query $fastafile -subject $gbfile.fasta -outfmt 5 -out $outfile.xml -word_size 10\n";
+system("blastn -query $fastafile -subject $gbfile.fasta -outfmt 5 -out $outfile.xml -word_size 10");
 
 print "parsing results\n";
 
-my ($ref_hash, $ref_array) = parse_fasta($reffile);
 my $hit_array = parse_xml ("$outfile.xml");
 my $hits = {};
 foreach my $hit (@$hit_array) {
@@ -44,28 +58,16 @@ foreach my $hit (@$hit_array) {
 		$hits->{$subject}->{"orientation"} = -1;
 	}
 }
-
 open OUTFH, ">", $outfile or die "couldn't create $outfile";
-
 foreach my $subj (@$ref_array) {
 	$subj =~ s/\t.*$//;
 	if (!(exists $hits->{$subj}->{"hsp"})) {
-		print "$subj: no hits\n";
 		next;
 	}
 	my $adjusted_hseq = $hits->{$subj}->{"hsp"}->{"hseq"};
 	$adjusted_hseq =~ s/-//g;
 	my $hlen = length $adjusted_hseq;
 	print OUTFH "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
-	if ($hlen == $hits->{$subj}->{"slen"}) {
-		if ($hits->{$subj}->{"orientation"} > 0) {
-			print "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
-		} else {
-			print "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\tinverted match\n";
-		}
-	} else {
-		print "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\tpartial match: $hlen ne $hits->{$subj}->{slen}\n";
-	}
 }
 
 close OUTFH;
@@ -95,17 +97,14 @@ parse_blast
 
 =head1 SYNOPSIS
 
-First run: blastn -query comparison.fasta -subject reference.fasta -outfmt 3 -out blast_file
-Then run: parse_blast [-blast blast_file] [-outputfile output_file]
+parse_blast [-blast blast_file] [-outputfile output_file]
 
 =head1 OPTIONS
 
-  -blast:           "outfmt 3" formatted blastn output
+  -blast:           "outfmt 5" formatted blastn output
   -outputfile:      name of output file
 
 =head1 DESCRIPTION
 
-Parses an "outfmt 3" formatted blastn file to generate a list of regions to be used in
-Genbank annotations.
 
 =cut
