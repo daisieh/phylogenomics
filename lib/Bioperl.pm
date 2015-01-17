@@ -1,9 +1,26 @@
+#!/usr/bin/perl
+
+package Bioperl;
+use strict;
 use Bio::AlignIO;
 use Bio::SeqIO;
 use Bio::Align::Utilities qw(cat);
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../lib";
 use Nexus qw(write_nexus_character_block write_nexus_taxa_block);
+
+BEGIN {
+	require Exporter;
+	# set the version for version checking
+	our $VERSION     = 1.00;
+	# Inherit from Exporter to export functions and variables
+	our @ISA         = qw(Exporter);
+	# Functions and variables which are exported by default
+	our @EXPORT      = qw();
+	# Functions and variables which can be optionally exported
+	our @EXPORT_OK   = qw(convert_aln_to_nexus get_locations_from_genbank_file parse_aln_into_genes perc_diff_partition make_aln_from_fasta_file main_name_for_gb_feature slice_fasta_to_exons slice_fasta_from_genbank_file);
+}
+
 
 =head1
 
@@ -64,7 +81,8 @@ sub get_locations_from_genbank_file {
 
     my $seqio_object = Bio::SeqIO->new(-file => $gb_file);
     my $seq_object = $seqio_object->next_seq;
-    my $source_start, $source_end;
+    my $source_start = 0;
+    my $source_end = 0;
 
     my $result_str = "";
     while ($seq_object) {
@@ -115,7 +133,8 @@ sub parse_aln_into_genes {
     my $type = "CDS";
 
     my $gb_seqio = Bio::SeqIO->new(-file => $gb_file);
-    my $start, $end;
+    my $start = 0;
+    my $end = 0;
 
 	while (my $seq_object = $gb_seqio->next_seq) {
 		for my $feat_object ($seq_object->get_SeqFeatures) {
@@ -125,7 +144,7 @@ sub parse_aln_into_genes {
 				my @locations = $feat_object->location->each_Location;
 				my $cat_aln = 0;
 				my $strand = 0;
-				foreach $loc (@locations) {
+				foreach my $loc (@locations) {
 					$strand = $loc->strand;
 					my $start = $loc->start;
 					my $end = $loc->end;
@@ -144,7 +163,7 @@ sub parse_aln_into_genes {
 				if ($strand < 0) {
 					# must flip each seq in the curr_slice
 					my $flipped_aln = Bio::SimpleAlign->new();
-					foreach $seq ( $cat_aln->each_seq() ) {
+					foreach my $seq ( $cat_aln->each_seq() ) {
 						$seq = $seq->revcom();
 						$flipped_aln->add_seq($seq);
 					}

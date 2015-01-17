@@ -1,10 +1,12 @@
 #!/usr/bin/env perl
-use CircleGraph;
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
-require "bioperl_subfuncs.pl";
-require "circlegraphs.pl";
+
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use CircleGraph;
+use Bioperl qw (make_aln_from_fasta_file perc_diff_partition get_locations_from_genbank_file);
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
