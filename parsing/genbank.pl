@@ -1,9 +1,15 @@
 #!/usr/bin/perl
 
+use Getopt::Long;
+use Pod::Usage;
 use Data::Dumper;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Genbank qw(parse_genbank write_features_as_fasta write_features_as_table);
+
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
 
 my $gbfile = shift;
 
@@ -25,7 +31,7 @@ genbank.pl
 
 =head1 SYNOPSIS
 
-genbank gbfile
+genbank.pl gbfile
 
 =head1 DESCRIPTION
 

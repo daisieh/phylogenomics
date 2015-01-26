@@ -3,7 +3,7 @@
 use Data::Dumper;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use Genbank qw(parse_regionfile parse_featurefile);
+use Genbank qw(parse_regionfile parse_featurefile set_sequence sequence_for_interval sequin_feature);
 use Subfunctions qw(parse_fasta);
 
 # a regionfile is the output of parse_blast.pl comparing the fastafile to the reference fasta file from genbank.pl

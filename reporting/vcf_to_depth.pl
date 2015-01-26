@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 
+use strict;
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
@@ -33,7 +34,7 @@ if ($samplefile =~ /(.*?)\.vcf$/) {
 }
 
 foreach my $sample (@samples) {
-	$name = basename($sample);
+	my $name = basename($sample);
 	print "processing $name...\n";
 	my $vcf_file = $sample . ".vcf";
 	if ($outfile ne "") {

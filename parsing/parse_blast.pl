@@ -10,6 +10,10 @@ use Genbank qw (parse_genbank write_features_as_fasta);
 use Subfunctions qw (parse_fasta);
 use Data::Dumper;
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
+
 my $help = 0;
 my $outfile = "";
 my $gbfile = "";
@@ -58,8 +62,8 @@ foreach my $hit (@$hit_array) {
 		$hits->{$subject}->{"orientation"} = -1;
 	}
 }
-open OUTFH, ">", $outfile or die "couldn't create $outfile";
-foreach my $subj (@$ref_array) {
+open OUTFH, ">", "$outfile.regions" or die "couldn't create $outfile";
+my $prev_loc = 0;
 my @sorted_ref_array = sort compare_regions @$ref_array;
 foreach my $subj (@sorted_ref_array) {
 	$subj =~ s/\t.*$//;
@@ -84,11 +88,12 @@ parse_blast
 
 =head1 SYNOPSIS
 
-parse_blast [-blast blast_file] [-outputfile output_file]
+parse_blast -reference genbank.gb -fasta fastafile [-outputfile output_file]
 
 =head1 OPTIONS
 
-  -blast:           "outfmt 5" formatted blastn output
+  -fastafile:       fasta sequence to blast
+  -reference:       genbank file to blast against
   -outputfile:      name of output file
 
 =head1 DESCRIPTION

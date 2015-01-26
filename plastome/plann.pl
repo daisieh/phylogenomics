@@ -17,6 +17,10 @@ my $fastafile = "";
 my $orgname = "";
 my $samplename = "";
 
+if (@ARGV == 0) {
+    pod2usage(-verbose => 1);
+}
+
 GetOptions ('reference=s' => \$gbfile,
 			'fastafile=s' => \$fastafile,
 			'outfile=s' => \$outfile,
@@ -31,6 +35,10 @@ if ($help) {
 if ($gbfile !~ /\.gb$/) {
 	print "reference file needs to be a fully annotated Genbank file.\n";
 	exit;
+}
+
+if ($outfile eq "") {
+	$outfile = "output";
 }
 
 my $gene_array = parse_genbank($gbfile);
@@ -178,16 +186,19 @@ __END__
 
 =head1 NAME
 
-parse_blast
+plann.pl
 
 =head1 SYNOPSIS
 
-parse_blast [-blast blast_file] [-outputfile output_file]
+plann.pl -reference gbfile.gb -fasta denovoplastome.fasta -out outfile [-organism "Genus species"] [-sample samplename]
 
 =head1 OPTIONS
 
-  -blast:           "outfmt 5" formatted blastn output
-  -outputfile:      name of output file
+  -reference:       a well-annotated plastome reference sequence, in genbank file format
+  -fastafile:       the plastome sequence to be annotated, in fasta format
+  -outfile:         the output name (default is "output")
+  -organism:        [optional: scientific name for Genbank annotation]
+  -sample:          the name of the plastome sample (default is the name in the fasta file)
 
 =head1 DESCRIPTION
 
