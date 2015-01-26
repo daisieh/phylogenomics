@@ -42,6 +42,16 @@ print FAS_FH write_features_as_fasta ($gene_array);
 close FAS_FH;
 my ($ref_hash, $ref_array) = parse_fasta ("$gbfile.fasta", 1);
 
+# look for regions too small to blast accurately:
+my @tiny_regions = ();
+foreach my $region (@$ref_array) {
+	if ($region =~ /(.*)\t(\d+)\t(\d+)/) {
+		if ($3 - $2 < 10) {
+			push @tiny_regions, "$region";
+		}
+	}
+}
+
 print "running blastn -query $fastafile -subject $gbfile.fasta -outfmt 5 -out $outfile.xml -word_size 10\n";
 system("blastn -query $fastafile -subject $gbfile.fasta -outfmt 5 -out $outfile.xml -word_size 10");
 
@@ -68,6 +78,8 @@ my @sorted_ref_array = sort compare_regions @$ref_array;
 foreach my $subj (@sorted_ref_array) {
 	$subj =~ s/\t.*$//;
 	if (!(exists $hits->{$subj}->{"hsp"})) {
+		print "can't find $subj\n";
+
 		next;
 	}
 	my $adjusted_hseq = $hits->{$subj}->{"hsp"}->{"hseq"};
