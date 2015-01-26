@@ -19,7 +19,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw(blast_to_ref debug);
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(sort_hsps_by_match parse_xml revcomp_hsp);
+	our @EXPORT_OK   = qw(parse_xml revcomp_hsp compare_hsps compare_regions);
 }
 my $debug = 0;
 
@@ -244,12 +244,10 @@ sub revcomp_hsp {
 	return $hsp;
 }
 
-
-
-sub sort_hsps_by_match {
-	my $a = shift;
-	my $b = shift;
-
+###### SORT FUNCTIONS
+sub compare_hsps ($$) {
+	my $a = $_[0];
+	my $b = $_[1];
 	my $score = $b->{"bit-score"} - $a->{"bit-score"};
 	if ($score == 0) {
 		my $b_direction = ($b->{"query-to"} - $b->{"query-from"})/($b->{"hit-to"} - $b->{"hit-from"});
@@ -264,6 +262,18 @@ sub sort_hsps_by_match {
 	}
 	return $score;
 }
+
+sub compare_regions ($$) {
+	my $a = $_[0];
+	my $b = $_[1];
+	$b =~ /.*\t(\d+)\t(\d+)/;
+	my $b_start = $2;
+	$a =~ /.*\t(\d+)\t(\d+)/;
+	my $a_start = $2;
+	return ($a_start <=> $b_start);
+}
+
+
 
 return 1;
 

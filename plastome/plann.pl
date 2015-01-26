@@ -6,7 +6,7 @@ use File::Temp qw (tempfile tempdir);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Blast qw (parse_xml);
-use Genbank qw (parse_genbank write_features_as_fasta write_features_as_table parse_regionfile parse_feature_table set_sequence get_sequence sequence_for_interval sequin_feature parse_gene_array_to_features);
+use Genbank qw (parse_genbank write_features_as_fasta write_features_as_table parse_regionfile parse_feature_table set_sequence get_sequence sequence_for_interval sequin_feature parse_gene_array_to_features compare_hsps);
 use Subfunctions qw (parse_fasta);
 use Data::Dumper;
 
@@ -172,22 +172,6 @@ foreach my $gene (@final_gene_array) {
 }
 close FH;
 
-
-sub compare_hsps {
-	my $score = $b->{"bit-score"} - $a->{"bit-score"};
-	if ($score == 0) {
-		my $b_direction = ($b->{"query-to"} - $b->{"query-from"})/($b->{"hit-to"} - $b->{"hit-from"});
-		my $a_direction = ($a->{"query-to"} - $a->{"query-from"})/($a->{"hit-to"} - $a->{"hit-from"});
-		if ($b_direction > $a_direction) {
-			$score = 1;
-		} elsif ($a_direction < $b_direction) {
-			$score = -1;
-		} else {
-			$score = 0;
-		}
-	}
-	return $score;
-}
 
 
 __END__

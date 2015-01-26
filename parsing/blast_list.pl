@@ -5,7 +5,7 @@ use FindBin;
 use File::Spec;
 use File::Path qw (make_path);
 use lib "$FindBin::Bin/../lib";
-use Blast qw (parse_xml sort_hsps_by_match);
+use Blast qw (parse_xml compare_hsps);
 use Subfunctions qw (parse_fasta);
 use Data::Dumper;
 
@@ -67,7 +67,7 @@ foreach my $gene (@genes) {
 	foreach my $hit (@$hit_array) {
 		my $subject = $hit->{"subject"}->{"name"};
 		my $query = $hit->{"query"}->{"name"};
-		my @hsps = sort { sort_hsps_by_match ($a, $b) } @{$hit->{"hsps"}};
+		my @hsps = sort { compare_hsps ($a, $b) } @{$hit->{"hsps"}};
 		my $best_hit = shift @hsps;
 		$hits->{$subject}->{"hsp"} = $best_hit;
 		$hits->{$subject}->{"slen"} = $hit->{"subject"}->{"length"};
