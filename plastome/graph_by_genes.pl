@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
-# require "bioperl_subfuncs.pl";
 
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 use CircleGraph;
 
 my $usage  = "graph_by_genes.pl input_file output_file\n";

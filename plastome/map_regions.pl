@@ -1,11 +1,12 @@
 #!/usr/bin/env perl
-use CircleGraph;
 use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
-require "bioperl_subfuncs.pl";
-require "circlegraphs.pl";
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use CircleGraph;
+use Bioperl qw ();
 
 
 if (@ARGV == 0) {

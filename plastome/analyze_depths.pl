@@ -1,13 +1,14 @@
-use CircleGraph;
+#!/usr/bin/perl
+
+use strict;
 use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Getopt::Long;
 use Pod::Usage;
-require "bioperl_subfuncs.pl";
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use Subfunctions;
-require "circlegraphs.pl";
+use Bioperl qw (get_locations_from_genbank_file);
+use CircleGraph;
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -54,6 +55,9 @@ if ($samplefile =~ /(.+?)\.depth/) {
         $name =~ s/\n//;
         if ($name !~ /^\s*$/) {
             my $samplename = basename($name);
+            if ($samplename =~ /(.*?)\.depth/) {
+            	$samplename = $1;
+            }
             push @names, $samplename;
         }
     }
@@ -138,7 +142,7 @@ foreach my $samplename (@names) {
 }
 
 
-while (($key, $value) = each %samples) {
+while (my ($key, $value) = each %samples) {
     my @depth_array = @{$value->{"depths"}};
     open FH, ">", "$outfile"."_$key"."_depths.txt";
     print FH "pos\t$key\n";
@@ -171,7 +175,7 @@ my $circlegraph_obj = new CircleGraph();
 $circlegraph_obj->inner_radius($circlegraph_obj->inner_radius - 100);
 my $max=1;
 my %graphs;
-while (($key, $value) = each %samples) {
+while (my ($key, $value) = each %samples) {
     # process each depths file
     open FH, "<", "$outfile"."_$key"."_depths.txt";
     my @items = <FH>;
@@ -193,7 +197,7 @@ while (($key, $value) = each %samples) {
 }
 
 #process yvals so that they are scaled to 1
-while (($key, $value) = each %samples) {
+while (my ($key, $value) = each %samples) {
     my @yvals = @{$graphs{$key}};
     for (my $y=0;$y<@yvals;$y++) {
         @{$graphs{$key}}[$y] = @yvals[$y]/$max;
@@ -236,8 +240,8 @@ if ($min_coverage > 0) {
 # draw the maps
 my $j = 0;
 my @xvals = @{$graphs{"x"}};
-for ($j=0; $j< keys(%samples); $j++) {
-	$key = $names[$j];
+for (my $j=0; $j< keys(%samples); $j++) {
+	my $key = $names[$j];
     my @yvals = @{$graphs{$key}};
     # plot the coverage map
     $circlegraph_obj->plot_line(\@xvals, \@yvals, {color=>$j});
@@ -271,7 +275,7 @@ print FH $circlegraph_obj->output_ps();
 close FH;
 
 if (!$keepfiles) {
-    while (($key, $value) = each %samples) {
+    while (my ($key, $value) = each %samples) {
         unlink "$outfile"."_$key"."_depths.txt" or warn "could not delete $outfile"."_$key"."_depths.txt";
         unlink "$outfile"."_$key"."_indels.txt" or warn "could not delete $outfile"."_$key"."_indels.txt";
     }
