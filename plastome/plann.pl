@@ -6,8 +6,8 @@ use File::Temp qw (tempfile tempdir);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Blast qw (parse_xml);
-use Genbank qw (parse_genbank write_features_as_fasta write_features_as_table parse_regionfile parse_feature_table set_sequence get_sequence sequence_for_interval sequin_feature parse_gene_array_to_features compare_hsps);
-use Subfunctions qw (parse_fasta);
+use Genbank qw (parse_regionfile write_features_as_table parse_gene_array_to_features set_sequence get_sequence);
+use Subfunctions qw (parse_fasta blast_to_genbank);
 use Data::Dumper;
 
 my $help = 0;
@@ -41,49 +41,7 @@ if ($outfile eq "") {
 	$outfile = "output";
 }
 
-my $gene_array = parse_genbank($gbfile);
-
-open FAS_FH, ">", "$gbfile.fasta";
-print FAS_FH write_features_as_fasta ($gene_array);
-close FAS_FH;
-my ($ref_hash, $ref_array) = parse_fasta ("$gbfile.fasta", 1);
-print Dumper ($gene_array);
-system("blastn -query $fastafile -subject $gbfile.fasta -outfmt 5 -out $outfile.xml -word_size 10");
-
-print "parsing results to $outfile.regions\n";
-
-my $hit_array = parse_xml ("$outfile.xml");
-my $hits = {};
-foreach my $hit (@$hit_array) {
-	my $subject = $hit->{"subject"}->{"name"};
-	my $query = $hit->{"query"}->{"name"};
-	my @hsps = sort compare_hsps @{$hit->{"hsps"}};
-	my $best_hit = shift @hsps;
-	$hits->{$subject}->{"hsp"} = $best_hit;
-	$hits->{$subject}->{"slen"} = $hit->{"subject"}->{"length"};
-	if ($best_hit->{"hit-from"} < $best_hit->{"hit-to"}) {
-		$hits->{$subject}->{"orientation"} = 1;
-	} else {
-		$hits->{$subject}->{"orientation"} = -1;
-	}
-}
-
-open REGIONS_FH, ">", "$outfile.regions" or die "couldn't create $outfile.regions";
-
-foreach my $subj (@$ref_array) {
-	$subj =~ s/\t.*$//;
-	if (!(exists $hits->{$subj}->{"hsp"})) {
-		next;
-	}
-	my $adjusted_hseq = $hits->{$subj}->{"hsp"}->{"hseq"};
-	$adjusted_hseq =~ s/-//g;
-	my $hlen = length $adjusted_hseq;
-	print REGIONS_FH "$subj\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
-	print REGIONS_FH $ref_hash->{$subj} . "\n";
-	print REGIONS_FH "$hits->{$subj}->{hsp}->{'hseq'}\n$hits->{$subj}->{hsp}->{'qseq'}\n";
-}
-
-close REGIONS_FH;
+my ($result_hash, $result_array) = blast_to_genbank ($gbfile, $fastafile, $outfile);
 
 # a regionfile is the output of parse_blast.pl comparing the fastafile to the reference fasta file from genbank.pl
 my ($gene_array2, $gene_index_array) = parse_regionfile("$outfile.regions");
