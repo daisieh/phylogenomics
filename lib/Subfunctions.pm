@@ -1357,7 +1357,6 @@ sub blast_to_genbank {
 
 	my $gene_array = parse_genbank($gbfile);
 	my ($ref_hash, $ref_array) = flatten_features($gene_array);
-	print Dumper ($gene_array);
 
 	# look for regions too small to blast accurately:
 	my $tiny_regions = {};
@@ -1483,7 +1482,6 @@ sub merge_to_featuretable {
 		}
 		my @new_contains = ();
 		$gene->{"id"} = $id;
-	# 	print Dumper($gene);
 		foreach my $destcontains (@{$dest_gene->{"contains"}}) {
 			my $genecontains = shift $gene->{"contains"};
 			$destcontains->{"region"} = $genecontains->{"region"};
