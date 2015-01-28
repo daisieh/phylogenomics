@@ -18,7 +18,6 @@ my $outfile = shift;
 
 my ($gene_array, $gene_index_array) = parse_regionfile($regionfile);
 my ($destination_gene_array, $destination_gene_index_array) = parse_featurefile($featurefile);
-
 my ($fastahash, undef) = parse_fasta($fastafile);
 my $name = "";
 my $seqlen = 0;
@@ -79,13 +78,10 @@ foreach my $gene (@final_gene_array) {
 	foreach my $r (@{$gene->{'region'}}) {
 		$r =~ /(\d+)\.\.(\d+)/;
 		print FH "$1\t$2\tgene\n";
-# 		my $regseq = sequence_for_interval ($r);
-# 		print FASTA_FH ">$gene_id"."_$feat_id"."_$genename"."_$featname($strand)\t$start\t$end\n$regseq\n";
 	}
 	foreach my $q (keys %{$gene->{'qualifiers'}}) {
 		print FH "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
 	}
-# 	print FH "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
 
 	# then, print each feature contained.
 	foreach my $feat (@{$gene->{'contains'}}) {
