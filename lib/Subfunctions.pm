@@ -1,6 +1,10 @@
 package Subfunctions;
 use strict;
+use FindBin;
+use lib "$FindBin::Bin/..";
 use Nexus qw(parse_nexus);
+use Blast qw (parse_xml compare_hsps compare_regions);
+use Genbank qw (parse_genbank flatten_features write_features_as_fasta sequence_for_interval);
 use Data::Dumper;
 
 
@@ -13,7 +17,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta write_fasta parse_phylip write_phylip meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta write_fasta parse_phylip write_phylip meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str blast_to_genbank);
 }
 
 my $debug = 0;
@@ -569,21 +573,25 @@ sub parse_fasta {
 
 sub write_fasta {
 	my $fastahash = shift;
-
-	unless (exists $fastahash->{"characters"}) {
-		print "write_fasta: no sequences specified.\n";
-		exit;
-	}
-
-	unless (exists $fastahash->{"names"}) {
-		$fastahash->{"names"} = (keys %{$fastahash->{"characters"}});
-	}
-
+	my $fastanames = shift;
 	my $result = "";
-	foreach my $t (@{$fastahash->{"names"}}) {
-		$result .= ">$t\n$fastahash->{characters}->{$t}\n";
-	}
+	if (exists $fastahash->{"characters"}) {
+		unless (exists $fastahash->{"names"}) {
+			$fastahash->{"names"} = (keys %{$fastahash->{"characters"}});
+		}
 
+		foreach my $t (@{$fastahash->{"names"}}) {
+			$result .= ">$t\n$fastahash->{characters}->{$t}\n";
+		}
+	} elsif ((ref $fastanames) eq "ARRAY") {
+		foreach my $name (@{$fastanames}) {
+			$result .= ">$name\n$fastahash->{$name}\n";
+		}
+	} else {
+		foreach my $name (keys %{$fastahash}) {
+			$result .= ">$name\n$fastahash->{$name}\n";
+		}
+	}
 	return $result;
 }
 
@@ -1335,6 +1343,93 @@ sub codon_to_aa {
 	return "X";
 }
 
+# returns an array of gene hashes:
+# gene->{name}
+# gene->{strand}
+# gene->{type}
+# gene->{contains} = an array of regions
+#	[ (start, end), (start, end) ]
+
+sub blast_to_genbank {
+	my $gbfile = shift;
+	my $fastafile = shift;
+	my $outfile = shift;
+
+	my $gene_array = parse_genbank($gbfile);
+	my ($ref_hash, $ref_array) = flatten_features($gene_array);
+	print Dumper ($gene_array);
+
+	# look for regions too small to blast accurately:
+	my $tiny_regions = {};
+	my $tiny_region_extension_length = 20;
+	foreach my $region (@$ref_array) {
+		my $start = $ref_hash->{$region}->{'start'};
+		my $end = $ref_hash->{$region}->{'end'};
+		if ($end - $start < 10) {
+			$tiny_regions->{$region}->{'characters'} = $ref_hash->{"$region"}->{'characters'};
+			$start -= $tiny_region_extension_length;
+			$end += $tiny_region_extension_length;
+			$ref_hash->{"$region"}->{'characters'} = sequence_for_interval ("$start..$end");
+		}
+	}
+
+	open FAS_FH, ">", "$gbfile.fasta";
+	my @new_ref_array = ();
+	foreach my $ref (@$ref_array) {
+		push @new_ref_array, "$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}";
+		print FAS_FH ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
+	}
+	close FAS_FH;
+
+	system("blastn -query $fastafile -subject $gbfile.fasta -outfmt 5 -out $outfile.xml -word_size 10");
+
+	print "parsing results\n";
+
+	# choose the best hits:
+	my $hit_array = parse_xml ("$outfile.xml");
+	my $hits = {};
+	foreach my $hit (@$hit_array) {
+		my $subject = $hit->{"subject"}->{"name"};
+		my @hsps = sort compare_hsps @{$hit->{"hsps"}};
+		my $best_hit = shift @hsps;
+		$hits->{$subject}->{"hsp"} = $best_hit;
+		if ($best_hit->{"hit-from"} < $best_hit->{"hit-to"}) {
+			$hits->{$subject}->{"orientation"} = 1;
+		} else {
+			$hits->{$subject}->{"orientation"} = -1;
+		}
+	}
+	my @result_array = ();
+	foreach my $subj (@new_ref_array) {
+		$subj =~ s/\t.*$//;
+		if (exists $tiny_regions->{$subj}) {
+			$hits->{$subj}->{hsp}->{'query-from'} += $tiny_region_extension_length;
+			$hits->{$subj}->{hsp}->{'query-to'} -= $tiny_region_extension_length;
+		}
+		# gene->{name}
+# gene->{strand}
+# gene->{feature}
+# gene->{contains} = an array of regions
+#	[ (start, end), (start, end) ]
+		$subj =~ /$(\d+)_(\d+)_(.+?)_(.+)$/;
+		my $gene_id = $1;
+		my $feat_id = $2;
+		my $gene_name = $3;
+		my $feat_name = $4;
+# 		if (!(exists $result_hash->{$gene_name})) {
+# 			my $gene_hash = {};
+# 			push @result_array, $gene_hash;
+# 		}
+	}
+
+	open OUTFH, ">", "$outfile.regions" or die "couldn't create $outfile";
+	foreach my $subj (@new_ref_array) {
+		print OUTFH "$subj($ref_hash->{$subj}->{'strand'})\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
+	}
+
+	close OUTFH;
+
+}
 
 # must return 1 for the file overall.
 1;
