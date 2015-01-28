@@ -1498,7 +1498,6 @@ sub merge_to_featuretable {
 	# print header
 	print FH ">Features\t$name\n";
 
-	open FASTA_FH, ">", "$outfile.fasta";
 	# start printing genes
 	foreach my $gene (@final_gene_array) {
 		# first, print overall gene information
@@ -1526,7 +1525,6 @@ sub merge_to_featuretable {
 				}
 				my $regseq = Genbank::sequence_for_interval ($reg);
 				my $featname = $feat->{"type"};
-				print FASTA_FH ">$gene_id"."_$feat_id"."_$genename"."_$featname($strand)\t$start\t$end#$regseq\n";
 				$feat_id++;
 			}
 			print FH Genbank::sequin_feature ($feat->{'region'}, $feat);
