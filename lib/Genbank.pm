@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table flatten_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -126,17 +126,24 @@ sub parse_feature_sequences {
 	}
 }
 
-sub write_features_as_fasta {
+sub flatten_features {
 	my $gene_array = shift;
-
-	my $result = "";
+# print Dumper ($gene_array);
+	my $flattened_hash = {};
+	my @flattened_names = ();
 	my $gene_id = 0;
+
 	foreach my $gene (@$gene_array) {
 		if ($gene->{"type"} eq "gene") {
 			my $interval_str = flatten_interval ($gene->{"region"});
-			my $geneseq = sequence_for_interval ($interval_str);
+			my @gene_interval = ($interval_str);
 			my $genename = $gene->{"qualifiers"}->{"gene"};
+			$flattened_hash->{$genename}->{"gene"} = stringify_feature(\@gene_interval, $gene);
+# 			$result .= "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
+			$flattened_hash->{$genename}->{"contains"} = ();
 			foreach my $feat (@{$gene->{"contains"}}) {
+				push @{$flattened_hash->{$genename}->{"contains"}}, stringify_feature($feat->{"region"}, $feat);
+# 				$result .= "$gene_id\t" . stringify_feature ($feat->{"region"}, $feat);
 				my $feat_id = 0;
 				foreach my $reg (@{$feat->{"region"}}) {
 					my $strand = "+";
@@ -149,112 +156,44 @@ sub write_features_as_fasta {
 					}
 					my $regseq = sequence_for_interval ($reg);
 					my $featname = $feat->{"type"};
-					$result .= ">$gene_id"."_$feat_id"."_$genename"."_$featname($strand)\t$start\t$end\n$regseq\n";
+					my $fullname = "$gene_id"."_$feat_id"."_$genename"."_$featname";
+					push @flattened_names, $fullname;
+					$flattened_hash->{$fullname}->{"strand"} = $strand;
+					$flattened_hash->{$fullname}->{"start"} = $start;
+					$flattened_hash->{$fullname}->{"end"} = $end;
+					$flattened_hash->{$fullname}->{"characters"} = $regseq;
 					$feat_id++;
 				}
 			}
-			my $interval_str = flatten_interval ($gene->{"region"});
-			my @gene_interval = ($interval_str);
 			$gene_id++;
 		}
 	}
-	return $result;
+# 	print Dumper ($flattened_hash);
+	return ($flattened_hash, \@flattened_names);
 }
 
+sub write_features_as_fasta {
+	my $gene_array = shift;
 
-sub parse_regionfile {
-	my $regionfile = shift;
-
-	my @gene_array = ();
-	my @gene_index_array = ();
-	open FH, "<", $regionfile;
-	my $curr_gene_count = 0;
-	my $curr_gene_exons;
-	my $curr_gene = "";
-	my $curr_gene_hash= {};
-	foreach my $line (<FH>) {
-		if ($line =~ /^(.*?)_(\d+)_(.+?)_(.+?)\((.)\)\t(\d+)\t(\d+)$/) {
-			# 	0_0_trnH_tRNA(-)	4	77
-			my ($id, $sub, $name, $type, $strand, $start, $end) = ($1, $2, $3, $4, $5, $6, $7);
-			if ($id == 0) { # first gene
-				$curr_gene_hash = {};
-				push @gene_index_array, $id;
-				push @gene_array, $curr_gene_hash;
-				# process new gene's first exon:
-				$curr_gene_exons = ();
-				my $region = "";
-				if ($strand eq "-") {
-					$region = "$end..$start";
-				} else {
-					$region = "$start..$end";
-				}
-				push @$curr_gene_exons, $region;
-				my @feat_array = ();
-				push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
-				$curr_gene_hash->{"contains"} = \@feat_array;
-				$curr_gene_hash->{"qualifiers"} = {"gene"=>$name};
-				$curr_gene = $name;
-				next;
-			}
-
-			if ($id == $curr_gene_count) {
-				# this is another exon in the same gene
-				my $region = "";
-				if ($strand eq "-") {
-					$region = "$end..$start";
-					unshift @$curr_gene_exons, $region;
-
-				} else {
-					$region = "$start..$end";
-					push @$curr_gene_exons, $region;
-				}
-			} else {
-				# this is a new gene
-
-				# finish processing the gene we were working on:
-				$curr_gene_hash->{"type"} = "gene";
-				$curr_gene_hash->{"region"} = max_interval ($curr_gene_exons); # largest gene region
-
-				# start processing the new gene:
-				$curr_gene_count = $id;
-				$curr_gene_hash = {};
-				push @gene_index_array, $id;
-				push @gene_array, $curr_gene_hash;
-
-				# process new gene's first exon:
-				$curr_gene_exons = ();
-				my $region = "";
-				if ($strand eq "-") {
-					$region = "$end..$start";
-				} else {
-					$region = "$start..$end";
-				}
-				push @$curr_gene_exons, $region;
-				my @feat_array = ();
-				push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
-				$curr_gene_hash->{"contains"} = \@feat_array;
-				$curr_gene_hash->{"qualifiers"} = {"gene"=>$name};
-				$curr_gene = $name;
-			}
-		}
+	my ($flattened_hash, $flattened_names) = flatten_features ($gene_array);
+	my $result = "";
+	foreach my $fullname (@$flattened_names) {
+		my $strand = $flattened_hash->{$fullname}->{"strand"};
+		my $start = $flattened_hash->{$fullname}->{"start"};
+		my $end = $flattened_hash->{$fullname}->{"end"};
+		my $regseq = $flattened_hash->{$fullname}->{"characters"};
+		$result .= ">$fullname($strand)\t$start\t$end\n$regseq\n";
 	}
-	# finish processing the gene we were working on:
-	$curr_gene_hash->{"type"} = "gene";
-	$curr_gene_hash->{"region"} = max_interval ($curr_gene_exons); # largest gene region
-	return (\@gene_array, \@gene_index_array);
+
+	return $result;
 }
 
 sub write_features_as_table {
 	my $gene_array = shift;
-
 	my $result = "";
 	my $gene_id = 0;
 	foreach my $gene (@$gene_array) {
 		if ($gene->{"type"} eq "gene") {
-			my $interval_str = flatten_interval ($gene->{"region"});
-			my $geneseq = sequence_for_interval ($interval_str);
-			my $genename = $gene->{"qualifiers"}->{"gene"};
-			foreach my $feat (@{$gene->{"contains"}}) {}
 			my $interval_str = flatten_interval ($gene->{"region"});
 			my @gene_interval = ($interval_str);
 			$result .= "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
@@ -264,6 +203,7 @@ sub write_features_as_table {
 			$gene_id++;
 		}
 	}
+
 	return $result;
 }
 
@@ -378,6 +318,91 @@ sub parse_featurefile {
 	return parse_feature_table ($featuretable);
 }
 
+sub write_regionfile {
+
+}
+
+sub parse_regionfile {
+	my $regionfile = shift;
+
+	my @gene_array = ();
+	my @gene_index_array = ();
+	open FH, "<", $regionfile;
+	my $curr_gene_count = 0;
+	my $curr_gene_exons;
+	my $curr_gene = "";
+	my $curr_gene_hash= {};
+	foreach my $line (<FH>) {
+		if ($line =~ /^(.*?)_(\d+)_(.+?)_(.+?)\((.)\)\t(\d+)\t(\d+)$/) {
+			# 	0_0_trnH_tRNA(-)	4	77
+			my ($id, $sub, $name, $type, $strand, $start, $end) = ($1, $2, $3, $4, $5, $6, $7);
+			print "$id $name $start $end\n";
+			if ($id == 0) { # first gene
+				$curr_gene_hash = {};
+				push @gene_index_array, $id;
+				push @gene_array, $curr_gene_hash;
+				# process new gene's first exon:
+				$curr_gene_exons = ();
+				my $region = "";
+				if ($strand eq "-") {
+					$region = "$end..$start";
+				} else {
+					$region = "$start..$end";
+				}
+				push @$curr_gene_exons, $region;
+				my @feat_array = ();
+				push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
+				$curr_gene_hash->{"contains"} = \@feat_array;
+				$curr_gene_hash->{"qualifiers"} = {"gene"=>$name};
+				$curr_gene = $name;
+				next;
+			}
+
+			if ($id == $curr_gene_count) {
+				# this is another exon in the same gene
+				my $region = "";
+				if ($strand eq "-") {
+					$region = "$end..$start";
+				} else {
+					$region = "$start..$end";
+				}
+					push @$curr_gene_exons, $region;
+			} else {
+				# this is a new gene
+
+				# finish processing the gene we were working on:
+				$curr_gene_hash->{"type"} = "gene";
+				$curr_gene_hash->{"region"} = max_interval ($curr_gene_exons); # largest gene region
+
+				# start processing the new gene:
+				$curr_gene_count = $id;
+				$curr_gene_hash = {};
+				push @gene_index_array, $id;
+				push @gene_array, $curr_gene_hash;
+
+				# process new gene's first exon:
+				$curr_gene_exons = ();
+				my $region = "";
+				if ($strand eq "-") {
+					$region = "$end..$start";
+				} else {
+					$region = "$start..$end";
+				}
+				push @$curr_gene_exons, $region;
+				my @feat_array = ();
+				push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
+				$curr_gene_hash->{"contains"} = \@feat_array;
+				$curr_gene_hash->{"qualifiers"} = {"gene"=>$name};
+				$curr_gene = $name;
+			}
+		}
+	}
+	# finish processing the gene we were working on:
+	$curr_gene_hash->{"type"} = "gene";
+	$curr_gene_hash->{"region"} = max_interval ($curr_gene_exons); # largest gene region
+	return (\@gene_array, \@gene_index_array);
+}
+
 sub sequence_for_interval {
 	my $interval_str = shift;
 	my $revcomp = shift;
@@ -387,9 +412,9 @@ sub sequence_for_interval {
 	my $end = $2;
 	my $geneseq = "";
 	if ($start < $end) {
-		(undef, $geneseq, undef) = split_seq ($sequence, $start, $end);
+		(undef, $geneseq, undef) = Subfunctions::split_seq ($sequence, $start, $end);
 	} else {
-		(undef, $geneseq, undef) = split_seq ($sequence, $end, $start);
+		(undef, $geneseq, undef) = Subfunctions::split_seq ($sequence, $end, $start);
 		if ($revcomp == 1) {
 			$geneseq = reverse_complement ($geneseq);
 		}
@@ -401,7 +426,7 @@ sub sequin_feature {
 	my $regions = shift;
 	my $feature = shift;
 	my $result = "";
-
+# print Dumper($feature) . join (",", @$regions) . "\n";
 	my $first_int = shift @$regions;
 	$first_int =~ /(\d+)\.\.(\d+)/;
 	$result = "$1\t$2\t$feature->{type}\n";
@@ -469,7 +494,6 @@ sub parse_feature_desc {
 	$feature_desc =~ /^(.{16})(.+)$/;
 	my $type = $1;
 	my $region = $2;
-
 	$type =~ s/ *$//; # remove trailing blanks.
 
 	$feat_desc_hash->{"type"} = $type;
@@ -512,6 +536,11 @@ sub parse_interval {
 			my $subregions = parse_interval($subint);
 			push @regions, @$subregions;
 		}
+	} elsif ($intervalstr =~ /^order\s*\((.+)\)$/) {
+		# this is a series of intervals, but there is no implication about joining them.
+		my @subintervals = split(/,/, $1);
+		my $max_interval = max_interval (\@subintervals);
+		push @regions, @$max_interval;
 	} elsif ($intervalstr =~ /(\d+)\.\.(\d+)/) {
 		push @regions, "$intervalstr";
 	}
@@ -621,6 +650,7 @@ sub within_interval {
 	}
 	return 0;
 }
+
 
 return 1;
 
