@@ -1374,7 +1374,6 @@ sub blast_to_genbank {
 
  	my ($fastafh, $subjectfasta) = tempfile();
 	foreach my $ref (@$ref_array) {
-		push @new_ref_array, "$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}";
 		print "$ref\n";
 		print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
 	}
@@ -1397,35 +1396,30 @@ sub blast_to_genbank {
 			$hits->{$subject}->{"orientation"} = -1;
 		}
 	}
-	my @result_array = ();
-	foreach my $subj (@new_ref_array) {
-		$subj =~ s/\t.*$//;
+
+	# copy the best hit values back into the reference array:
+	foreach my $subj (@$ref_array) {
+		$ref_hash->{$subj}->{'start'} = $hits->{$subj}->{hsp}->{'query-from'};
+		$ref_hash->{$subj}->{'end'} = $hits->{$subj}->{hsp}->{'query-to'};
+
 		if (exists $tiny_regions->{$subj}) {
-			$hits->{$subj}->{hsp}->{'query-from'} += $tiny_region_extension_length;
-			$hits->{$subj}->{hsp}->{'query-to'} -= $tiny_region_extension_length;
+			$ref_hash->{$subj}->{'start'} += $tiny_region_extension_length;
+			$ref_hash->{$subj}->{'start'} -= $tiny_region_extension_length;
 		}
-		# gene->{name}
-# gene->{strand}
-# gene->{feature}
-# gene->{contains} = an array of regions
-#	[ (start, end), (start, end) ]
-		$subj =~ /$(\d+)_(\d+)_(.+?)_(.+)$/;
-		my $gene_id = $1;
-		my $feat_id = $2;
-		my $gene_name = $3;
-		my $feat_name = $4;
-# 		if (!(exists $result_hash->{$gene_name})) {
-# 			my $gene_hash = {};
-# 			push @result_array, $gene_hash;
-# 		}
 	}
 
-	open OUTFH, ">", "$outfile.regions" or die "couldn't create $outfile";
-	foreach my $subj (@new_ref_array) {
-		print OUTFH "$subj($ref_hash->{$subj}->{'strand'})\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
+#  	my ($outfh, undef) = tempfile();
+	open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
+	foreach my $subj (@$ref_array) {
+# 		print "$subj\n";
+# 		print "$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
+# 		print "$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n###\n";
+# 		print "$hits->{$subj}->{hsp}->{'qseq'}\n";
+# 		print "$ref_hash->{$subj}->{'characters'}\n";
+		print $outfh "$subj($ref_hash->{$subj}->{'strand'})\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
 	}
 
-	close OUTFH;
+	close $outfh;
 
 }
 
@@ -1441,9 +1435,6 @@ sub merge_to_featuretable {
 	my $outfile = shift;
 	my $name = shift;
 
-	if (!defined $name) {
-		$name = "";
-	}
 
 	my ($gene_array, $gene_index_array) = Genbank::parse_regionfile($regionfile);
 	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_featurefile($featurefile);
@@ -1451,7 +1442,9 @@ sub merge_to_featuretable {
 	my $seqlen = 0;
 	foreach my $k (keys $fastahash) {
 		# there should be only one key, so just one name.
-		$name = $k;
+		if (!defined $name) {
+			$name = $k;
+		}
 		$seqlen = length ($fastahash->{$k});
 		Genbank::set_sequence($fastahash->{$k});
 	}
