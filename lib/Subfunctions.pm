@@ -1404,7 +1404,7 @@ sub blast_to_genbank {
 
 		if (exists $tiny_regions->{$subj}) {
 			$ref_hash->{$subj}->{'start'} += $tiny_region_extension_length;
-			$ref_hash->{$subj}->{'start'} -= $tiny_region_extension_length;
+			$ref_hash->{$subj}->{'end'} -= $tiny_region_extension_length;
 		}
 	}
 
