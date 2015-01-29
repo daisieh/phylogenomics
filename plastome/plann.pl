@@ -56,23 +56,19 @@ foreach my $subj (@$ref_array) {
 
 close $outfh;
 
+
+my ($fastahash, $fastaarray) = parse_fasta($fastafile);
+
+# there should be only one key, so just one name.
+if ($samplename eq "") {
+	$samplename = @$fastaarray[0];
+}
+
+my $queryseq = $fastahash->{@$fastaarray[0]};
 my $genbank_header = "$samplename [organism=$orgname][moltype=Genomic DNA][location=chloroplast][topology=Circular][gcode=11]";
 open FASTA_FH, ">", "$outfile.fsa";
-print FASTA_FH ">$genbank_header\n";
-print FASTA_FH get_sequence() . "\n";
+print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
-
-
-my ($fastahash, undef) = parse_fasta($fastafile);
-my $seqlen = 0;
-foreach my $k (keys $fastahash) {
-	# there should be only one key, so just one name.
-	if ($samplename eq "") {
-		$samplename = $k;
-	}
-	$seqlen = length ($fastahash->{$k});
-	Genbank::set_sequence($fastahash->{$k});
-}
 
 merge_to_featuretable ("$outfile.regions", $fastafile, "$gbfile.features", $outfile, $genbank_header);
 
