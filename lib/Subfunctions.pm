@@ -1354,10 +1354,10 @@ sub codon_to_aa {
 sub blast_to_genbank {
 	my $gene_array = shift;
 	my $fastafile = shift;
-	my $outfile = shift;
 
 	my ($ref_hash, $ref_array) = clone_features($gene_array);
-
+	my ($query_hash, $query_array) = parse_fasta($fastafile);
+	my $queryseq = $query_hash->{@$query_array[0]};
 	# look for regions too small to blast accurately:
 	my $tiny_regions = {};
 	my $tiny_region_extension_length = 20;
@@ -1371,11 +1371,8 @@ sub blast_to_genbank {
 			$ref_hash->{"$region"}->{'characters'} = sequence_for_interval ("$start..$end");
 		}
 	}
-
  	my ($fastafh, $subjectfasta) = tempfile();
 	foreach my $ref (@$ref_array) {
-		push @new_ref_array, "$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}";
-		print "$ref\n";
 		print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
 	}
 	close $fastafh;
@@ -1397,36 +1394,21 @@ sub blast_to_genbank {
 			$hits->{$subject}->{"orientation"} = -1;
 		}
 	}
-	my @result_array = ();
-	foreach my $subj (@new_ref_array) {
-		$subj =~ s/\t.*$//;
+
+	# copy the best hit values back into the reference array:
+	foreach my $subj (@$ref_array) {
+		$ref_hash->{$subj}->{'start'} = $hits->{$subj}->{hsp}->{'query-from'};
+		$ref_hash->{$subj}->{'end'} = $hits->{$subj}->{hsp}->{'query-to'};
+
 		if (exists $tiny_regions->{$subj}) {
-			$hits->{$subj}->{hsp}->{'query-from'} += $tiny_region_extension_length;
-			$hits->{$subj}->{hsp}->{'query-to'} -= $tiny_region_extension_length;
+			$ref_hash->{$subj}->{'start'} += $tiny_region_extension_length;
+			$ref_hash->{$subj}->{'end'} -= $tiny_region_extension_length;
 		}
-		# gene->{name}
-# gene->{strand}
-# gene->{feature}
-# gene->{contains} = an array of regions
-#	[ (start, end), (start, end) ]
-		$subj =~ /$(\d+)_(\d+)_(.+?)_(.+)$/;
-		my $gene_id = $1;
-		my $feat_id = $2;
-		my $gene_name = $3;
-		my $feat_name = $4;
-# 		if (!(exists $result_hash->{$gene_name})) {
-# 			my $gene_hash = {};
-# 			push @result_array, $gene_hash;
-# 		}
+		my (undef, $geneseq, undef) = Subfunctions::split_seq ($queryseq, $ref_hash->{$subj}->{'start'}, $ref_hash->{$subj}->{'end'});
+		$ref_hash->{$subj}->{'characters'} = $geneseq;
 	}
 
-	open OUTFH, ">", "$outfile.regions" or die "couldn't create $outfile";
-	foreach my $subj (@new_ref_array) {
-		print OUTFH "$subj($ref_hash->{$subj}->{'strand'})\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
-	}
-
-	close OUTFH;
-
+	return ($ref_hash, $ref_array);
 }
 
 sub merge_to_featuretable {
@@ -1441,19 +1423,14 @@ sub merge_to_featuretable {
 	my $outfile = shift;
 	my $name = shift;
 
-	if (!defined $name) {
-		$name = "";
-	}
 
 	my ($gene_array, $gene_index_array) = Genbank::parse_regionfile($regionfile);
 	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_featurefile($featurefile);
-	my ($fastahash, undef) = parse_fasta($fastafile);
-	my $seqlen = 0;
-	foreach my $k (keys $fastahash) {
-		# there should be only one key, so just one name.
-		$name = $k;
-		$seqlen = length ($fastahash->{$k});
-		Genbank::set_sequence($fastahash->{$k});
+	my (undef, $fastaarray) = parse_fasta($fastafile);
+
+	# there should be only one key, so just one name.
+	if (!defined $name) {
+		$name = @$fastaarray[0];
 	}
 
 	my $gene_hash = {};
@@ -1499,8 +1476,6 @@ sub merge_to_featuretable {
 	foreach my $gene (@final_gene_array) {
 		# first, print overall gene information
 		my $genename = $gene->{"qualifiers"}->{"gene"};
-		my $gene_id = $gene->{"id"};
-		my $feat_id = 0;
 		foreach my $r (@{$gene->{'region'}}) {
 			$r =~ /(\d+)\.\.(\d+)/;
 			print FH "$1\t$2\tgene\n";
@@ -1520,9 +1495,6 @@ sub merge_to_featuretable {
 					$start = $end;
 					$end = $oldend;
 				}
-				my $regseq = Genbank::sequence_for_interval ($reg);
-				my $featname = $feat->{"type"};
-				$feat_id++;
 			}
 			print FH Genbank::sequin_feature ($feat->{'region'}, $feat);
 		}

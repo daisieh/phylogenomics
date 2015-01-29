@@ -332,7 +332,6 @@ sub parse_regionfile {
 		if ($line =~ /^(.*?)_(\d+)_(.+?)_(.+?)\((.)\)\t(\d+)\t(\d+)$/) {
 			# 	0_0_trnH_tRNA(-)	4	77
 			my ($id, $sub, $name, $type, $strand, $start, $end) = ($1, $2, $3, $4, $5, $6, $7);
-			print "$id $name $start $end\n";
 			if ($id == 0) { # first gene
 				$curr_gene_hash = {};
 				push @gene_index_array, $id;
