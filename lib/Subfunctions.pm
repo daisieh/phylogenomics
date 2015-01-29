@@ -1354,7 +1354,6 @@ sub codon_to_aa {
 sub blast_to_genbank {
 	my $gene_array = shift;
 	my $fastafile = shift;
-	my $outfile = shift;
 
 	my ($ref_hash, $ref_array) = clone_features($gene_array);
 
