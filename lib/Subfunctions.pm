@@ -1406,13 +1406,7 @@ sub blast_to_genbank {
 		}
 	}
 
-	open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
-	foreach my $subj (@$ref_array) {
-		print $outfh "$subj($ref_hash->{$subj}->{'strand'})\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
-	}
-
-	close $outfh;
-
+	return ($ref_hash, $ref_array);
 }
 
 sub merge_to_featuretable {
