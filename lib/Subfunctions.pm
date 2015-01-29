@@ -1426,15 +1426,11 @@ sub merge_to_featuretable {
 
 	my ($gene_array, $gene_index_array) = Genbank::parse_regionfile($regionfile);
 	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_featurefile($featurefile);
-	my ($fastahash, undef) = parse_fasta($fastafile);
-	my $seqlen = 0;
-	foreach my $k (keys $fastahash) {
-		# there should be only one key, so just one name.
-		if (!defined $name) {
-			$name = $k;
-		}
-		$seqlen = length ($fastahash->{$k});
-		Genbank::set_sequence($fastahash->{$k});
+	my (undef, $fastaarray) = parse_fasta($fastafile);
+
+	# there should be only one key, so just one name.
+	if (!defined $name) {
+		$name = @$fastaarray[0];
 	}
 
 	my $gene_hash = {};
@@ -1480,8 +1476,6 @@ sub merge_to_featuretable {
 	foreach my $gene (@final_gene_array) {
 		# first, print overall gene information
 		my $genename = $gene->{"qualifiers"}->{"gene"};
-		my $gene_id = $gene->{"id"};
-		my $feat_id = 0;
 		foreach my $r (@{$gene->{'region'}}) {
 			$r =~ /(\d+)\.\.(\d+)/;
 			print FH "$1\t$2\tgene\n";
@@ -1501,9 +1495,6 @@ sub merge_to_featuretable {
 					$start = $end;
 					$end = $oldend;
 				}
-				my $regseq = Genbank::sequence_for_interval ($reg);
-				my $featname = $feat->{"type"};
-				$feat_id++;
 			}
 			print FH Genbank::sequin_feature ($feat->{'region'}, $feat);
 		}
