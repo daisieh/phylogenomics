@@ -6,6 +6,7 @@ use File::Temp qw (tempfile tempdir);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Subfunctions qw (parse_fasta write_fasta blast_to_genbank);
+use Genbank qw (parse_genbank);
 use Data::Dumper;
 
 if (@ARGV == 0) {
@@ -31,8 +32,8 @@ if ($gbfile !~ /\.gb$/) {
 	print "reference file needs to be a fully annotated Genbank file.\n";
 	exit;
 }
-
-my ($result_hash, $result_array) = blast_to_genbank ($gbfile, $fastafile, $outfile);
+my $gene_array = parse_genbank($gbfile);
+my ($result_hash, $result_array) = blast_to_genbank ($gene_array, $fastafile, $outfile);
 
 __END__
 

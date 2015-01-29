@@ -4,7 +4,7 @@ use FindBin;
 use lib "$FindBin::Bin/..";
 use Nexus qw(parse_nexus);
 use Blast qw (parse_xml compare_hsps compare_regions);
-use Genbank qw (parse_genbank flatten_features write_features_as_fasta sequence_for_interval parse_regionfile parse_featurefile set_sequence sequin_feature);
+use Genbank qw (parse_genbank clone_features write_features_as_fasta sequence_for_interval parse_regionfile parse_featurefile set_sequence sequin_feature);
 use Data::Dumper;
 
 
@@ -1351,12 +1351,11 @@ sub codon_to_aa {
 #	[ (start, end), (start, end) ]
 
 sub blast_to_genbank {
-	my $gbfile = shift;
+	my $gene_array = shift;
 	my $fastafile = shift;
 	my $outfile = shift;
 
-	my $gene_array = parse_genbank($gbfile);
-	my ($ref_hash, $ref_array) = flatten_features($gene_array);
+	my ($ref_hash, $ref_array) = clone_features($gene_array);
 
 	# look for regions too small to blast accurately:
 	my $tiny_regions = {};
