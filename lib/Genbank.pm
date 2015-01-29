@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table flatten_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -126,7 +126,7 @@ sub parse_feature_sequences {
 	}
 }
 
-sub flatten_features {
+sub clone_features {
 	my $gene_array = shift;
 # print Dumper ($gene_array);
 	my $flattened_hash = {};
@@ -175,7 +175,7 @@ sub flatten_features {
 sub write_features_as_fasta {
 	my $gene_array = shift;
 
-	my ($flattened_hash, $flattened_names) = flatten_features ($gene_array);
+	my ($flattened_hash, $flattened_names) = clone_features ($gene_array);
 	my $result = "";
 	foreach my $fullname (@$flattened_names) {
 		my $strand = $flattened_hash->{$fullname}->{"strand"};
@@ -316,10 +316,6 @@ sub parse_featurefile {
 
 	close FH;
 	return parse_feature_table ($featuretable);
-}
-
-sub write_regionfile {
-
 }
 
 sub parse_regionfile {
