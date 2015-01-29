@@ -1371,10 +1371,8 @@ sub blast_to_genbank {
 			$ref_hash->{"$region"}->{'characters'} = sequence_for_interval ("$start..$end");
 		}
 	}
-
  	my ($fastafh, $subjectfasta) = tempfile();
 	foreach my $ref (@$ref_array) {
-		print "$ref\n";
 		print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
 	}
 	close $fastafh;
@@ -1408,14 +1406,8 @@ sub blast_to_genbank {
 		}
 	}
 
-#  	my ($outfh, undef) = tempfile();
 	open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
 	foreach my $subj (@$ref_array) {
-# 		print "$subj\n";
-# 		print "$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
-# 		print "$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n###\n";
-# 		print "$hits->{$subj}->{hsp}->{'qseq'}\n";
-# 		print "$ref_hash->{$subj}->{'characters'}\n";
 		print $outfh "$subj($ref_hash->{$subj}->{'strand'})\t$hits->{$subj}->{hsp}->{'query-from'}\t$hits->{$subj}->{hsp}->{'query-to'}\n";
 	}
 
