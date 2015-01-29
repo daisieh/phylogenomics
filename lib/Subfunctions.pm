@@ -1,5 +1,6 @@
 package Subfunctions;
 use strict;
+use File::Temp qw(tempfile);
 use FindBin;
 use lib "$FindBin::Bin/..";
 use Nexus qw(parse_nexus);
@@ -1371,20 +1372,19 @@ sub blast_to_genbank {
 		}
 	}
 
-	open FAS_FH, ">", "$gbfile.fasta";
-	my @new_ref_array = ();
+ 	my ($fastafh, $subjectfasta) = tempfile();
 	foreach my $ref (@$ref_array) {
 		push @new_ref_array, "$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}";
-		print FAS_FH ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
+		print "$ref\n";
+		print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
 	}
-	close FAS_FH;
+	close $fastafh;
 
-	system("blastn -query $fastafile -subject $gbfile.fasta -outfmt 5 -out $outfile.xml -word_size 10");
-
-	print "parsing results\n";
+ 	my (undef, $blastfile) = tempfile();
+	system("blastn -query $fastafile -subject $subjectfasta -outfmt 5 -out $blastfile -word_size 10");
 
 	# choose the best hits:
-	my $hit_array = Blast::parse_xml ("$outfile.xml");
+	my $hit_array = Blast::parse_xml ($blastfile);
 	my $hits = {};
 	foreach my $hit (@$hit_array) {
 		my $subject = $hit->{"subject"}->{"name"};
