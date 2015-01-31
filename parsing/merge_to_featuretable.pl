@@ -26,8 +26,9 @@ my (undef, $fastaarray) = parse_fasta($fastafile);
 # there should be only one key, so just one name.
 my $name = @$fastaarray[0];
 
-merge_to_featuretable ($regionfile, "$gbfile.features", $outfile, $name);
-
+open FH, ">", "$outfile.tbl";
+print FH merge_to_featuretable ($regionfile, "$gbfile.features", $name);
+close FH;
 # >Features Populus trichocarpa chloroplast, complete genome.
 # 1	157033	source
 # 			mol_type	genomic DNA
