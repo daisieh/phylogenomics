@@ -43,9 +43,6 @@ if ($outfile eq "") {
 
 
 my $gene_array = parse_genbank($gbfile);
-open FEATURES_FH, ">", "$gbfile.features";
-print FEATURES_FH write_features_as_table ($gene_array);
-close FEATURES_FH;
 
 # writes out $outfile.regions
 my ($ref_hash, $ref_array) = blast_to_genbank ($gene_array, $fastafile);
@@ -70,7 +67,11 @@ open FASTA_FH, ">", "$outfile.fsa";
 print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
-merge_to_featuretable ("$outfile.regions", $fastafile, "$gbfile.features", $outfile, $genbank_header);
+open FEATURES_FH, ">", "$gbfile.features";
+print FEATURES_FH write_features_as_table ($gene_array);
+close FEATURES_FH;
+
+merge_to_featuretable ("$outfile.regions", "$gbfile.features", $outfile, $genbank_header);
 
 # a regionfile is the output of parse_blast.pl comparing the fastafile to the reference fasta file from genbank.pl
 # my ($gene_array, $gene_index_array) = parse_regionfile("$outfile.regions");

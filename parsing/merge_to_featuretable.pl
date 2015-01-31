@@ -21,7 +21,12 @@ open FEATURES_FH, ">", "$gbfile.features";
 print FEATURES_FH write_features_as_table ($gene_array);
 close FEATURES_FH;
 
-merge_to_featuretable ($regionfile, $fastafile, "$gbfile.features", $outfile);
+my (undef, $fastaarray) = parse_fasta($fastafile);
+
+# there should be only one key, so just one name.
+my $name = @$fastaarray[0];
+
+merge_to_featuretable ($regionfile, "$gbfile.features", $outfile, $name);
 
 # >Features Populus trichocarpa chloroplast, complete genome.
 # 1	157033	source
