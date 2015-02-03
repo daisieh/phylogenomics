@@ -4,7 +4,7 @@ use Data::Dumper;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Genbank qw(parse_genbank write_features_as_table);
-use Subfunctions qw(parse_fasta merge_to_featuretable);
+use Subfunctions qw(parse_fasta merge_to_sequin_tbl);
 
 # a regionfile is the output of parse_blast.pl comparing the fastafile to the reference fasta file from genbank.pl
 my $regionfile = shift;
@@ -22,7 +22,7 @@ my (undef, $fastaarray) = parse_fasta($fastafile);
 my $name = @$fastaarray[0];
 
 open FH, ">", "$outfile.tbl";
-print FH merge_to_featuretable ($regionfile, $gbfile, $name);
+print FH merge_to_sequin_tbl ($regionfile, $gbfile, $name);
 close FH;
 # >Features Populus trichocarpa chloroplast, complete genome.
 # 1	157033	source

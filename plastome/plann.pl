@@ -7,7 +7,7 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Blast qw (parse_xml);
 use Genbank qw (parse_genbank parse_regionfile write_features_as_table parse_gene_array_to_features set_sequence get_sequence);
-use Subfunctions qw (parse_fasta blast_to_genbank merge_to_featuretable);
+use Subfunctions qw (parse_fasta blast_to_genbank merge_to_sequin_tbl);
 use Data::Dumper;
 
 my $help = 0;
@@ -77,7 +77,7 @@ print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
 open TBL_FH, ">", "$outfile.tbl";
-print TBL_FH merge_to_featuretable ("$outfile.regions", $gbfile, $genbank_header);
+print TBL_FH merge_to_sequin_tbl ("$outfile.regions", $gbfile, $genbank_header);
 close TBL_FH;
 
 # need to annotate inverted repeats
