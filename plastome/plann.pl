@@ -21,7 +21,7 @@ if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
-GetOptions ('reference=s' => \$gbfile,
+GetOptions ('reference|gb|genbank=s' => \$gbfile,
 			'fastafile=s' => \$fastafile,
 			'outfile=s' => \$outfile,
 			'organism=s' => \$orgname,
@@ -41,6 +41,15 @@ if ($outfile eq "") {
 	$outfile = "output";
 }
 
+if ($gbfile eq "") {
+	print "need to supply a Genbank reference file (-reference).\n";
+	exit;
+}
+
+if ($fastafile eq "") {
+	print "need to supply a fasta-formatted plastome sequence to annotate (-fasta).\n";
+	exit;
+}
 
 my $gene_array = parse_genbank($gbfile);
 
