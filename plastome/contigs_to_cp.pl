@@ -369,7 +369,7 @@ contigs_to_cp.pl [-reffile reffile] [-contigfile contigfile] [-outputfile output
 
 =head1 OPTIONS
 
-  -reffile:         fasta file of reference plastome
+  -reffile:         genbank or fasta file of reference plastome
   -contigfile:      fasta file of putative cp contigs
   -outputfile:      name of output file
 
