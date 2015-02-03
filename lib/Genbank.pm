@@ -51,7 +51,14 @@ sub parse_genbank {
 	open FH, "<", $gbfile;
 
 	my @gene_array = ();
-# 	my $name = "";
+	$line = "";
+	$in_features = 0;
+	$in_sequence = 0;
+	$feat_desc_string = "";
+	$sequence = "";
+	$curr_gene = {};
+	$gb_name = "";
+
 	$line = readline FH;
 	while (defined $line) {
 		if ($line =~ /^\s+$/) {
