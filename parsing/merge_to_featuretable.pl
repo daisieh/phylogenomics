@@ -16,18 +16,13 @@ my $fastafile = shift;
 my $gbfile = shift;
 my $outfile = shift;
 
-my $gene_array = parse_genbank($gbfile);
-open FEATURES_FH, ">", "$gbfile.features";
-print FEATURES_FH write_features_as_table ($gene_array);
-close FEATURES_FH;
-
 my (undef, $fastaarray) = parse_fasta($fastafile);
 
 # there should be only one key, so just one name.
 my $name = @$fastaarray[0];
 
 open FH, ">", "$outfile.tbl";
-print FH merge_to_featuretable ($regionfile, "$gbfile.features", $name);
+print FH merge_to_featuretable ($regionfile, $gbfile, $name);
 close FH;
 # >Features Populus trichocarpa chloroplast, complete genome.
 # 1	157033	source

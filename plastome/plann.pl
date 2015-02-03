@@ -67,12 +67,8 @@ open FASTA_FH, ">", "$outfile.fsa";
 print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
-open FEATURES_FH, ">", "$gbfile.features";
-print FEATURES_FH write_features_as_table ($gene_array);
-close FEATURES_FH;
-
 open TBL_FH, ">", "$outfile.tbl";
-print TBL_FH merge_to_featuretable ("$outfile.regions", "$gbfile.features", $genbank_header);
+print TBL_FH merge_to_featuretable ("$outfile.regions", $gbfile, $genbank_header);
 close TBL_FH;
 
 # need to annotate inverted repeats
