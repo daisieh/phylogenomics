@@ -1360,6 +1360,7 @@ sub blast_to_genbank {
 	my ($ref_hash, $ref_array) = clone_features($gene_array);
 	my ($query_hash, $query_array) = parse_fasta($fastafile);
 	my $queryseq = $query_hash->{@$query_array[0]};
+
 	# look for regions too small to blast accurately:
 	my $tiny_regions = {};
 	my $tiny_region_extension_length = 20;
@@ -1370,9 +1371,11 @@ sub blast_to_genbank {
 			$tiny_regions->{$region}->{'characters'} = $ref_hash->{"$region"}->{'characters'};
 			$start -= $tiny_region_extension_length;
 			$end += $tiny_region_extension_length;
-			$ref_hash->{"$region"}->{'characters'} = sequence_for_interval ("$start..$end");
+			my (undef, $seq, undef) = Subfunctions::split_seq ($refseq, $start, $end);
+			$ref_hash->{"$region"}->{'characters'} = $seq;
 		}
 	}
+
  	my ($fastafh, $subjectfasta) = tempfile();
 	foreach my $ref (@$ref_array) {
 		print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
@@ -1380,34 +1383,50 @@ sub blast_to_genbank {
 	close $fastafh;
 
  	my (undef, $blastfile) = tempfile();
+
 	system("blastn -query $fastafile -subject $subjectfasta -outfmt 5 -out $blastfile -word_size 10");
 
 	# choose the best hits:
 	my $hit_array = Blast::parse_xml ($blastfile);
-	my $hits = {};
 	foreach my $hit (@$hit_array) {
 		my $subj = $hit->{"subject"}->{"name"};
+
+		# keep the best-scoring hits.
 		my @hsps = sort Blast::compare_hsps @{$hit->{"hsps"}};
+		my @best_hsps = ();
+		foreach my $hsp (@hsps) {
+			if ($hsp->{'score'} > 50) {
+				push @best_hsps, $hsp;
+			} else {
+				last;
+			}
+		}
+
 		my $best_hit = shift @hsps;
-		$hits->{$subj}->{"hsp"} = $best_hit;
-		if ($best_hit->{"hit-from"} < $best_hit->{"hit-to"}) {
-			$hits->{$subj}->{"orientation"} = 1;
-		} else {
-			$hits->{$subj}->{"orientation"} = -1;
-		}
-	}
 
-	# copy the best hit values back into the reference array:
-	foreach my $subj (@$ref_array) {
-		$ref_hash->{$subj}->{'start'} = $hits->{$subj}->{hsp}->{'query-from'};
-		$ref_hash->{$subj}->{'end'} = $hits->{$subj}->{hsp}->{'query-to'};
-
+		# fix the lengths back for tiny regions.
 		if (exists $tiny_regions->{$subj}) {
-			$ref_hash->{$subj}->{'start'} += $tiny_region_extension_length;
-			$ref_hash->{$subj}->{'end'} -= $tiny_region_extension_length;
+			$best_hit->{'query-from'} += $tiny_region_extension_length;
+			$best_hit->{'query-to'} -= $tiny_region_extension_length;
+			$best_hit->{"align-len"} = $best_hit->{'query-to'} - $best_hit->{'query-from'} + 1;
 		}
-		my (undef, $geneseq, undef) = Subfunctions::split_seq ($queryseq, $ref_hash->{$subj}->{'start'}, $ref_hash->{$subj}->{'end'});
-		$ref_hash->{$subj}->{'characters'} = $geneseq;
+
+		$ref_hash->{$subj}->{'coverage'} = ($ref_hash->{$subj}->{'end'} - $ref_hash->{$subj}->{'start'} + 1) . "/" . $best_hit->{"align-len"};
+
+		# copy the best hit values back into the reference array:
+		if ($best_hit->{"align-len"} == ($ref_hash->{$subj}->{'end'} - $ref_hash->{$subj}->{'start'} + 1)) {
+			# the entire reference gene was matched: set the hash start and end to the updated indices on the query seq.
+			$ref_hash->{$subj}->{'start'} = $best_hit->{'query-from'};
+			$ref_hash->{$subj}->{'end'} = $best_hit->{'query-to'};
+			my (undef, $geneseq, undef) = Subfunctions::split_seq ($queryseq, $ref_hash->{$subj}->{'start'}, $ref_hash->{$subj}->{'end'});
+			$ref_hash->{$subj}->{'characters'} = $geneseq;
+		} else {
+			# the entire reference gene was not matched: save off the reference gene as-is and save the hits for later.
+			$ref_hash->{$subj}->{'hsps'} = \@best_hsps;
+
+			my (undef, $refgeneseq, undef) = Subfunctions::split_seq ($refseq, $ref_hash->{$subj}->{'start'}, $ref_hash->{$subj}->{'end'});
+			$ref_hash->{$subj}->{'characters'} = $refgeneseq;
+		}
 	}
 
 	return ($ref_hash, $ref_array);

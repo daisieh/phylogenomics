@@ -53,9 +53,14 @@ if ($fastafile eq "") {
 
 # write out $outfile.regions
 my ($ref_hash, $ref_array) = blast_to_genbank ($gbfile, $fastafile);
+
 open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
 foreach my $subj (@$ref_array) {
-	print $outfh "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
+	if (exists $ref_hash->{$subj}->{'hsps'}) {
+		print "$subj $ref_hash->{$subj}->{'coverage'}\n" . Dumper ($ref_hash->{$subj}->{'hsps'});
+	} else {
+		print $outfh "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
+	}
 }
 
 close $outfh;
