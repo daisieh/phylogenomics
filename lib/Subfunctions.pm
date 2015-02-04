@@ -1386,14 +1386,14 @@ sub blast_to_genbank {
 	my $hit_array = Blast::parse_xml ($blastfile);
 	my $hits = {};
 	foreach my $hit (@$hit_array) {
-		my $subject = $hit->{"subject"}->{"name"};
+		my $subj = $hit->{"subject"}->{"name"};
 		my @hsps = sort Blast::compare_hsps @{$hit->{"hsps"}};
 		my $best_hit = shift @hsps;
-		$hits->{$subject}->{"hsp"} = $best_hit;
+		$hits->{$subj}->{"hsp"} = $best_hit;
 		if ($best_hit->{"hit-from"} < $best_hit->{"hit-to"}) {
-			$hits->{$subject}->{"orientation"} = 1;
+			$hits->{$subj}->{"orientation"} = 1;
 		} else {
-			$hits->{$subject}->{"orientation"} = -1;
+			$hits->{$subj}->{"orientation"} = -1;
 		}
 	}
 
