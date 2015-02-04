@@ -51,10 +51,8 @@ if ($fastafile eq "") {
 	exit;
 }
 
-my $gene_array = parse_genbank($gbfile);
-
-# writes out $outfile.regions
-my ($ref_hash, $ref_array) = blast_to_genbank ($gene_array, $fastafile);
+# write out $outfile.regions
+my ($ref_hash, $ref_array) = blast_to_genbank ($gbfile, $fastafile);
 open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
 foreach my $subj (@$ref_array) {
 	print $outfh "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";

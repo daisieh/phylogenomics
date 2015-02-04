@@ -1352,9 +1352,11 @@ sub codon_to_aa {
 #	[ (start, end), (start, end) ]
 
 sub blast_to_genbank {
-	my $gene_array = shift;
+	my $gbfile = shift;
 	my $fastafile = shift;
 
+	my $gene_array = Genbank::parse_genbank($gbfile);
+	my $refseq = Genbank::get_sequence();
 	my ($ref_hash, $ref_array) = clone_features($gene_array);
 	my ($query_hash, $query_array) = parse_fasta($fastafile);
 	my $queryseq = $query_hash->{@$query_array[0]};
