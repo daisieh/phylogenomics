@@ -7,7 +7,7 @@ use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Blast qw (parse_xml);
 use Genbank qw (parse_genbank parse_regionfile write_features_as_table parse_gene_array_to_features set_sequence get_sequence);
-use Subfunctions qw (parse_fasta blast_to_genbank merge_to_sequin_tbl);
+use Subfunctions qw (parse_fasta blast_to_genbank align_regions_to_reference align_hits_to_ref);
 use Data::Dumper;
 
 my $help = 0;
@@ -51,21 +51,6 @@ if ($fastafile eq "") {
 	exit;
 }
 
-# write out $outfile.regions
-my ($ref_hash, $ref_array) = blast_to_genbank ($gbfile, $fastafile);
-
-open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
-foreach my $subj (@$ref_array) {
-	if (exists $ref_hash->{$subj}->{'hsps'}) {
-		print "$subj $ref_hash->{$subj}->{'coverage'}\n" . Dumper ($ref_hash->{$subj}->{'hsps'});
-	} else {
-		print $outfh "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
-	}
-}
-
-close $outfh;
-
-
 my ($fastahash, $fastaarray) = parse_fasta($fastafile);
 
 # there should be only one key, so just one name.
@@ -74,13 +59,33 @@ if ($samplename eq "") {
 }
 
 my $queryseq = $fastahash->{@$fastaarray[0]};
+
+# write out $outfile.regions
+my ($result_hash, $result_array) = blast_to_genbank ($gbfile, $fastafile);
+
+my @finished_array = ();
+foreach my $subj (@$result_array) {
+	if (exists $result_hash->{$subj}->{'hsps'}) {
+		print "$subj\n" . Dumper (align_hits_to_ref ($result_hash->{$subj}, $queryseq));
+
+	} else {
+		push @finished_array, $subj;
+	}
+}
+open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
+print $outfh Genbank::write_regionfile ($result_hash, \@finished_array);
+close $outfh;
+
 my $genbank_header = "$samplename [organism=$orgname][moltype=Genomic DNA][location=chloroplast][topology=Circular][gcode=11]";
 open FASTA_FH, ">", "$outfile.fsa";
 print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
+
+my $gene_array = align_regions_to_reference ("$outfile.regions", $gbfile);
+
 open TBL_FH, ">", "$outfile.tbl";
-print TBL_FH merge_to_sequin_tbl ("$outfile.regions", $gbfile, $genbank_header);
+print TBL_FH Genbank::write_sequin_tbl ($gene_array, $genbank_header);
 close TBL_FH;
 
 # need to annotate inverted repeats
