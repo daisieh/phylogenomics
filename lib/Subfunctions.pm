@@ -4,7 +4,7 @@ use File::Temp qw(tempfile);
 use FindBin;
 use lib "$FindBin::Bin/..";
 use Nexus qw(parse_nexus);
-use Blast qw (parse_xml compare_hsps compare_regions);
+use Blast qw (parse_xml sort_hsps_by_score sort_regions_by_start);
 use Genbank qw (parse_genbank clone_features write_features_as_fasta sequence_for_interval parse_regionfile parse_featurefile set_sequence sequin_feature);
 use Data::Dumper;
 
@@ -18,7 +18,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw();
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta write_fasta parse_phylip write_phylip meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str blast_to_genbank merge_to_sequin_tbl);
+	our @EXPORT_OK   = qw(timestamp combine_files make_label_lookup sample_list get_ordered_genotypes get_allele_str get_iupac_code reverse_complement parse_fasta write_fasta parse_phylip write_phylip meld_matrices sortfasta meld_sequence_files vcf_to_depth blast_to_alignment blast_short_to_alignment system_call disambiguate_str split_seq line_wrap trim_to_ref align_to_ref align_to_seq subseq_from_fasta translate_seq codon_to_aa pad_seq_ends set_debug debug find_sequences consensus_str blast_to_genbank align_regions_to_reference align_hits_to_ref);
 }
 
 my $debug = 0;
@@ -1392,7 +1392,7 @@ sub blast_to_genbank {
 		my $subj = $hit->{"subject"}->{"name"};
 
 		# keep the best-scoring hits.
-		my @hsps = sort Blast::compare_hsps @{$hit->{"hsps"}};
+		my @hsps = sort Blast::sort_hsps_by_score @{$hit->{"hsps"}};
 		my @best_hsps = ();
 		foreach my $hsp (@hsps) {
 			if ($hsp->{'score'} > 50) {
@@ -1432,21 +1432,48 @@ sub blast_to_genbank {
 	return ($ref_hash, $ref_array);
 }
 
-sub merge_to_sequin_tbl {
+sub align_hits_to_ref {
+	my $hit_hash = shift;
+	my $queryseq = shift;
+
+	my @hits = sort Blast::sort_hsps_by_hit_start @{$hit_hash->{'hsps'}};
+	my @result = ();
+	push @result, $hit_hash->{'characters'};
+	foreach my $hit (@hits) {
+		if ($hit->{'hit-from'} > $hit->{'hit-to'}) {
+			next;
+		}
+		my $front_pad = ($hit->{'hit-from'} - 1);
+		my $back_pad = (length($hit_hash->{'characters'}) - $hit->{'hit-to'});
+		my $qseq = "";
+		my $hseq = "";
+# 		(undef, $qseq, undef) = Subfunctions::split_seq ($queryseq, $hit->{'query-from'} - $front_pad, $hit->{'query-to'} + $back_pad);
+# 		$qseq = lc ($qseq);
+# 		$hseq = uc(substr ($qseq, $front_pad, length($qseq) - $front_pad - $back_pad));
+# 		substr ($qseq, $front_pad, length($hseq), $hseq);
+		$qseq = '-'x $front_pad . $hit->{'qseq'} . '-' x $back_pad;
+		push @result, $qseq;
+		$qseq = '-'x $front_pad . $hit->{'midline'} . '-' x $back_pad;
+		push @result, $qseq;
+		$qseq = '-'x $front_pad . $hit->{'hseq'} . '-' x $back_pad;
+		push @result, $qseq;
+
+	}
+
+ 	return \@result;
+}
+
+sub align_regions_to_reference {
 	# a regionfile is the output of parse_blast.pl comparing the fasta file to the reference fasta file from genbank.pl
 	my $regionfile = shift;
 	my $refgbfile = shift;
-	my $name = shift;
 
 	my ($gene_array, $gene_index_array) = Genbank::parse_regionfile($regionfile);
 
 	my $ref_gene_array = Genbank::parse_genbank($refgbfile);
-	my ($featfh, $featurefile) = tempfile();
 	my $featstring = Genbank::write_features_as_table ($ref_gene_array);
-	print $featfh $featstring;
-	close $featfh;
 
-	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_featurefile($featurefile);
+	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_feature_table ($featstring);
 	my $gene_hash = {};
 	foreach my $id (@$gene_index_array) {
 		my $gene = shift $gene_array;
@@ -1481,38 +1508,7 @@ sub merge_to_sequin_tbl {
 		push @final_gene_array, $gene;
 	}
 
-	# print header
-	my $result .= ">Features\t$name\n";
-
-	# start printing genes
-	foreach my $gene (@final_gene_array) {
-		# first, print overall gene information
-		my $genename = $gene->{"qualifiers"}->{"gene"};
-		foreach my $r (@{$gene->{'region'}}) {
-			$r =~ /(\d+)\.\.(\d+)/;
-			$result .= "$1\t$2\tgene\n";
-		}
-		foreach my $q (keys %{$gene->{'qualifiers'}}) {
-			$result .= "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
-		}
-
-		# then, print each feature contained.
-		foreach my $feat (@{$gene->{'contains'}}) {
-			foreach my $reg (@{$feat->{"region"}}) {
-				my $strand = "+";
-				my ($start, $end) = split (/\.\./, $reg);
-				if ($end < $start) {
-					$strand = "-";
-					my $oldend = $start;
-					$start = $end;
-					$end = $oldend;
-				}
-			}
-			$result .= Genbank::sequin_feature ($feat->{'region'}, $feat);
-		}
-	}
-
-	return $result;
+	return \@final_gene_array;
 }
 
 # must return 1 for the file overall.
