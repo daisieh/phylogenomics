@@ -1432,33 +1432,6 @@ sub blast_to_genbank {
 	return ($ref_hash, $ref_array);
 }
 
-sub align_hits_to_ref {
-	my $hit_hash = shift;
-	my $queryseq = shift;
-
-	my @hits = sort Blast::sort_hsps_by_hit_start @{$hit_hash->{'hsps'}};
-	my @result_array = ();
-	push @result_array, $hit_hash->{'characters'};
-	foreach my $hit (@hits) {
-		if ($hit->{'hit-from'} > $hit->{'hit-to'}) {
-			next;
-		}
-		my $front_pad = ($hit->{'hit-from'} - 1);
-		my $back_pad = (length($hit_hash->{'characters'}) - $hit->{'hit-to'});
-		my $qseq = "";
-		my $hseq = "";
-		$qseq = '-'x $front_pad . $hit->{'qseq'} . '-' x $back_pad;
-		push @result_array, $qseq;
-		$qseq = '-'x $front_pad . $hit->{'midline'} . '-' x $back_pad;
-		push @result_array, $qseq;
-		$qseq = '-'x $front_pad . $hit->{'hseq'} . '-' x $back_pad;
-		push @result_array, $qseq;
-
-	}
-
- 	return \@result_array;
-}
-
 sub align_regions_to_reference {
 	my $ref_hash = shift;
 	my $ref_array = shift;
@@ -1494,6 +1467,33 @@ sub align_regions_to_reference {
 	}
 
 	return \@final_gene_array;
+}
+
+sub align_hits_to_ref {
+	my $hit_hash = shift;
+	my $queryseq = shift;
+
+	my @hits = sort Blast::sort_hsps_by_hit_start @{$hit_hash->{'hsps'}};
+	my @result_array = ();
+	push @result_array, $hit_hash->{'characters'};
+	foreach my $hit (@hits) {
+		if ($hit->{'hit-from'} > $hit->{'hit-to'}) {
+			next;
+		}
+		my $front_pad = ($hit->{'hit-from'} - 1);
+		my $back_pad = (length($hit_hash->{'characters'}) - $hit->{'hit-to'});
+		my $qseq = "";
+		my $hseq = "";
+		$qseq = '-'x $front_pad . $hit->{'qseq'} . '-' x $back_pad;
+		push @result_array, $qseq;
+		$qseq = '-'x $front_pad . $hit->{'midline'} . '-' x $back_pad;
+		push @result_array, $qseq;
+		$qseq = '-'x $front_pad . $hit->{'hseq'} . '-' x $back_pad;
+		push @result_array, $qseq;
+
+	}
+
+ 	return \@result_array;
 }
 
 # must return 1 for the file overall.
