@@ -19,7 +19,7 @@ BEGIN {
 	# Functions and variables which are exported by default
 	our @EXPORT      = qw(blast_to_ref debug);
 	# Functions and variables which can be optionally exported
-	our @EXPORT_OK   = qw(parse_xml revcomp_hsp compare_hsps compare_regions);
+	our @EXPORT_OK   = qw(parse_xml revcomp_hsp sort_hsps_by_score sort_regions_by_start sort_hsps_by_hit_start);
 }
 my $debug = 0;
 
@@ -222,7 +222,8 @@ sub parse_xml {
 				$hsp_hash->{"query-frame"} = $hsp->{"Hsp_query-frame"}[0];
 				$hsp_hash->{"score"} = $hsp->{"Hsp_score"}[0];
 				$hsp_hash->{"align-len"} = $hsp->{"Hsp_align-len"}[0];
-# 				$hsp_hash->{"midline"} = $hsp->{"Hsp_midline"}[0];
+				$hsp_hash->{"midline"} = $hsp->{"Hsp_midline"}[0];
+
 			}
 		}
 	}
@@ -245,7 +246,7 @@ sub revcomp_hsp {
 }
 
 ###### SORT FUNCTIONS
-sub compare_hsps ($$) {
+sub sort_hsps_by_score ($$) {
 	my $a = $_[0];
 	my $b = $_[1];
 	my $score = $b->{"bit-score"} - $a->{"bit-score"};
@@ -263,7 +264,23 @@ sub compare_hsps ($$) {
 	return $score;
 }
 
-sub compare_regions ($$) {
+sub sort_hsps_by_hit_start ($$) {
+	my $a = $_[0];
+	my $b = $_[1];
+	my $b_start = $b->{'hit-from'};
+	my $a_start = $a->{'hit-from'};
+	return ($a_start <=> $b_start);
+}
+
+sub sort_hsps_by_query_start ($$) {
+	my $a = $_[0];
+	my $b = $_[1];
+	my $b_start = $b->{'query-from'};
+	my $a_start = $a->{'query-from'};
+	return ($a_start <=> $b_start);
+}
+
+sub sort_regions_by_start ($$) {
 	my $a = $_[0];
 	my $b = $_[1];
 	$b =~ /.*\t(\d+)\t(\d+)/;
