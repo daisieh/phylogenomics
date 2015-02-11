@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_region_array parse_region_array parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_region_array parse_region_array parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -348,20 +348,6 @@ sub parse_gene_array_to_features {
 		}
 	}
 	return (\@gene_hasharray, \@gene_index_array);
-}
-
-sub parse_featurefile {
-	my $featurefile = shift;
-
-	open FH, "<:crlf", $featurefile or die "couldn't open file $featurefile";
-
-	my $featuretable = "";
-	foreach my $line (<FH>) {
-		$featuretable .= $line;
-	}
-
-	close FH;
-	return parse_feature_table ($featuretable);
 }
 
 sub write_region_array {

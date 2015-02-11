@@ -5,7 +5,7 @@ use FindBin;
 use lib "$FindBin::Bin/..";
 use Nexus qw(parse_nexus);
 use Blast qw (parse_xml sort_hsps_by_score sort_regions_by_start);
-use Genbank qw (parse_genbank clone_features write_features_as_fasta sequence_for_interval parse_featurefile set_sequence sequin_feature);
+use Genbank qw (parse_genbank clone_features write_features_as_fasta sequence_for_interval set_sequence sequin_feature);
 use Data::Dumper;
 
 
