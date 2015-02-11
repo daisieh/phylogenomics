@@ -452,7 +452,14 @@ sub parse_regionfile {
 	# finish processing the gene we were working on:
 	$curr_gene_hash->{"type"} = "gene";
 	$curr_gene_hash->{"region"} = max_interval ($curr_gene_exons); # largest gene region
-	return (\@gene_array, \@gene_index_array);
+
+	my $gene_hash = {};
+	foreach my $id (@gene_index_array) {
+		my $gene = shift @gene_array;
+		$gene_hash->{$id} = $gene;
+	}
+
+	return $gene_hash, \@gene_index_array;
 }
 
 sub sequence_for_interval {
