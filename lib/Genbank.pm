@@ -368,11 +368,11 @@ sub write_region_array {
 	my $ref_hash = shift;
 	my $ref_array = shift;
 
-	my @result = ();
+	my @region_array = ();
 	foreach my $subj (@$ref_array) {
-		push @result, "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
+		push @region_array, "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
 	}
-	return \@result;
+	return \@region_array;
 }
 
 sub parse_region_array {
