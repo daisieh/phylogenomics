@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_regionfile parse_regionfile parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_region_array parse_region_array parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -364,27 +364,26 @@ sub parse_featurefile {
 	return parse_feature_table ($featuretable);
 }
 
-sub write_regionfile {
+sub write_region_array {
 	my $ref_hash = shift;
 	my $ref_array = shift;
 
-	my $result = "";
+	my @result = ();
 	foreach my $subj (@$ref_array) {
-		$result .= "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
+		push @result, "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
 	}
-	return $result;
+	return \@result;
 }
 
-sub parse_regionfile {
-	my $regionfile = shift;
+sub parse_region_array {
+	my $region_array = shift;
 
 	my @gene_array = ();
-	open FH, "<", $regionfile;
 	my $curr_gene_count = 0;
 	my $curr_gene_exons;
 	my $curr_gene = "";
 	my $curr_gene_hash= {};
-	foreach my $line (<FH>) {
+	foreach my $line (@$region_array) {
 		if ($line =~ /^(.*?)_(\d+)_(.+?)_(.+?)\((.)\)\t(\d+)\t(\d+)$/) {
 			# 	0_0_trnH_tRNA(-)	4	77
 			my ($id, $sub, $name, $type, $strand, $start, $end) = ($1, $2, $3, $4, $5, $6, $7);
