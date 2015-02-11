@@ -6,7 +6,7 @@ use File::Temp qw (tempfile tempdir);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Blast qw (parse_xml);
-use Genbank qw (parse_genbank parse_regionfile write_features_as_table parse_gene_array_to_features set_sequence get_sequence);
+use Genbank qw (parse_genbank write_features_as_table parse_gene_array_to_features set_sequence get_sequence);
 use Subfunctions qw (parse_fasta blast_to_genbank align_regions_to_reference align_hits_to_ref);
 use Data::Dumper;
 
@@ -72,17 +72,18 @@ foreach my $subj (@$result_array) {
 		push @finished_array, $subj;
 	}
 }
-open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
-print $outfh Genbank::write_regionfile ($result_hash, \@finished_array);
-close $outfh;
 
 my $genbank_header = "$samplename [organism=$orgname][moltype=Genomic DNA][location=chloroplast][topology=Circular][gcode=11]";
 open FASTA_FH, ">", "$outfile.fsa";
 print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
+my $regionfile = "$outfile.regions";
+open my $outfh, ">", $regionfile or die "couldn't create $regionfile";
+print $outfh Genbank::write_regionfile ($result_hash, \@finished_array);
+close $outfh;
 
-my $gene_array = align_regions_to_reference ("$outfile.regions", $gbfile);
+my $gene_array = align_regions_to_reference ($regionfile, $gbfile);
 
 open TBL_FH, ">", "$outfile.tbl";
 print TBL_FH Genbank::write_sequin_tbl ($gene_array, $genbank_header);
