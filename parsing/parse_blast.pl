@@ -6,7 +6,7 @@ use File::Temp qw (tempfile tempdir);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Subfunctions qw (parse_fasta write_fasta blast_to_genbank);
-use Genbank qw (parse_genbank);
+use Genbank qw (parse_genbank write_regionfile write_sequin_tbl);
 use Data::Dumper;
 
 if (@ARGV == 0) {
@@ -32,10 +32,23 @@ if ($gbfile !~ /\.gb$/) {
 	print "reference file needs to be a fully annotated Genbank file.\n";
 	exit;
 }
-open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
+
 my ($ref_hash, $ref_array) = blast_to_genbank ($gbfile, $fastafile);
+
+my $regionfile = "$outfile.regions";
+open my $outfh, ">", $regionfile or die "couldn't create $regionfile";
 print $outfh write_regionfile ($ref_hash, $ref_array);
 close $outfh;
+
+my $gene_array = Subfunctions::align_regions_to_reference ($regionfile, $gbfile);
+
+my (undef, $fastaarray) = parse_fasta($fastafile);
+# there should be only one key, so just one name.
+my $name = @$fastaarray[0];
+
+open FH, ">", "$outfile.tbl";
+print FH write_sequin_tbl ($gene_array, $name);
+close FH;
 
 __END__
 
@@ -55,5 +68,8 @@ parse_blast -reference genbank.gb -fasta fastafile [-outputfile output_file]
 
 =head1 DESCRIPTION
 
+Given a Genbank-formatted reference file and a fasta-formatted sequence of a putative homolog
+of that reference, outputs a Sequin-formatted feature table with the homolog aligned to the
+gene features in the reference file.
 
 =cut
