@@ -12,16 +12,21 @@ if (@ARGV == 0) {
 }
 
 my $gbfile = shift;
+my $outfile = shift;
+
+if (!defined $outfile) {
+	$outfile = $gbfile;
+}
 
 my $gene_array = parse_genbank($gbfile);
 
-open FASTA_FH, ">", "$gbfile.fasta";
+open FASTA_FH, ">", "$outfile.fasta";
 print FASTA_FH write_features_as_fasta ($gene_array);
 close FASTA_FH;
 
-open FEATURES_FH, ">", "$gbfile.features";
-print FEATURES_FH write_features_as_table ($gene_array);
-close FEATURES_FH;
+open TBL_FH, ">", "$outfile.tbl";
+print TBL_FH Genbank::write_sequin_tbl($gene_array, "test");
+close TBL_FH;
 
 __END__
 

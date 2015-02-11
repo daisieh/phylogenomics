@@ -32,12 +32,9 @@ if ($gbfile !~ /\.gb$/) {
 	print "reference file needs to be a fully annotated Genbank file.\n";
 	exit;
 }
-my ($ref_hash, $ref_array) = blast_to_genbank ($gbfile, $fastafile);
 open my $outfh, ">", "$outfile.regions" or die "couldn't create $outfile";
-foreach my $subj (@$ref_array) {
-	print $outfh "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
-}
-
+my ($ref_hash, $ref_array) = blast_to_genbank ($gbfile, $fastafile);
+print $outfh write_regionfile ($ref_hash, $ref_array);
 close $outfh;
 
 __END__
