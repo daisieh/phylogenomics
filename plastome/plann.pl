@@ -85,30 +85,37 @@ close TBL_FH;
 
 # need to annotate inverted repeats
 
-# my $self_array = parse_xml ("$refblast.xml");
-# my @irs = ();
-# foreach my $hit (@$self_array) {
-# 	my @hsps = sort order_by_query_start @{$hit->{"hsps"}};
-# 	foreach my $hsp (@hsps) {
-# 		# only look at identical pieces that are smaller than the entire reference
-# 		if ((($hsp->{"query-to"} - $hsp->{"query-from"}) < ($reflen - 1)) && (($hsp->{"query-to"} - $hsp->{"query-from"}) > 10000)) {
-# 			push @irs, $hsp;
-# 		}
-# 	}
-# }
-#
-# if (@irs > 2) {
-# 	die "Error! There seem to be more than two inverted repeats. Are you sure this is a plastome sequence?";
-# }
-# sub order_by_query_start {
-# 	my $bstart = $b->{"query-from"};
-# 	my $astart = $a->{"query-from"};
-#
-# 	if ($astart < $bstart) { return -1; }
-# 	if ($astart > $bstart) { return 1; }
-# 	return 0;
-# }
+print "finding inverted repeats\n";
+# my ($fh, $refblast) = tempfile();
+my $refblast = "temp.xml";
+system("blastn -query $fastafile -subject $fastafile -outfmt 5 -out $refblast -evalue 1e-200");
 
+my $self_array = Blast::parse_xml ("$refblast");
+my @irs = ();
+foreach my $hit (@$self_array) {
+	my @hsps = sort Blast::sort_regions_by_start @{$hit->{"hsps"}};
+	foreach my $hsp (@hsps) {
+		# only look at identical pieces that are smaller than the entire reference
+		my $querylen = $hsp->{"query-to"} - $hsp->{"query-from"};
+		if (($querylen < 50000) && ($querylen > 10000)) {
+			push @irs, $hsp;
+		}
+	}
+}
+
+if (@irs > 2) {
+	die "Error! There seem to be more than two inverted repeats. Are you sure this is a plastome sequence?";
+}
+@irs = sort Blast::sort_hsps_by_query_start @irs;
+
+# all of the IR information is in one of the IRs, so shift.
+my $ir = shift @irs;
+my $irb = $ir->{'query-from'} . ".." . $ir->{'query-to'};
+my $ira = $ir->{'hit-to'} . ".." . $ir->{'hit-from'};
+
+#      repeat_region   84922..112749
+#                      /note="inverted repeat B"
+#                      /rpt_type=inverted
 
 __END__
 
