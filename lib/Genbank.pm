@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_region_array parse_region_array parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_region_array parse_region_array parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -195,25 +195,6 @@ sub write_features_as_fasta {
 	return $result;
 }
 
-sub write_features_as_table {
-	my $gene_array = shift;
-	my $result = "";
-	my $gene_id = 0;
-	foreach my $gene (@$gene_array) {
-		if ($gene->{"type"} eq "gene") {
-			my $interval_str = flatten_interval ($gene->{"region"});
-			my @gene_interval = ($interval_str);
-			$result .= "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
-			foreach my $feat (@{$gene->{"contains"}}) {
-				$result .= "$gene_id\t" . stringify_feature ($feat->{"region"}, $feat);
-			}
-			$gene_id++;
-		}
-	}
-
-	return $result;
-}
-
 sub write_sequin_tbl {
 	my $gene_array = shift;
 	my $name = shift;
@@ -254,7 +235,20 @@ sub write_sequin_tbl {
 }
 
 sub parse_feature_table {
-	my $featuretablestring = shift;
+	my $gene_array = shift;
+	my $featuretablestring = "";
+	my $gene_id = 0;
+	foreach my $gene (@$gene_array) {
+		if ($gene->{"type"} eq "gene") {
+			my $interval_str = flatten_interval ($gene->{"region"});
+			my @gene_interval = ($interval_str);
+			$featuretablestring .= "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
+			foreach my $feat (@{$gene->{"contains"}}) {
+				$featuretablestring .= "$gene_id\t" . stringify_feature ($feat->{"region"}, $feat);
+			}
+			$gene_id++;
+		}
+	}
 
 	my @featuretable = split (/\n|\r/,$featuretablestring);
 	my @gene_hasharray = ();

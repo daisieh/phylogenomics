@@ -1439,7 +1439,7 @@ sub align_regions_to_reference {
 
 	my $gene_index_array = Genbank::parse_region_array(Genbank::write_region_array ($ref_hash, $ref_array));
 
-	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_feature_table (Genbank::write_features_as_table (Genbank::parse_genbank($refgbfile)));
+	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_feature_table (Genbank::parse_genbank($refgbfile));
 	my $dest_gene_hash = {};
 	foreach my $id (@$destination_gene_index_array) {
 		$dest_gene_hash->{$id} = shift $destination_gene_array;
