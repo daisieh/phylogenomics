@@ -6,7 +6,7 @@ use File::Temp qw (tempfile tempdir);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 use Subfunctions qw (parse_fasta write_fasta blast_to_genbank);
-use Genbank qw (parse_genbank write_regionfile write_sequin_tbl);
+use Genbank qw (parse_genbank write_sequin_tbl);
 use Data::Dumper;
 
 if (@ARGV == 0) {
@@ -35,12 +35,7 @@ if ($gbfile !~ /\.gb$/) {
 
 my ($ref_hash, $ref_array) = blast_to_genbank ($gbfile, $fastafile);
 
-my $regionfile = "$outfile.regions";
-open my $outfh, ">", $regionfile or die "couldn't create $regionfile";
-print $outfh write_regionfile ($ref_hash, $ref_array);
-close $outfh;
-
-my $gene_array = Subfunctions::align_regions_to_reference ($regionfile, $gbfile);
+my $gene_array = Subfunctions::align_regions_to_reference ($ref_hash, $ref_array, $gbfile);
 
 my (undef, $fastaarray) = parse_fasta($fastafile);
 # there should be only one key, so just one name.

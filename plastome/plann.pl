@@ -78,12 +78,7 @@ open FASTA_FH, ">", "$outfile.fsa";
 print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
-my $regionfile = "$outfile.regions";
-open my $outfh, ">", $regionfile or die "couldn't create $regionfile";
-print $outfh Genbank::write_regionfile ($result_hash, \@finished_array);
-close $outfh;
-
-my $gene_array = align_regions_to_reference ($regionfile, $gbfile);
+my $gene_array = align_regions_to_reference ($result_hash, \@finished_array, $gbfile);
 
 open TBL_FH, ">", "$outfile.tbl";
 print TBL_FH Genbank::write_sequin_tbl ($gene_array, $genbank_header);
