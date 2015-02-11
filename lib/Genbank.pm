@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval parse_regionfile parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_regionfile parse_regionfile parse_featurefile parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta write_features_as_table clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -214,6 +214,45 @@ sub write_features_as_table {
 	return $result;
 }
 
+sub write_sequin_tbl {
+	my $gene_array = shift;
+	my $name = shift;
+
+	# print header
+	my $result = ">Features\t$name\n";
+
+	# start printing genes
+	foreach my $gene (@$gene_array) {
+		# first, print overall gene information
+		my $genename = $gene->{"qualifiers"}->{"gene"};
+		foreach my $r (@{$gene->{'region'}}) {
+			$r =~ /(\d+)\.\.(\d+)/;
+			$result .= "$1\t$2\tgene\n";
+		}
+		foreach my $q (keys %{$gene->{'qualifiers'}}) {
+			$result .= "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
+		}
+
+		# then, print each feature contained.
+		foreach my $feat (@{$gene->{'contains'}}) {
+			foreach my $reg (@{$feat->{"region"}}) {
+				my $strand = "+";
+				my ($start, $end) = split (/\.\./, $reg);
+				if ($end < $start) {
+					$strand = "-";
+					my $oldend = $start;
+					$start = $end;
+					$end = $oldend;
+				}
+			}
+			$result .= Genbank::sequin_feature ($feat->{'region'}, $feat);
+		}
+	}
+
+	return $result;
+
+}
+
 sub parse_feature_table {
 	my $featuretablestring = shift;
 
@@ -323,6 +362,17 @@ sub parse_featurefile {
 
 	close FH;
 	return parse_feature_table ($featuretable);
+}
+
+sub write_regionfile {
+	my $ref_hash = shift;
+	my $ref_array = shift;
+
+	my $result = "";
+	foreach my $subj (@$ref_array) {
+		$result .= "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
+	}
+	return $result;
 }
 
 sub parse_regionfile {
