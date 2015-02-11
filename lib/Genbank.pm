@@ -379,7 +379,6 @@ sub parse_regionfile {
 	my $regionfile = shift;
 
 	my @gene_array = ();
-	my @gene_index_array = ();
 	open FH, "<", $regionfile;
 	my $curr_gene_count = 0;
 	my $curr_gene_exons;
@@ -391,7 +390,7 @@ sub parse_regionfile {
 			my ($id, $sub, $name, $type, $strand, $start, $end) = ($1, $2, $3, $4, $5, $6, $7);
 			if ($id == 0) { # first gene
 				$curr_gene_hash = {};
-				push @gene_index_array, $id;
+				$curr_gene_hash->{'id'} = $id;
 				push @gene_array, $curr_gene_hash;
 				# process new gene's first exon:
 				$curr_gene_exons = ();
@@ -429,7 +428,7 @@ sub parse_regionfile {
 				# start processing the new gene:
 				$curr_gene_count = $id;
 				$curr_gene_hash = {};
-				push @gene_index_array, $id;
+				$curr_gene_hash->{'id'} = $id;
 				push @gene_array, $curr_gene_hash;
 
 				# process new gene's first exon:
@@ -453,13 +452,7 @@ sub parse_regionfile {
 	$curr_gene_hash->{"type"} = "gene";
 	$curr_gene_hash->{"region"} = max_interval ($curr_gene_exons); # largest gene region
 
-	my $gene_hash = {};
-	foreach my $id (@gene_index_array) {
-		my $gene = shift @gene_array;
-		$gene_hash->{$id} = $gene;
-	}
-
-	return $gene_hash, \@gene_index_array;
+	return \@gene_array;
 }
 
 sub sequence_for_interval {
