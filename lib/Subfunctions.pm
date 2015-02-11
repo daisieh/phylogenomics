@@ -1437,8 +1437,8 @@ sub align_hits_to_ref {
 	my $queryseq = shift;
 
 	my @hits = sort Blast::sort_hsps_by_hit_start @{$hit_hash->{'hsps'}};
-	my @result = ();
-	push @result, $hit_hash->{'characters'};
+	my @result_array = ();
+	push @result_array, $hit_hash->{'characters'};
 	foreach my $hit (@hits) {
 		if ($hit->{'hit-from'} > $hit->{'hit-to'}) {
 			next;
@@ -1447,20 +1447,16 @@ sub align_hits_to_ref {
 		my $back_pad = (length($hit_hash->{'characters'}) - $hit->{'hit-to'});
 		my $qseq = "";
 		my $hseq = "";
-# 		(undef, $qseq, undef) = Subfunctions::split_seq ($queryseq, $hit->{'query-from'} - $front_pad, $hit->{'query-to'} + $back_pad);
-# 		$qseq = lc ($qseq);
-# 		$hseq = uc(substr ($qseq, $front_pad, length($qseq) - $front_pad - $back_pad));
-# 		substr ($qseq, $front_pad, length($hseq), $hseq);
 		$qseq = '-'x $front_pad . $hit->{'qseq'} . '-' x $back_pad;
-		push @result, $qseq;
+		push @result_array, $qseq;
 		$qseq = '-'x $front_pad . $hit->{'midline'} . '-' x $back_pad;
-		push @result, $qseq;
+		push @result_array, $qseq;
 		$qseq = '-'x $front_pad . $hit->{'hseq'} . '-' x $back_pad;
-		push @result, $qseq;
+		push @result_array, $qseq;
 
 	}
 
- 	return \@result;
+ 	return \@result_array;
 }
 
 sub align_regions_to_reference {
