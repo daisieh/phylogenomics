@@ -135,7 +135,6 @@ sub parse_feature_sequences {
 
 sub clone_features {
 	my $gene_array = shift;
-# print Dumper ($gene_array);
 	my $flattened_hash = {};
 	my @flattened_names = ();
 	my $gene_id = 0;
@@ -146,11 +145,9 @@ sub clone_features {
 			my @gene_interval = ($interval_str);
 			my $genename = $gene->{"qualifiers"}->{"gene"};
 			$flattened_hash->{$genename}->{"gene"} = stringify_feature(\@gene_interval, $gene);
-# 			$result .= "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
 			$flattened_hash->{$genename}->{"contains"} = ();
 			foreach my $feat (@{$gene->{"contains"}}) {
 				push @{$flattened_hash->{$genename}->{"contains"}}, stringify_feature($feat->{"region"}, $feat);
-# 				$result .= "$gene_id\t" . stringify_feature ($feat->{"region"}, $feat);
 				my $feat_id = 0;
 				foreach my $reg (@{$feat->{"region"}}) {
 					my $strand = "+";
@@ -183,16 +180,16 @@ sub write_features_as_fasta {
 	my $gene_array = shift;
 
 	my ($flattened_hash, $flattened_names) = clone_features ($gene_array);
-	my $result = "";
+	my $result_string = "";
 	foreach my $fullname (@$flattened_names) {
 		my $strand = $flattened_hash->{$fullname}->{"strand"};
 		my $start = $flattened_hash->{$fullname}->{"start"};
 		my $end = $flattened_hash->{$fullname}->{"end"};
 		my $regseq = $flattened_hash->{$fullname}->{"characters"};
-		$result .= ">$fullname($strand)\t$start\t$end\n$regseq\n";
+		$result_string .= ">$fullname($strand)\t$start\t$end\n$regseq\n";
 	}
 
-	return $result;
+	return $result_string;
 }
 
 sub write_sequin_tbl {
@@ -200,7 +197,7 @@ sub write_sequin_tbl {
 	my $name = shift;
 
 	# print header
-	my $result = ">Features\t$name\n";
+	my $result_string = ">Features\t$name\n";
 
 	# start printing genes
 	foreach my $gene (@$gene_array) {
@@ -208,10 +205,10 @@ sub write_sequin_tbl {
 		my $genename = $gene->{"qualifiers"}->{"gene"};
 		foreach my $r (@{$gene->{'region'}}) {
 			$r =~ /(\d+)\.\.(\d+)/;
-			$result .= "$1\t$2\tgene\n";
+			$result_string .= "$1\t$2\tgene\n";
 		}
 		foreach my $q (keys %{$gene->{'qualifiers'}}) {
-			$result .= "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
+			$result_string .= "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
 		}
 
 		# then, print each feature contained.
@@ -226,11 +223,11 @@ sub write_sequin_tbl {
 					$end = $oldend;
 				}
 			}
-			$result .= Genbank::sequin_feature ($feat->{'region'}, $feat);
+			$result_string .= Genbank::sequin_feature ($feat->{'region'}, $feat);
 		}
 	}
 
-	return $result;
+	return $result_string;
 
 }
 
@@ -456,33 +453,32 @@ sub sequence_for_interval {
 sub sequin_feature {
 	my $regions = shift;
 	my $feature = shift;
-	my $result = "";
-# print Dumper($feature) . join (",", @$regions) . "\n";
+	my $result_string = "";
 	my $first_int = shift @$regions;
 	$first_int =~ /(\d+)\.\.(\d+)/;
-	$result = "$1\t$2\t$feature->{type}\n";
+	$result_string = "$1\t$2\t$feature->{type}\n";
 	foreach my $int (@$regions) {
 		$int =~ /(\d+)\.\.(\d+)/;
-		$result .= "$1\t$2\n";
+		$result_string .= "$1\t$2\n";
 	}
 	foreach my $key (keys %{$feature->{"qualifiers"}}) {
-		$result .= "\t\t\t$key\t$feature->{qualifiers}->{$key}\n";
+		$result_string .= "\t\t\t$key\t$feature->{qualifiers}->{$key}\n";
 	}
-	return $result;
+	return $result_string;
 }
 
 sub stringify_feature {
 	my $regions = shift;
 	my $feature = shift;
-	my $result = "";
+	my $result_string = "";
 
 	my @features = ();
 	foreach my $key (keys %{$feature->{"qualifiers"}}) {
 		my $feat = "$key=$feature->{qualifiers}->{$key}";
 		push @features, $feat;
 	}
-	$result = "$feature->{type}\t".join(",",@$regions)."\t".join("#",@features)."\n";
-	return $result;
+	$result_string = "$feature->{type}\t".join(",",@$regions)."\t".join("#",@features)."\n";
+	return $result_string;
 }
 
 
