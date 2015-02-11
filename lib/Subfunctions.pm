@@ -5,7 +5,7 @@ use FindBin;
 use lib "$FindBin::Bin/..";
 use Nexus qw(parse_nexus);
 use Blast qw (parse_xml sort_hsps_by_score sort_regions_by_start);
-use Genbank qw (parse_genbank clone_features write_features_as_fasta sequence_for_interval parse_regionfile parse_featurefile set_sequence sequin_feature);
+use Genbank qw (parse_genbank clone_features write_features_as_fasta sequence_for_interval parse_featurefile set_sequence sequin_feature);
 use Data::Dumper;
 
 
@@ -1460,11 +1460,11 @@ sub align_hits_to_ref {
 }
 
 sub align_regions_to_reference {
-	# a regionfile is the output of parse_blast.pl comparing the fasta file to the reference fasta file from genbank.pl
-	my $regionfile = shift;
+	my $ref_hash = shift;
+	my $ref_array = shift;
 	my $refgbfile = shift;
 
-	my ($gene_hash, $gene_index_array) = Genbank::parse_regionfile($regionfile);
+	my $gene_index_array = Genbank::parse_region_array(Genbank::write_region_array ($ref_hash, $ref_array));
 
 	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_feature_table (Genbank::write_features_as_table (Genbank::parse_genbank($refgbfile)));
 	my $dest_gene_hash = {};
@@ -1474,8 +1474,8 @@ sub align_regions_to_reference {
 
 	# fill in the genes from the regionfile with the info from the destination gene array
 	my @final_gene_array = ();
-	foreach my $id (@$gene_index_array) {
-		my $gene = $gene_hash->{$id};
+	foreach my $gene (@$gene_index_array) {
+		my $id = $gene->{'id'};
 		my $dest_gene = $dest_gene_hash->{$id};
 
 		foreach my $q (keys %{$dest_gene->{"qualifiers"}}) {
@@ -1484,7 +1484,6 @@ sub align_regions_to_reference {
 			}
 		}
 		my @new_contains = ();
-		$gene->{"id"} = $id;
 		foreach my $destcontains (@{$dest_gene->{"contains"}}) {
 			my $genecontains = shift $gene->{"contains"};
 			$destcontains->{"region"} = $genecontains->{"region"};
