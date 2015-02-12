@@ -39,7 +39,7 @@ unless ($outfile) {
 }
 
 #parse infile into separate chromosome files
-open FH, "<", $infile;
+open FH, "<:crlf", $infile;
 my @lines = <FH>;
 close FH;
 shift @lines;

@@ -44,7 +44,7 @@ my @inputs = ();
 my @fwd_strand = ();
 my @rev_strand = ();
 
-open FH, "<", $datafile;
+open FH, "<:crlf", $datafile;
 my $line = readline FH;
 
 while ($line) {

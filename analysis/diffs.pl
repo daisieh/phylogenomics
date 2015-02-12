@@ -8,7 +8,7 @@ my $fastafile = shift;
 my (undef, $tempfile) = tempfile(UNLINK => 1);
 flattenfasta ($fastafile, $tempfile, "\t");
 
-open FH, "<", $tempfile;
+open FH, "<:crlf", $tempfile;
 my @seqs = ();
 my @names = ();
 foreach my $line (<FH>) {

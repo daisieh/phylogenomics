@@ -24,7 +24,7 @@ unless (-e $fastafile) {
 }
 
 my @seqs = ();
-open LIST_FH, "<", "$sequencelist";
+open LIST_FH, "<:crlf", "$sequencelist";
 foreach my $seq (<LIST_FH>) {
 	chomp $seq;
 	push @seqs, $seq;

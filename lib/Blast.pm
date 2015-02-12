@@ -177,7 +177,7 @@ sub parse_xml {
 
 	my $parser = new XML::Simple();
 
-	open XML_FH, "<", $blast_xml;
+	open XML_FH, "<:crlf", $blast_xml;
 
 	my $xml = "";
 	my $query_name = "";

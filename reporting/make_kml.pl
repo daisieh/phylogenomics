@@ -18,7 +18,7 @@ if ($help) {
     pod2usage(-verbose => 1);
 }
 
-open fileIN, "<", "$iconsfile" or die "no file named $iconsfile";
+open fileIN, "<:crlf", "$iconsfile" or die "no file named $iconsfile";
 my @inputs = <fileIN>;
 
 my %colors = ();
@@ -29,7 +29,7 @@ foreach my $color (@inputs) {
 	$colors{"$name"} = "$label";
 }
 
-open fileIN, "<", "$inputfile" or die "no file named $inputfile";
+open fileIN, "<:crlf", "$inputfile" or die "no file named $inputfile";
 @inputs = <fileIN>;
 
 my $result = "";

@@ -28,7 +28,7 @@ if ($help) {
 
 print $runline;
 
-open VCF_FH, "<", $vcf_file or die "couldn't open input file $vcf_file.";
+open VCF_FH, "<:crlf", $vcf_file or die "couldn't open input file $vcf_file.";
 $vcf_file =~ /(.*)\.vcf/;
 my $seqname = $1;
 unless ($outfile) {

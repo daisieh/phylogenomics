@@ -9,7 +9,7 @@ my $regionsfile = shift;
 my (undef, $tempfile) = tempfile(UNLINK => 1);
 flattenfasta ($fastafile, $tempfile, "\t");
 
-open FH, "<", $tempfile;
+open FH, "<:crlf", $tempfile;
 my @seqs = ();
 my @names = ();
 foreach my $line (<FH>) {
@@ -19,7 +19,7 @@ foreach my $line (<FH>) {
 }
 close FH;
 
-open FH, "<", $regionsfile;
+open FH, "<:crlf", $regionsfile;
 my $location = 0;
 my @newseqs = ();
 foreach my $line (<FH>) {

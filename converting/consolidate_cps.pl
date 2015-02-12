@@ -9,14 +9,14 @@ GetOptions ('files|input=s' => \$filelistname,
             'names:s' => \$namefile,
             'outputfile:s' => \$out_file) or die "options misspecified";
 
-open FH, "<", $filelistname or die "couldn't open $filelistname";
+open FH, "<:crlf", $filelistname or die "couldn't open $filelistname";
 my @filelist = <FH>;
 close FH;
 
 my @namelist = @filelist;
 
 if ($namefile) {
-    open FH, "<", $namefile or die "couldn't open $namefile";
+    open FH, "<:crlf", $namefile or die "couldn't open $namefile";
     @namelist = <FH>;
     close FH;
 }

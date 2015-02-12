@@ -11,7 +11,7 @@ my $resultprefix = shift or die "$usage";
 
 my $is_fastq = ($fastafile =~ /q$/);
 
-open FH, "<", $fastafile or die "couldn't open fasta file";
+open FH, "<:crlf", $fastafile or die "couldn't open fasta file";
 
 my $filesuffix = "fasta";
 if ($is_fastq == 1) {

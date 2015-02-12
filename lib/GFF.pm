@@ -98,7 +98,7 @@ sub parse_gff_file {
 	my $gff_file = shift;
 
 	my $gff_array = ();
-	open my $gff_fh, "<", $gff_file;
+	open my $gff_fh, "<:crlf", $gff_file;
 	my $line = "";
 	while ($line = readline $gff_fh) {
 		if ($line =~ /^##/) {

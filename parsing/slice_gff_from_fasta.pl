@@ -41,7 +41,7 @@ if ($genefile ne "") {
 		unless (-d $outdir) {
 			make_path($outdir);
 		}
-		open GENE_FH, "<", $genefile or die "couldn't open gene file $genefile.";
+		open GENE_FH, "<:crlf", $genefile or die "couldn't open gene file $genefile.";
 		while (my $line = readline GENE_FH) {
 			if ($line =~ /^(.+?)\s+/) {
 				push @genes, $1;
@@ -57,10 +57,10 @@ if ($genefile ne "") {
 
 @sorted_genes = sort @genes;
 
-open my $fh, "<", $gff_file or die "couldn't open gff file $gff_file";
+open my $fh, "<:crlf", $gff_file or die "couldn't open gff file $gff_file";
 
 foreach my $gene (@sorted_genes) {
-	open my $fh, "<", $gff_file or die "couldn't open gff file $gff_file";
+	open my $fh, "<:crlf", $gff_file or die "couldn't open gff file $gff_file";
 	$gff_block = read_gff_block($fh, $gene);
 	close FH;
 

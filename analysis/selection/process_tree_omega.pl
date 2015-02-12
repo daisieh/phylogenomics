@@ -40,7 +40,7 @@ if ($gb_file =~ /\.gb/) {
 		$seq_object = $seqio_object->next_seq;
 	}
 } else {
-	open FH, "<", $gb_file;
+	open FH, "<:crlf", $gb_file;
 	my $line = readline FH;
 	while ($line) {
 		chomp $line;

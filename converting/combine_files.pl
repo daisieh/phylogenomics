@@ -24,7 +24,7 @@ GetOptions ('files|input=s{1,}' => \@files,
 if (@files == 1) {
 	my $file = pop @files;
 	if (-e $file) {
-		open FH, "<", $file;
+		open FH, "<:crlf", $file;
 		foreach my $line (<FH>) {
 			chomp $line;
 			push @files, $line;

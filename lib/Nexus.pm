@@ -42,7 +42,7 @@ sub parse_nexus {
 	my $interleave = 0;
 	my $nchar = 0;
 
-	open fileIN, "<", "$inputfile" or die "no file named $inputfile";
+	open fileIN, "<:crlf", "$inputfile" or die "no file named $inputfile";
 	my @inputs = <fileIN>;
 
 	my $input = "";

@@ -21,7 +21,7 @@ unless ($inputfile && $labelfile) {
 }
 
 
-open FH, "<", $inputfile;
+open FH, "<:crlf", $inputfile;
 my @input_lines = <FH>;
 close FH;
 

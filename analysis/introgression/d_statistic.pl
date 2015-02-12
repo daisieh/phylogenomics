@@ -26,7 +26,7 @@ my $out_fh = \*STDOUT;
 if ($out_file) {
 	open $out_fh, ">", $out_file;
 }
-open FH, "<", $fastafile;
+open FH, "<:crlf", $fastafile;
 my $line = readline FH;
 my @seqs = ();
 my @names = ();

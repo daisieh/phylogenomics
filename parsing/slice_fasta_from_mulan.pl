@@ -12,7 +12,7 @@ my $fa_file = @ARGV[1];
 
 my $whole_aln = make_aln_from_fasta_file ($fa_file);
 
-open my $fh, "<", $inputfile or die "couldn't open $inputfile";
+open my $fh, "<:crlf", $inputfile or die "couldn't open $inputfile";
 
 my $line = readline $fh;
 my $header;

@@ -3,7 +3,7 @@ use strict;
 
 my $inputfile = @ARGV[0];
 
-open my $fh, "<", $inputfile or die "couldn't open $inputfile";
+open my $fh, "<:crlf", $inputfile or die "couldn't open $inputfile";
 
 open my $outfh, ">", "$inputfile.gb" or die "couldn't open $inputfile.gb";
 

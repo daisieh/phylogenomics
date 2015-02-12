@@ -85,7 +85,7 @@ if (!(-s $raxmlinfofile)) {
 }
 print "found the RAxML run $raxmlinfofile\n";
 
-open FH, "<", $raxmlinfofile;
+open FH, "<:crlf", $raxmlinfofile;
 $raxml_data->{"params"} = "";
 $raxml_data->{"input"} = "";
 my $line = readline FH;
@@ -125,7 +125,7 @@ $raxml_data->{"trees"} = ();
 
 ##### write in the best tree
 print "loading in best tree from RAxML_bipartitions.$inputname\n";
-open FH, "<", "RAxML_bipartitions.$inputname";
+open FH, "<:crlf", "RAxML_bipartitions.$inputname";
 my $tree = {};
 $tree->{"besttree"} = "";
 foreach my $line (<FH>) {
@@ -136,7 +136,7 @@ close FH;
 
 #### write in the bootstrap trees
 print "loading in bootstrap trees from RAxML_bootstrap.$inputname\n";
-open FH, "<", "RAxML_bootstrap.$inputname";
+open FH, "<:crlf", "RAxML_bootstrap.$inputname";
 my $i = 1;
 foreach my $line (<FH>) {
 	$tree = {};

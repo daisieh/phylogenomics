@@ -29,7 +29,7 @@ make_path($outdir);
 
 
 my $singlecopy_contigs = {};
-open VALFH, "<", $validatefile or die "couldn't open validatefile $validatefile";
+open VALFH, "<:crlf", $validatefile or die "couldn't open validatefile $validatefile";
 foreach my $line (<VALFH>) {
 #Potri.001G166200.1	1e-90	457	810	81.18	self	4.22_len_1868_cov_11.1
 	if ($line =~ /(.+?)\t.+?\tself\t(.*)$/) {

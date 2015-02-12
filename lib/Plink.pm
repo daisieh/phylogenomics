@@ -66,7 +66,7 @@ sub parse_ped {
 	$plink_hash->{"individuals"} = {};
 	$plink_hash->{"names"} = ();
 
-	open PED_FH, "<", $inputped;
+	open PED_FH, "<:crlf", $inputped;
 	# ped file:
 	# 1 ALAA20-2_DNA55 0 0 2 2 C C
 	# col 1: family ID
@@ -118,7 +118,7 @@ sub parse_map {
 	}
 
 	$plink_hash->{"snps"} = {};
-	open MAP_FH, "<", $inputmap;
+	open MAP_FH, "<:crlf", $inputmap;
 	# map file:
 	# col 1: chromosome (scaffold)
 	# col 2: snp name

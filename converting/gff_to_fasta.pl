@@ -35,7 +35,7 @@ unless (-d $outdir) {
 
 my @genes = ();
 my $sequence = "";
-open my $fh, "<", $gff_file or die "couldn't open $gff_file";
+open my $fh, "<:crlf", $gff_file or die "couldn't open $gff_file";
 my $in_gff = 1;
 my $in_fasta = 0;
 # my $line;

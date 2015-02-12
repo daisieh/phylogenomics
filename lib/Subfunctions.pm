@@ -84,7 +84,7 @@ sub combine_files {
 
     my @inputs;
     for (my $i=0; $i<@files; $i++) {
-        open FH, "<", @files[$i] or die "can't open @files[$i]\n";
+        open FH, "<:crlf", @files[$i] or die "can't open @files[$i]\n";
         my @data = <FH>;
         close FH;
         push @inputs, \@data;
@@ -140,7 +140,7 @@ sub combine_files_old {
 
     my @inputs;
     for (my $i=0; $i<@files; $i++) {
-        open FH, "<", @files[$i] or die "can't open @files[$i]\n";
+        open FH, "<:crlf", @files[$i] or die "can't open @files[$i]\n";
         my @data = <FH>;
         close FH;
         push @inputs, \@data;
@@ -210,7 +210,7 @@ sub make_label_lookup {
     my $reverse = shift;
     my %labels;
     if ($labelfile) {
-        open FH, "<", "$labelfile" or die "make_label_lookup died: couldn't open $labelfile\n";
+        open FH, "<:crlf", "$labelfile" or die "make_label_lookup died: couldn't open $labelfile\n";
         my @items = <FH>;
         close FH;
         foreach my $line (@items) {
@@ -242,7 +242,7 @@ sub sample_list {
     my @samples = ();
     if ($samplefile) {
     	if (-e $samplefile) {
-			open FH, "<", "$samplefile" or die "sample_list died: couldn't open $samplefile\n";
+			open FH, "<:crlf", "$samplefile" or die "sample_list died: couldn't open $samplefile\n";
 			my @items = <FH>;
 			close FH;
 			foreach my $line (@items) {
@@ -538,7 +538,7 @@ sub parse_fasta {
 	my $taxa = {};
 	my @taxanames = ();
 	my $length = 0;
-	open fileIN, "<", "$fastafile" or die "couldn't parse fasta file $fastafile";
+	open fileIN, "<:crlf", "$fastafile" or die "couldn't parse fasta file $fastafile";
 
 	my $input = readline fileIN;
 	my $taxonlabel = "";
@@ -659,7 +659,7 @@ sub parse_phylip {
 	my $taxa = {};
 	my @taxonlabels = ();
 
-	open FH, "<", $inputfile or die "couldn't find file $inputfile";
+	open FH, "<:crlf", $inputfile or die "couldn't find file $inputfile";
 
 	my $line = readline FH;
 	while ($line =~ /^\s*$/) {
@@ -915,7 +915,7 @@ sub blast_to_alignment {
 	my ($query_end, $subject_end, $ref_length) = 0;
 	my ($curr_query_start, $curr_query_seq, $curr_query_end) = 0;
 
-	open BLAST_FH, "<", $blastfile;
+	open BLAST_FH, "<:crlf", $blastfile;
 	my @lines = <BLAST_FH>;
 	close BLAST_FH;
 
@@ -995,7 +995,7 @@ sub blast_short_to_alignment {
 	my ($query_end, $subject_end, $ref_length) = 0;
 	my ($curr_query_start, $curr_query_seq, $curr_query_end) = 0;
 
-	open BLAST_FH, "<", $blastfile;
+	open BLAST_FH, "<:crlf", $blastfile;
 	my @lines = <BLAST_FH>;
 	close BLAST_FH;
 
@@ -1230,7 +1230,7 @@ sub subseq_from_fasta {
 	my $newstart = 0;
 	my $length = $end - $start;
 	my $newend = 0;
-	open FH, "<", $fastafile or die "couldn't open $fastafile";
+	open FH, "<:crlf", $fastafile or die "couldn't open $fastafile";
 
 	my $line = readline FH; # first line is the name
 	$line = readline FH;

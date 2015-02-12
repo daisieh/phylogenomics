@@ -54,7 +54,7 @@ if ($oneslice) {
 } elsif ($gb_file) {
     $gene_alns = slice_fasta_from_genbank_file ($fastafile, $gb_file, $type);
 } elsif ($slice_list) {
-    open FH, "<", $slice_list or die "Couldn't open slice list $slice_list";
+    open FH, "<:crlf", $slice_list or die "Couldn't open slice list $slice_list";
     my @slices = <FH>;
     close FH;
 

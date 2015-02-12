@@ -9,7 +9,7 @@ my (undef, $tempfile) = tempfile(UNLINK => 1);
 # my $tempfile = "$fastafile.temp";
 flattenfasta ($fastafile, $tempfile, "\t");
 
-open FH, "<", $tempfile;
+open FH, "<:crlf", $tempfile;
 my @seqs = ();
 my @names = ();
 foreach my $line (<FH>) {

@@ -27,7 +27,7 @@ if ($help){
 
 my @items_to_find = ();
 
-open FIND_FH, "<", $lookupfile;
+open FIND_FH, "<:crlf", $lookupfile;
 foreach my $line (<FIND_FH>) {
 	chomp $line;
 	my @bits = split(/\t/,$line);
@@ -35,7 +35,7 @@ foreach my $line (<FIND_FH>) {
 }
 close FIND_FH;
 my $dictionary = {};
-open FH, "<", $subjectfile;
+open FH, "<:crlf", $subjectfile;
 foreach my $line (<FH>) {
 # print ">" . $line;
 	my @items = split (/\t/, $line);

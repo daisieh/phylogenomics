@@ -38,7 +38,7 @@ my $outdir = File::Spec->rel2abs($outfile);
 unless (-d $outdir) {
 	make_path($outdir);
 }
-open GENE_FH, "<", $genefile or die "couldn't open gene file.";
+open GENE_FH, "<:crlf", $genefile or die "couldn't open gene file.";
 while (my $line = readline GENE_FH) {
 	if ($line =~ /^(.+?)\s+/) {
 		push @genes, $1;
@@ -49,7 +49,7 @@ my @sorted_genes = sort @genes;
 
 
 foreach my $gene (@sorted_genes) {
-	open my $fh, "<", $gff_file;
+	open my $fh, "<:crlf", $gff_file;
 	my $gff_block = read_gff_block($fh, $gene);
 	close $fh;
 
@@ -83,7 +83,7 @@ foreach my $gene (@sorted_genes) {
 	}
 
 
-	open BLASTFH, "<", File::Spec->catfile ($blastfile, $gene);
+	open BLASTFH, "<:crlf", File::Spec->catfile ($blastfile, $gene);
 	readline BLASTFH;
 	foreach my $line (<BLASTFH>) {
 		if ($line =~ /$gene\.gene/) {

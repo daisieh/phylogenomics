@@ -2,7 +2,7 @@
 
 my $genicfile = shift;
 
-open FH, "<", $genicfile;
+open FH, "<:crlf", $genicfile;
 
 my $currname = "";
 my $currstart = 0;

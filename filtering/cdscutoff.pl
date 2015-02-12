@@ -9,7 +9,7 @@ if ($cutoff > 0) {
 	$cutoff = $cutoff / 100;
 }
 my @genes = ();
-open FH, "<", $genelist;
+open FH, "<:crlf", $genelist;
 foreach my $line (<FH>) {
 	chomp $line;
 	push @genes, $line;
@@ -25,7 +25,7 @@ if ($cutoffstr =~ /\d+\.(\d{2})/) {
 open OUTFH, ">", "cutoff.$perc";
 foreach my $gene (@genes) {
 	print "looking at $gene\n";
-	open FH, "<", File::Spec->catfile($genedir, $gene);
+	open FH, "<:crlf", File::Spec->catfile($genedir, $gene);
 	my $totalident = 0;
 	my $totallength = 0;
 	foreach my $line (<FH>) {

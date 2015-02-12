@@ -50,7 +50,7 @@ print $runline;
 
 my @references = ();
 my @refids = ();
-open refFH, "<", $ref_file;
+open refFH, "<:crlf", $ref_file;
 my $refseq = "";
 my $refid = "";
 

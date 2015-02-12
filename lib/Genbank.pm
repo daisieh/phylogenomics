@@ -48,7 +48,7 @@ sub get_name {
 sub parse_genbank {
 	my $gbfile = shift;
 
-	open FH, "<", $gbfile;
+	open FH, "<:crlf", $gbfile;
 
 	my @gene_array = ();
 	$line = "";

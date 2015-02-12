@@ -46,7 +46,7 @@ if ($samplefile =~ /(.+?)\.depth/) {
     $samplefile = $1;
     push @names, $samplefile;
 } else {
-    open FH, "<", "$samplefile" or die "no such file";
+    open FH, "<:crlf", "$samplefile" or die "no such file";
     my @rawnames = <FH>;
     close FH;
 
@@ -96,7 +96,7 @@ foreach my $samplename (@names) {
     my $depthfile = "$samplename".".depth";
     $samplename = basename($samplename);
     print "processing $samplename\n";
-    open VCF_FH, "<", "$depthfile" or die "couldn't open $depthfile";
+    open VCF_FH, "<:crlf", "$depthfile" or die "couldn't open $depthfile";
     my @depths = ();
     my @indels = ();
     my $i = 1;
@@ -177,7 +177,7 @@ my $max=1;
 my %graphs;
 while (my ($key, $value) = each %samples) {
     # process each depths file
-    open FH, "<", "$outfile"."_$key"."_depths.txt";
+    open FH, "<:crlf", "$outfile"."_$key"."_depths.txt";
     my @items = <FH>;
     close FH;
     my $header = shift @items;

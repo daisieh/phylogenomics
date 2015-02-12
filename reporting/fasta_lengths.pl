@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 my $file = shift;
 
-open FH, "<", $file;
+open FH, "<:crlf", $file;
 
 my $line = readline FH;
 my ($name, $length) = 0;

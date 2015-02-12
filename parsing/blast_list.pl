@@ -38,7 +38,7 @@ unless (-d $outdir) {
 
 my @genes = ();
 
-open FH, "<", $genefile;
+open FH, "<:crlf", $genefile;
 while (my $line = readline FH) {
 	chomp $line;
 	push @genes, $line;

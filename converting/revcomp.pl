@@ -8,7 +8,7 @@ use File::Temp qw (tempfile tempdir);
 
 my $input_file = shift;
 if (-e $input_file) {
-	open FH, "<", $input_file;
+	open FH, "<:crlf", $input_file;
 
 	# my (undef, $tempfile) = tempfile(UNLINK => 1);
 

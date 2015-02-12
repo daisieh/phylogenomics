@@ -73,7 +73,7 @@ my $plink_hash = parse_plink($inputped, $inputmap);
 # print Dumper($plink_hash);
 my $gene_locations = {};
 if ($gfffile ne "") {
-	open my $gff_fh, "<", $gfffile;
+	open my $gff_fh, "<:crlf", $gfffile;
 	my $gff_array = parse_gff_file ($gfffile);
 	print Dumper($gff_array);
 	foreach my $gff_hash (@$gff_array) {

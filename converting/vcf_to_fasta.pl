@@ -47,7 +47,7 @@ if ($samplefile =~ /(.*?)\.vcf$/) {
 }
 
 if ($samplefile =~ /recode\.vcf/) {
-	open VCF_FH, "<", $samplefile or die "couldn't open input file $samplefile.";
+	open VCF_FH, "<:crlf", $samplefile or die "couldn't open input file $samplefile.";
 
 	# eat header:
 	my $line = readline VCF_FH;
@@ -97,7 +97,7 @@ if ($samplefile =~ /recode\.vcf/) {
 	foreach my $sample (@samplefiles) {
 		$name = basename($sample);
 		my $vcf_file = $sample . ".vcf";
-		unless (open (VCF_FH, "<", $vcf_file)) { next; }
+		unless (open (VCF_FH, "<:crlf", $vcf_file)) { next; }
 
 		# eat header:
 		my $line = readline VCF_FH;

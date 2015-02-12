@@ -71,7 +71,7 @@ print "Done with HYPHY. Processing outputs...\n";
 
 foreach my $aln (@gene_alns) {
 	my $name = $aln->description();
-	open FH, "<", "$output_name"."_$name.bfout" or next;
+	open FH, "<:crlf", "$output_name"."_$name.bfout" or next;
 	my @output_fh = <FH>;
 	close FH;
     print "$name...";
@@ -122,7 +122,7 @@ sub fork_hyphy {
             my $t = $bf_exec->error_string();
             print $t . "\n";
         }
-        open FH, "<", $bf_exec->outfile_name();
+        open FH, "<:crlf", $bf_exec->outfile_name();
         my @output_fh = <FH>;
         close FH;
 
