@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature flatten_interval parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_region_array parse_region_array parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_region_array parse_region_array parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
