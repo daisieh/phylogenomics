@@ -233,26 +233,26 @@ sub write_sequin_tbl {
 
 sub parse_feature_table {
 	my $gene_array = shift;
-	my $featuretablestring = "";
+
+	my @feature_table = ();
 	my $gene_id = 0;
 	foreach my $gene (@$gene_array) {
 		if ($gene->{"type"} eq "gene") {
 			my $interval_str = flatten_interval ($gene->{"region"});
 			my @gene_interval = ($interval_str);
-			$featuretablestring .= "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
+			push @feature_table, "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
 			foreach my $feat (@{$gene->{"contains"}}) {
-				$featuretablestring .= "$gene_id\t" . stringify_feature ($feat->{"region"}, $feat);
+				push @feature_table, "$gene_id\t" . stringify_feature ($feat->{"region"}, $feat);
 			}
 			$gene_id++;
 		}
 	}
 
-	my @featuretable = split (/\n|\r/,$featuretablestring);
 	my @gene_hasharray = ();
 	my @gene_index_array = ();
 	my $gene_id = -1;
 	my $curr_gene = {};
-	foreach my $line (@featuretable) {
+	foreach my $line (@feature_table) {
 		my ($id, $type, $regionstr, $qualstr, undef) = split ("\t", $line);
 		# first, assemble the feature into a hash.
 		my $this_feat = {};
@@ -270,6 +270,7 @@ sub parse_feature_table {
 		}
 
 		$this_feat->{"type"} = $type;
+
 		# then, check to see if this is a subfeature of the current gene (if its id # is the same as the current gene_id)
 		if ($id == $gene_id) {
 			# if it is, push it into the "contains" array.
