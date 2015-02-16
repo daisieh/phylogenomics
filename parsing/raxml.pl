@@ -34,7 +34,7 @@ GetOptions ('input=s' => \$inputfile,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help){
-    pod2usage(-verbose => 1);
+    pod2usage(-verbose => 2);
 }
 
 # Set defaults
