@@ -13,32 +13,57 @@ use Subfunctions qw(write_phylip parse_phylip parse_fasta pad_seq_ends debug set
 
 my $help = 0;
 my $outfile = "";
-my $inputname = "";
+my $inputfile = "";
+my $raxml = "raxmlHPC-PTHREADS";
+my $x = int(rand(1e8));
+my $p = int(rand(1e8));
+my $threads = 16;
+my $arguments = "-# 100 -m GTRGAMMA";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
 }
 
-GetOptions ('input=s' => \$inputname,
+GetOptions ('input=s' => \$inputfile,
 			'output=s' => \$outfile,
+			'raxml=s' => \$raxml,
+			'x=i' => \$x,
+			'p=i' => \$p,
+			'threads=i' => \$threads,
+			'arguments=s' => \$arguments,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help){
     pod2usage(-verbose => 1);
 }
 
+# Set defaults
 if ($outfile eq "") {
-	$outfile = "$inputname.nex";
+	$outfile = "$inputfile.nex";
 }
 
 if ($outfile !~ /\.nex$/) {
 	$outfile = "$outfile.nex";
 }
 
+if ($arguments =~ /^(.*)\s*-T (\d+)\s*(.*)$/) {
+	$threads = $2;
+	$arguments = $1.$3;
+}
+
+if ($arguments =~ /^(.*)\s*-x (\d+)\s*(.*)$/) {
+	$x = $2;
+	$arguments = $1.$3;
+}
+
+if ($arguments =~ /^(.*)\s*-p (\d+)\s*(.*)$/) {
+	$p = $2;
+	$arguments = $1.$3;
+}
 
 my $raxml_data = {};
 my $running = 0;
-($inputname, my $inputpath, undef) = fileparse ($inputname);
+my ($inputname, $inputpath, undef) = fileparse ($inputfile);
 my $raxmlinfofile = File::Spec->catpath( undef, $inputpath, "RAxML_info.$inputname" );
 print "looking for existing RAxML run $raxmlinfofile...\n";
 if (!(-e $raxmlinfofile)) {
@@ -46,12 +71,12 @@ if (!(-e $raxmlinfofile)) {
 	$running = 1;
 	if ($inputname =~ /\.fa.*$/) {
 		# it's a fasta file, convert to phylip...
-		my ($taxa, $taxanames) = parse_fasta($inputname);
+		my ($taxa, $taxanames) = parse_fasta($inputfile);
 		$raxml_data->{"fulltaxa"} = $taxanames;
 		$raxml_data->{"characters"} = $taxa;
 	} elsif ($inputname =~ /\.phy.*$/) {
 		# it's a phylip file...
-		my ($taxa, $taxanames) = parse_phylip($inputname);
+		my ($taxa, $taxanames) = parse_phylip($inputfile);
 		$raxml_data->{"fulltaxa"} = $taxanames;
 		$raxml_data->{"characters"} = $taxa;
 	}
@@ -71,9 +96,8 @@ if (!(-e $raxmlinfofile)) {
 		push @{$raxml_data->{"taxa"}}, $1;
 	}
 	$inputname = fileparse ($raxml_input);
-# 	raxmlHPC-PTHREADS -fa -s all_cps.phy -x 141105 -# 100 -m GTRGAMMA -n 141105 -T 16 -p 141105
-	my $cmd = "raxmlHPC-PTHREADS -fa -s $raxml_input -x 141105 -# 100 -m GTRGAMMA -n $inputname -T 16 -p 141105";
-	print $cmd . "\n";
+	my $cmd = "$raxml -fa -s $raxml_input -n $inputname -x $x -T $threads -p $p $arguments";
+	print "RAxML is called as '$cmd'\n";
 	system ($cmd);
 	$raxmlinfofile = File::Spec->catpath( undef, $inputpath, "RAxML_info.$inputname" );
 }
@@ -176,20 +200,25 @@ __END__
 
 =head1 NAME
 
-lookup
+raxml.pl
 
 =head1 SYNOPSIS
 
-raxml.pl -input raxml_input -out nexus_output
+raxml.pl -input raxml_input -out nexus_output [-raxml raxml_executable] [-x x-seed] [-p p-seed] [-threads num_threads] [-arguments 'raxml-arguments']
 
 =head1 OPTIONS
 
-  -input:          list of items to find.
-  -output:         tab-delimited file to find items in.
+  -input:          Fasta or Phylip formatted sequence alignment file
+  -output:         Name of outputted Nexus file
+  -raxml:          optional: the name of the raxml binary (default is 'raxmlHPC-PTHREADS')
+  -x:              optional: value of the -x argument (default is a random number)
+  -p:              optional: value of the -p argument (default is a random number)
+  -threads:        optional: number of threads to be used by raxml (default is 16)
+  -arguments:      optional: arguments to be passed to raxml (overrides -x/-p/-T if these are specified in -arguments) (default is "-# 100 -m GTRGAMMA")
 
 =head1 DESCRIPTION
 
-Return only the requested items from a subject tab-delimited table file.
+Takes a nucleotide sequence alignment in Fasta or Phylip format, runs RAxML on the sequences, and converts the output into a Nexus-formatted file. Bootstrap trees are saved as "bootstrap1" as well as the best tree as "besttree".
 
 =cut
 
