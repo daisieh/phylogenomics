@@ -57,18 +57,21 @@ my ($fastahash, $fastaarray) = parse_fasta($fastafile);
 if ($samplename eq "") {
 	$samplename = @$fastaarray[0];
 }
-
 my $queryseq = $fastahash->{@$fastaarray[0]};
 
 # write out $outfile.regions
 my ($result_hash, $result_array) = blast_to_genbank ($gbfile, $fastafile);
 
 my @finished_array = ();
+my $missing_results = "";
+my $finished_results = "";
+my $num_missing = 0;
 foreach my $subj (@$result_array) {
-	if (exists $result_hash->{$subj}->{'hsps'}) {
-		print "$subj\n" . Dumper (align_hits_to_ref ($result_hash->{$subj}, $queryseq));
-
+	if (($result_hash->{$subj}->{'complete'} eq "0")) {
+		$missing_results .= "MISSING $subj " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
+		$num_missing++;
 	} else {
+		$finished_results .= "ALIGNED $subj " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
 		push @finished_array, $subj;
 	}
 }
@@ -117,6 +120,14 @@ my $ira = $ir->{'hit-to'} . ".." . $ir->{'hit-from'};
 #      repeat_region   84922..112749
 #                      /note="inverted repeat B"
 #                      /rpt_type=inverted
+
+open MISSING_FH, ">", "$outfile.missing";
+print MISSING_FH "Aligned " . @finished_array . " genes\n";
+print MISSING_FH "$finished_results\n\n";
+print MISSING_FH "Missing $num_missing genes\n\n" . $missing_results;
+
+close MISSING_FH;
+
 
 __END__
 
