@@ -1407,26 +1407,42 @@ sub blast_to_genbank {
 
 		# fix the lengths back for tiny regions.
 		if (exists $tiny_regions->{$subj}) {
+			$best_hit->{'hit-from'} += $tiny_region_extension_length;
+			$best_hit->{'hit-to'} -= $tiny_region_extension_length;
 			$best_hit->{'query-from'} += $tiny_region_extension_length;
 			$best_hit->{'query-to'} -= $tiny_region_extension_length;
-			$best_hit->{"align-len"} = $best_hit->{'query-to'} - $best_hit->{'query-from'} + 1;
 		}
 
-		$ref_hash->{$subj}->{'coverage'} = ($ref_hash->{$subj}->{'end'} - $ref_hash->{$subj}->{'start'} + 1) . "/" . $best_hit->{"align-len"};
+		$best_hit->{'align-len'} = $best_hit->{'hit-to'} - $best_hit->{'hit-from'} + 1;
+		$ref_hash->{$subj}->{'align-len'} = ($ref_hash->{$subj}->{'end'} - $ref_hash->{$subj}->{'start'} + 1);
 
+		my (undef, $refgeneseq, undef) = Subfunctions::split_seq ($refseq, $ref_hash->{$subj}->{'start'}, $ref_hash->{$subj}->{'end'});
+		$ref_hash->{$subj}->{'reference'} = $refgeneseq;
+		$ref_hash->{$subj}->{'refstart'} = $ref_hash->{$subj}->{'start'};
+		$ref_hash->{$subj}->{'refend'} = $ref_hash->{$subj}->{'end'};
+		$ref_hash->{$subj}->{'complete'} = 0;
+		$ref_hash->{$subj}->{'gaps'} = "none";
 		# copy the best hit values back into the reference array:
-		if ($best_hit->{"align-len"} == ($ref_hash->{$subj}->{'end'} - $ref_hash->{$subj}->{'start'} + 1)) {
-			# the entire reference gene was matched: set the hash start and end to the updated indices on the query seq.
+		if ($best_hit->{'align-len'} == $ref_hash->{$subj}->{'align-len'}) {
+			my @best_one = ($best_hit);
+			$ref_hash->{$subj}->{'hsps'} = \@best_one;
 			$ref_hash->{$subj}->{'start'} = $best_hit->{'query-from'};
 			$ref_hash->{$subj}->{'end'} = $best_hit->{'query-to'};
-			my (undef, $geneseq, undef) = Subfunctions::split_seq ($queryseq, $ref_hash->{$subj}->{'start'}, $ref_hash->{$subj}->{'end'});
-			$ref_hash->{$subj}->{'characters'} = $geneseq;
-		} else {
+
+			# need to check for whether or not the gaps are in threes.
+			my $hseq_gaps = $best_hit->{'hseq'};
+			my $qseq_gaps = $best_hit->{'qseq'};
+			$hseq_gaps =~ s/---//g;
+			$qseq_gaps =~ s/---//g;
+
+			$ref_hash->{$subj}->{'gaps'} = ($hseq_gaps =~ tr/[AGCT]//dr) . " " . ($qseq_gaps =~ tr/[AGCT]//dr);
+			if ((($hseq_gaps =~ /-/) ne "1") && (($qseq_gaps =~ /-/) ne "1")) {
+				$ref_hash->{$subj}->{'complete'} = 1;
+			}
+		}
+		else {
 			# the entire reference gene was not matched: save off the reference gene as-is and save the hits for later.
 			$ref_hash->{$subj}->{'hsps'} = \@best_hsps;
-
-			my (undef, $refgeneseq, undef) = Subfunctions::split_seq ($refseq, $ref_hash->{$subj}->{'start'}, $ref_hash->{$subj}->{'end'});
-			$ref_hash->{$subj}->{'characters'} = $refgeneseq;
 		}
 	}
 
@@ -1475,6 +1491,10 @@ sub align_hits_to_ref {
 
 	my @hits = sort Blast::sort_hsps_by_hit_start @{$hit_hash->{'hsps'}};
 	my $result_string = "  REFERENCE:\n";
+	$result_string .= " " x (11 - (length $hit_hash->{'refstart'})) . "$hit_hash->{'refstart'} ";
+	$result_string .= "$hit_hash->{'reference'} $hit_hash->{'refend'}\n";
+	$result_string .= "  MATCHES:\n";
+	my $offset = $hit_hash->{'refstart'} - 1;
 	foreach my $hit (@hits) {
 		if ($hit->{'hit-from'} > $hit->{'hit-to'}) {
 			next;
