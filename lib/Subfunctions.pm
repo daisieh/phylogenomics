@@ -561,9 +561,10 @@ sub parse_fasta {
 				$length = 0;
 			}
 		} else {
-			$input =~ /^\s*(.+)\s*$/;
-			$taxa->{$taxonlabel} .= $1;
-			$length += length($1);
+			if ($input =~ /^\s*(.+)\s*$/) {
+				$taxa->{$taxonlabel} .= $1;
+				$length += length($1);
+			}
 		}
 		$input = readline fileIN;
 	}
