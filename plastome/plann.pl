@@ -83,15 +83,9 @@ close FASTA_FH;
 
 my $gene_array = align_regions_to_reference ($result_hash, \@finished_array, $gbfile);
 
-open TBL_FH, ">", "$outfile.tbl";
-print TBL_FH Genbank::write_sequin_tbl ($gene_array, $genbank_header);
-close TBL_FH;
-
 # need to annotate inverted repeats
-
-print "finding inverted repeats\n";
-# my ($fh, $refblast) = tempfile();
-my $refblast = "temp.xml";
+my ($fh, $refblast) = tempfile();
+# my $refblast = "temp.xml";
 system("blastn -query $fastafile -subject $fastafile -outfmt 5 -out $refblast -evalue 1e-200");
 
 my $self_array = Blast::parse_xml ("$refblast");
@@ -99,16 +93,16 @@ my @irs = ();
 foreach my $hit (@$self_array) {
 	my @hsps = sort Blast::sort_regions_by_start @{$hit->{"hsps"}};
 	foreach my $hsp (@hsps) {
-		# only look at identical pieces that are smaller than the entire reference
 		my $querylen = $hsp->{"query-to"} - $hsp->{"query-from"};
-		if (($querylen < 50000) && ($querylen > 10000)) {
+		# IRs are between 10,000 and 50,000 bp and are inverted.
+		if (($querylen < 50000) && ($querylen > 10000) && ($hsp->{'hit-frame'} == -1)) {
 			push @irs, $hsp;
 		}
 	}
 }
 
 if (@irs > 2) {
-	die "Error! There seem to be more than two inverted repeats. Are you sure this is a plastome sequence?";
+	print "Warning! There seem to be more than two inverted repeats (".@irs." found). Are you sure this is a plastome sequence?\n";
 }
 @irs = sort Blast::sort_hsps_by_query_start @irs;
 
@@ -120,6 +114,12 @@ my $ira = $ir->{'hit-to'} . ".." . $ir->{'hit-from'};
 #      repeat_region   84922..112749
 #                      /note="inverted repeat B"
 #                      /rpt_type=inverted
+
+
+
+open TBL_FH, ">", "$outfile.tbl";
+print TBL_FH Genbank::write_sequin_tbl ($gene_array, $genbank_header);
+close TBL_FH;
 
 open MISSING_FH, ">", "$outfile.missing";
 print MISSING_FH "Aligned " . @finished_array . " genes\n";
