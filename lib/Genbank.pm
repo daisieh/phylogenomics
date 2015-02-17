@@ -204,8 +204,9 @@ sub write_sequin_tbl {
 		# first, print overall gene information
 		my $genename = $gene->{"qualifiers"}->{"gene"};
 		foreach my $r (@{$gene->{'region'}}) {
+			my $type = $gene->{'type'};
 			$r =~ /(\d+)\.\.(\d+)/;
-			$result_string .= "$1\t$2\tgene\n";
+			$result_string .= "$1\t$2\t$type\n";
 		}
 		foreach my $q (keys %{$gene->{'qualifiers'}}) {
 			$result_string .= "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
