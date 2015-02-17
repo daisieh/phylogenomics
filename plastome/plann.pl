@@ -11,7 +11,7 @@ use Subfunctions qw (parse_fasta blast_to_genbank align_regions_to_reference ali
 use Data::Dumper;
 
 my $help = 0;
-my $outfile = "";
+my $outfile = "output";
 my $gbfile = "";
 my $fastafile = "";
 my $orgname = "";
@@ -37,10 +37,6 @@ if ($gbfile !~ /\.gb$/) {
 	exit;
 }
 
-if ($outfile eq "") {
-	$outfile = "output";
-}
-
 if ($gbfile eq "") {
 	print "need to supply a Genbank reference file (-reference).\n";
 	exit;
@@ -59,7 +55,6 @@ if ($samplename eq "") {
 }
 my $queryseq = $fastahash->{@$fastaarray[0]};
 
-# write out $outfile.regions
 my ($result_hash, $result_array) = blast_to_genbank ($gbfile, $fastafile);
 
 my @finished_array = ();
@@ -85,7 +80,6 @@ my $gene_array = align_regions_to_reference ($result_hash, \@finished_array, $gb
 
 # need to annotate inverted repeats
 my ($fh, $refblast) = tempfile();
-# my $refblast = "temp.xml";
 system("blastn -query $fastafile -subject $fastafile -outfmt 5 -out $refblast -evalue 1e-200");
 
 my $self_array = Blast::parse_xml ("$refblast");
@@ -108,22 +102,33 @@ if (@irs > 2) {
 
 # all of the IR information is in one of the IRs, so shift.
 my $ir = shift @irs;
-my $irb = $ir->{'query-from'} . ".." . $ir->{'query-to'};
+
 my $ira = $ir->{'hit-to'} . ".." . $ir->{'hit-from'};
+my $ira_hash = {};
+$ira_hash->{'type'} = "repeat_region";
+$ira_hash->{'qualifiers'}->{'note'} = "inverted repeat A";
+$ira_hash->{'qualifiers'}->{'rpt_type'} = "inverted";
+$ira_hash->{'region'} = ();
+push @{$ira_hash->{'region'}}, $ira;
+$ira_hash->{'contains'} = ();
+push @$gene_array, $ira_hash;
 
-#      repeat_region   84922..112749
-#                      /note="inverted repeat B"
-#                      /rpt_type=inverted
-
-
+my $irb = $ir->{'query-from'} . ".." . $ir->{'query-to'};
+my $irb_hash = {};
+$irb_hash->{'type'} = "repeat_region";
+$irb_hash->{'qualifiers'}->{'note'} = "inverted repeat B";
+$irb_hash->{'qualifiers'}->{'rpt_type'} = "inverted";
+$irb_hash->{'region'} = ();
+push @{$irb_hash->{'region'}}, $irb;
+$irb_hash->{'contains'} = ();
+push @$gene_array, $irb_hash;
 
 open TBL_FH, ">", "$outfile.tbl";
 print TBL_FH Genbank::write_sequin_tbl ($gene_array, $genbank_header);
 close TBL_FH;
 
-open MISSING_FH, ">", "$outfile.missing";
+open MISSING_FH, ">", "$outfile.results.txt";
 print MISSING_FH "Aligned " . @finished_array . " genes\n";
-print MISSING_FH "$finished_results\n\n";
 print MISSING_FH "Missing $num_missing genes\n\n" . $missing_results;
 
 close MISSING_FH;
