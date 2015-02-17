@@ -1449,6 +1449,21 @@ sub blast_to_genbank {
 	return ($ref_hash, $ref_array);
 }
 
+=head1
+
+B<align_regions_to_reference>
+
+Takes in a hash and index array from blast_to_genbank or similar as well as a Genbank record.
+Reindexes the positions of the features in the Genbank record to the hashed values.
+Returns an array of hashes for each feature:
+    hash->{'id'} = index of the feature in the array
+    hash->{'type'} = the feature type
+    hash->{'qualifiers'} = Genbank qualifiers, in a hash
+    hash->{'region'} = an array of intervals (as strings of xx..xx format)
+    hash->{'contains'} = the subfeatures.
+
+=cut
+
 sub align_regions_to_reference {
 	my $ref_hash = shift;
 	my $ref_array = shift;
@@ -1465,7 +1480,7 @@ sub align_regions_to_reference {
 	# fill in the genes from the regionfile with the info from the destination gene array
 	my @final_gene_array = ();
 	foreach my $gene (@$gene_index_array) {
-		my $id = $gene->{'id'};
+		my $id = delete $gene->{'id'};
 		my $dest_gene = $dest_gene_hash->{$id};
 
 		foreach my $q (keys %{$dest_gene->{"qualifiers"}}) {
