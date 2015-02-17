@@ -557,7 +557,7 @@ sub parse_fasta {
 			}
 			if ($length > 0) {
 				# we are at the next taxon; push the last one onto the taxon array.
-				$taxa->{"length"} = $length;
+				$taxa->{'length'} = $length;
 				$length = 0;
 			}
 		} else {
@@ -577,12 +577,12 @@ sub write_fasta {
 	my $fastahash = shift;
 	my $fastanames = shift;
 	my $result = "";
-	if (exists $fastahash->{"characters"}) {
-		unless (exists $fastahash->{"names"}) {
-			$fastahash->{"names"} = (keys %{$fastahash->{"characters"}});
+	if (exists $fastahash->{'characters'}) {
+		unless (exists $fastahash->{'names'}) {
+			$fastahash->{'names'} = (keys %{$fastahash->{'characters'}});
 		}
 
-		foreach my $t (@{$fastahash->{"names"}}) {
+		foreach my $t (@{$fastahash->{'names'}}) {
 			$result .= ">$t\n$fastahash->{characters}->{$t}\n";
 		}
 	} elsif ((ref $fastanames) eq "ARRAY") {
@@ -804,7 +804,7 @@ sub meld_matrices {
 				$total == length($v);
 			}
 		}
-		$regiontable{"regions"} .= "$key\t";
+		$regiontable{'regions'} .= "$key\t";
 		my %expandedmatrix = ();
 		foreach my $k (keys %mastertaxa) {
 			#add entries from this matrix into expandedmatrix
@@ -818,10 +818,10 @@ sub meld_matrices {
 		}
 		my $starts_at = $currlength + 1;
 		$currlength = $currlength + $total;
-		$regiontable{"exclusion-sets"} = $regiontable{"exclusion-sets"} . ($currlength + 1) . "-" . "$currlength\t";
+		$regiontable{'exclusion-sets'} = $regiontable{'exclusion-sets'} . ($currlength + 1) . "-" . "$currlength\t";
 
 	}
-	$mastertaxa{"length"} = $currlength;
+	$mastertaxa{'length'} = $currlength;
 
 	return (\%mastertaxa, \%regiontable);
 }
@@ -865,7 +865,7 @@ sub meld_sequence_files {
 		push @matrixnames, $inputfile;
 		if ($inputfile =~ /\.nex/) {
 			my $nexushash = parse_nexus ($inputfile);
-			$matrices->{ $inputfile } = $nexushash->{"characters"};
+			$matrices->{ $inputfile } = $nexushash->{'characters'};
 		} elsif ($inputfile =~/\.fa/) {
 			($matrices->{ $inputfile }, undef) = parse_fasta ($inputfile);
 		} else {
@@ -1164,8 +1164,8 @@ sub align_to_seq {
 	}
 
 	my ($seq_hash, undef) = parsefasta ("$outname.align.fasta");
-	my $gappedrefseq = delete $seq_hash->{"$refname"};
-	$seq_hash->{"reference"} = $gappedrefseq;
+	my $gappedrefseq = delete $seq_hash->{$refname};
+	$seq_hash->{'reference'} = $gappedrefseq;
 
 	return ($seq_hash);
 }
@@ -1369,11 +1369,11 @@ sub blast_to_genbank {
 		my $start = $ref_hash->{$region}->{'start'};
 		my $end = $ref_hash->{$region}->{'end'};
 		if ($end - $start < 10) {
-			$tiny_regions->{$region}->{'characters'} = $ref_hash->{"$region"}->{'characters'};
+			$tiny_regions->{$region}->{'characters'} = $ref_hash->{$region}->{'characters'};
 			$start -= $tiny_region_extension_length;
 			$end += $tiny_region_extension_length;
 			my (undef, $seq, undef) = Subfunctions::split_seq ($refseq, $start, $end);
-			$ref_hash->{"$region"}->{'characters'} = $seq;
+			$ref_hash->{$region}->{'characters'} = $seq;
 		}
 	}
 
@@ -1390,10 +1390,10 @@ sub blast_to_genbank {
 	# choose the best hits:
 	my $hit_array = Blast::parse_xml ($blastfile);
 	foreach my $hit (@$hit_array) {
-		my $subj = $hit->{"subject"}->{"name"};
+		my $subj = $hit->{'subject'}->{'name'};
 
 		# keep the best-scoring hits.
-		my @hsps = sort Blast::sort_hsps_by_score @{$hit->{"hsps"}};
+		my @hsps = sort Blast::sort_hsps_by_score @{$hit->{'hsps'}};
 		my @best_hsps = ();
 		foreach my $hsp (@hsps) {
 			if ($hsp->{'score'} > 50) {
@@ -1456,7 +1456,6 @@ B<align_regions_to_reference>
 Takes in a hash and index array from blast_to_genbank or similar as well as a Genbank record.
 Reindexes the positions of the features in the Genbank record to the hashed values.
 Returns an array of hashes for each feature:
-    hash->{'id'} = index of the feature in the array
     hash->{'type'} = the feature type
     hash->{'qualifiers'} = Genbank qualifiers, in a hash
     hash->{'region'} = an array of intervals (as strings of xx..xx format)
@@ -1483,18 +1482,18 @@ sub align_regions_to_reference {
 		my $id = delete $gene->{'id'};
 		my $dest_gene = $dest_gene_hash->{$id};
 
-		foreach my $q (keys %{$dest_gene->{"qualifiers"}}) {
-			if (!(exists $gene->{"qualifiers"}->{$q})) {
-				$gene->{"qualifiers"}->{$q} = $dest_gene->{"qualifiers"}->{$q}
+		foreach my $q (keys %{$dest_gene->{'qualifiers'}}) {
+			if (!(exists $gene->{'qualifiers'}->{$q})) {
+				$gene->{'qualifiers'}->{$q} = $dest_gene->{'qualifiers'}->{$q}
 			}
 		}
 		my @new_contains = ();
-		foreach my $destcontains (@{$dest_gene->{"contains"}}) {
-			my $genecontains = shift $gene->{"contains"};
-			$destcontains->{"region"} = $genecontains->{"region"};
+		foreach my $destcontains (@{$dest_gene->{'contains'}}) {
+			my $genecontains = shift $gene->{'contains'};
+			$destcontains->{'region'} = $genecontains->{'region'};
 			push @new_contains, $destcontains;
 		}
-		$gene->{"contains"} = \@new_contains;
+		$gene->{'contains'} = \@new_contains;
 		push @final_gene_array, $gene;
 	}
 

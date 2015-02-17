@@ -29,7 +29,7 @@ GetOptions ('reference|gb|genbank=s' => \$gbfile,
             'help|?' => \$help) or pod2usage(-msg => "GetOptions failed.", -exitval => 2);
 
 if ($help) {
-    pod2usage(-verbose => 1);
+    pod2usage(-verbose => 2);
 }
 
 if ($gbfile !~ /\.gb$/) {
@@ -59,16 +59,20 @@ my ($result_hash, $result_array) = blast_to_genbank ($gbfile, $fastafile);
 
 my @finished_array = ();
 my $missing_results = "";
-my $finished_results = "";
+# my $finished_results = "";
 my $num_missing = 0;
 foreach my $subj (@$result_array) {
+# print Dumper ($result_hash->{$subj});
 	if (($result_hash->{$subj}->{'complete'} eq "0")) {
-		$missing_results .= "MISSING $subj " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
+		$missing_results .= "MISSING $subj " . $result_hash->{$subj}->{'strand'} . " " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
 		$num_missing++;
 	} else {
-		$finished_results .= "ALIGNED $subj " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
+# 		$finished_results .= "ALIGNED $subj " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
 		push @finished_array, $subj;
 	}
+
+	# if it's a pseudo feature, we can go ahead and assume it's finished.
+
 }
 
 my $genbank_header = "$samplename [organism=$orgname][moltype=Genomic DNA][location=chloroplast][topology=Circular][gcode=11]";
@@ -85,9 +89,9 @@ system("blastn -query $fastafile -subject $fastafile -outfmt 5 -out $refblast -e
 my $self_array = Blast::parse_xml ("$refblast");
 my @irs = ();
 foreach my $hit (@$self_array) {
-	my @hsps = sort Blast::sort_regions_by_start @{$hit->{"hsps"}};
+	my @hsps = sort Blast::sort_regions_by_start @{$hit->{'hsps'}};
 	foreach my $hsp (@hsps) {
-		my $querylen = $hsp->{"query-to"} - $hsp->{"query-from"};
+		my $querylen = $hsp->{'query-to'} - $hsp->{'query-from'};
 		# IRs are between 10,000 and 50,000 bp and are inverted.
 		if (($querylen < 50000) && ($querylen > 10000) && ($hsp->{'hit-frame'} == -1)) {
 			push @irs, $hsp;
@@ -154,5 +158,6 @@ plann.pl -reference gbfile.gb -fasta denovoplastome.fasta -out outfile [-organis
 
 =head1 DESCRIPTION
 
+Plann uses a reference plastome Genbank file as a template to annotate a related plastome sequence.
 
 =cut
