@@ -1146,14 +1146,14 @@ sub blast_to_genbank {
 
 	my $gene_array = Genbank::parse_genbank($gbfile);
 	my $refseq = Genbank::get_sequence();
-	my ($ref_hash, $ref_array) = Genbank::clone_features($gene_array);
+	my ($ref_hash, $region_array) = Genbank::clone_features($gene_array);
 	my ($query_hash, $query_array) = parse_fasta($fastafile);
 	my $queryseq = $query_hash->{@$query_array[0]};
 
 	# look for regions too small to blast accurately:
 	my $tiny_regions = {};
 	my $tiny_region_extension_length = 20;
-	foreach my $region (@$ref_array) {
+	foreach my $region (@$region_array) {
 		my $start = $ref_hash->{$region}->{'start'};
 		my $end = $ref_hash->{$region}->{'end'};
 		if ($end - $start < 10) {
@@ -1166,7 +1166,7 @@ sub blast_to_genbank {
 	}
 
  	my ($fastafh, $subjectfasta) = tempfile();
-	foreach my $ref (@$ref_array) {
+	foreach my $ref (@$region_array) {
 		print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
 	}
 	close $fastafh;
@@ -1234,7 +1234,7 @@ sub blast_to_genbank {
 		}
 	}
 
-	return ($ref_hash, $ref_array);
+	return ($ref_hash, $region_array);
 }
 
 =head1
