@@ -2,11 +2,11 @@
 
 use Getopt::Long;
 use Pod::Usage;
-use File::Temp qw (tempfile tempdir);
+use File::Temp qw (tempfile);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use Blast qw (parse_xml);
-use Genbank qw (parse_genbank parse_gene_array_to_features set_sequence get_sequence);
+use Blast;
+use Genbank;
 use Subfunctions qw (parse_fasta blast_to_genbank align_regions_to_reference align_hits_to_ref);
 use Data::Dumper;
 

@@ -2,11 +2,11 @@
 
 use Getopt::Long;
 use Pod::Usage;
-use File::Temp qw (tempfile tempdir);
+use File::Temp qw (tempfile);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use Subfunctions qw (parse_fasta write_fasta blast_to_genbank);
-use Genbank qw (parse_genbank write_sequin_tbl);
+use Subfunctions qw (parse_fasta blast_to_genbank);
+use Genbank qw (write_sequin_tbl);
 use Data::Dumper;
 
 if (@ARGV == 0) {

@@ -5,7 +5,7 @@ use Pod::Usage;
 use Data::Dumper;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use Genbank qw(parse_genbank write_features_as_fasta);
+use Genbank;
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -18,10 +18,10 @@ if (!defined $outfile) {
 	$outfile = $gbfile;
 }
 
-my $gene_array = parse_genbank($gbfile);
+my $gene_array = Genbank::parse_genbank($gbfile);
 
 open FASTA_FH, ">", "$outfile.fasta";
-print FASTA_FH write_features_as_fasta ($gene_array);
+print FASTA_FH Genbank::write_features_as_fasta ($gene_array);
 close FASTA_FH;
 
 open TBL_FH, ">", "$outfile.tbl";

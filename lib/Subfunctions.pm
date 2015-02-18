@@ -3,9 +3,9 @@ use strict;
 use File::Temp qw(tempfile);
 use FindBin;
 use lib "$FindBin::Bin/..";
-use Nexus qw(parse_nexus);
-use Blast qw (parse_xml sort_hsps_by_score sort_regions_by_start);
-use Genbank qw (parse_genbank clone_features write_features_as_fasta sequence_for_interval set_sequence sequin_feature);
+use Nexus;
+use Blast;
+use Genbank;
 use Data::Dumper;
 
 
@@ -798,7 +798,7 @@ sub meld_sequence_files {
 	foreach my $inputfile (@inputfiles) {
 		push @matrixnames, $inputfile;
 		if ($inputfile =~ /\.nex/) {
-			my $nexushash = parse_nexus ($inputfile);
+			my $nexushash = Nexus::parse_nexus ($inputfile);
 			$matrices->{ $inputfile } = $nexushash->{'characters'};
 		} elsif ($inputfile =~/\.fa/) {
 			($matrices->{ $inputfile }, undef) = parse_fasta ($inputfile);
@@ -1146,7 +1146,7 @@ sub blast_to_genbank {
 
 	my $gene_array = Genbank::parse_genbank($gbfile);
 	my $refseq = Genbank::get_sequence();
-	my ($ref_hash, $ref_array) = clone_features($gene_array);
+	my ($ref_hash, $ref_array) = Genbank::clone_features($gene_array);
 	my ($query_hash, $query_array) = parse_fasta($fastafile);
 	my $queryseq = $query_hash->{@$query_array[0]};
 
