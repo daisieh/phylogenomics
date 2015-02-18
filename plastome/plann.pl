@@ -32,7 +32,7 @@ if ($help) {
     pod2usage(-verbose => 2);
 }
 
-if ($gbfile !~ /\.gb$/) {
+if ($gbfile !~ /\.gbf*$/) {
 	print "reference file needs to be a fully annotated Genbank file.\n";
 	exit;
 }
@@ -59,15 +59,12 @@ my ($result_hash, $result_array) = blast_to_genbank ($gbfile, $fastafile);
 
 my @finished_array = ();
 my $missing_results = "";
-# my $finished_results = "";
 my $num_missing = 0;
 foreach my $subj (@$result_array) {
-# print Dumper ($result_hash->{$subj});
 	if (($result_hash->{$subj}->{'complete'} eq "0")) {
 		$missing_results .= "MISSING $subj " . $result_hash->{$subj}->{'strand'} . " " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
 		$num_missing++;
 	} else {
-# 		$finished_results .= "ALIGNED $subj " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
 		push @finished_array, $subj;
 	}
 
