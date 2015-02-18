@@ -166,6 +166,7 @@ sub clone_features {
 					$flattened_hash->{$fullname}->{'start'} = $start;
 					$flattened_hash->{$fullname}->{'end'} = $end;
 					$flattened_hash->{$fullname}->{'characters'} = $regseq;
+					$flattened_hash->{$fullname}->{'gene'} = $genename;
 					$feat_id++;
 				}
 			}
