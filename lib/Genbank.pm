@@ -143,8 +143,11 @@ sub clone_features {
 		if ($gene->{'type'} eq "gene") {
 			my $interval_str = flatten_interval ($gene->{'region'});
 			my @gene_interval = ($interval_str);
-			my $genename = $gene->{'qualifiers'}->{'gene'};
+			# we need to disambiguate different copies of the gene
+			my $genename = $gene->{'qualifiers'}->{'gene'} . "_$gene_id";
 			$flattened_hash->{$genename}->{'gene'} = stringify_feature(\@gene_interval, $gene);
+
+# 			print "$genename " .Dumper($flattened_hash->{$genename}->{'gene'});
 			$flattened_hash->{$genename}->{'contains'} = ();
 			foreach my $feat (@{$gene->{'contains'}}) {
 				push @{$flattened_hash->{$genename}->{'contains'}}, stringify_feature($feat->{'region'}, $feat);
@@ -160,7 +163,7 @@ sub clone_features {
 					}
 					my $regseq = sequence_for_interval ($reg);
 					my $featname = $feat->{'type'};
-					my $fullname = "$gene_id"."_$feat_id"."_$genename"."_$featname";
+					my $fullname = "$genename"."_$featname"."_$feat_id";
 					push @flattened_names, $fullname;
 					$flattened_hash->{$fullname}->{'strand'} = $strand;
 					$flattened_hash->{$fullname}->{'start'} = $start;
@@ -173,7 +176,7 @@ sub clone_features {
 			$gene_id++;
 		}
 	}
-# 	print Dumper ($flattened_hash);
+
 	return ($flattened_hash, \@flattened_names);
 }
 
@@ -209,6 +212,7 @@ sub write_sequin_tbl {
 			$r =~ /(\d+)\.\.(\d+)/;
 			$result_string .= "$1\t$2\t$type\n";
 		}
+# 		print "$genename " . Dumper ($gene->{qualifiers});
 		foreach my $q (keys %{$gene->{'qualifiers'}}) {
 			$result_string .= "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
 		}
@@ -280,6 +284,7 @@ sub parse_feature_table {
 		} else {
 			$gene_id = $id;
 			$curr_gene = $this_feat;
+			$curr_gene->{'id'} = $id;
 			push @gene_index_array, $id;
 			push @gene_hasharray, $curr_gene;
 		}
@@ -350,12 +355,14 @@ sub write_region_array {
 
 	my @region_array = ();
 	foreach my $subj (@$ref_array) {
-		push @region_array, "$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
+		print "###$subj\n";
+		push @region_array, $subj; #"$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
 	}
-	return \@region_array;
+	return $ref_hash, \@region_array;
 }
 
 sub parse_region_array {
+	my $region_hash = shift;
 	my $region_array = shift;
 
 	my @gene_array = ();
@@ -363,10 +370,13 @@ sub parse_region_array {
 	my $curr_gene_exons;
 	my $curr_gene = "";
 	my $curr_gene_hash= {};
-	foreach my $line (@$region_array) {
-		if ($line =~ /^(.*?)_(\d+)_(.+?)_(.+?)\((.)\)\t(\d+)\t(\d+)$/) {
-			# 	0_0_trnH_tRNA(-)	4	77
-			my ($id, $sub, $name, $type, $strand, $start, $end) = ($1, $2, $3, $4, $5, $6, $7);
+	foreach my $gene (@$region_array) {
+# 	foreach my $line (@$region_array) {
+# 		if ($line =~ /^(.*?)_(\d+)_(.+?)_(.+?)\((.)\)\t(\d+)\t(\d+)$/) {
+		my ($id, $sub, $name, $type, $strand, $start, $end);# = ($1, $2, $3, $4, $5, $6, $7);
+		print "&&&& " . $gene . "\n";
+		if ($gene =~ /^(.*?)_(\d+)_(.+?)_(.+?)$/) {
+			my $id = $1;
 			if ($id == 0) { # first gene
 				$curr_gene_hash = {};
 				$curr_gene_hash->{'id'} = $id;
@@ -426,7 +436,9 @@ sub parse_region_array {
 				$curr_gene = $name;
 			}
 		}
+
 	}
+
 	# finish processing the gene we were working on:
 	$curr_gene_hash->{'type'} = "gene";
 	$curr_gene_hash->{'region'} = max_interval ($curr_gene_exons); # largest gene region

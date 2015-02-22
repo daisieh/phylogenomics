@@ -61,11 +61,13 @@ my @finished_array = ();
 my $missing_results = "";
 my $num_missing = 0;
 foreach my $subj (@$result_array) {
+print "@@@@ $subj\n";
 	if (($result_hash->{$subj}->{'complete'} eq "0")) {
 		$missing_results .= "MISSING $subj " . $result_hash->{$subj}->{'strand'} . " " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
 		$num_missing++;
 	} else {
 		push @finished_array, $subj;
+		next;
 	}
 
 	# if it's a pseudo feature, we can go ahead and assume it's finished.
