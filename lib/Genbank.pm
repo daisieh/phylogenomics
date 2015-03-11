@@ -216,16 +216,6 @@ sub write_sequin_tbl {
 
 		# then, print each feature contained.
 		foreach my $feat (@{$gene->{'contains'}}) {
-			foreach my $reg (@{$feat->{'region'}}) {
-				my $strand = "+";
-				my ($start, $end) = split (/\.\./, $reg);
-				if ($end < $start) {
-					$strand = "-";
-					my $oldend = $start;
-					$start = $end;
-					$end = $oldend;
-				}
-			}
 			$result_string .= Genbank::sequin_feature ($feat->{'region'}, $feat);
 		}
 	}
