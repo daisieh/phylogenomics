@@ -1259,9 +1259,7 @@ sub align_regions_to_reference {
 	my $ref_array = shift;
 	my $refgbfile = shift;
 
-	print Dumper ($ref_array);
-	my $gene_index_array = Genbank::parse_region_array(Genbank::write_region_array ($ref_hash, $ref_array));
-
+	my $gene_index_array = Genbank::parse_region_array($ref_hash, $ref_array);
 	my ($ref_gene_array, undef) = Genbank::parse_feature_table (Genbank::parse_genbank($refgbfile));
 
 	# fill in the genes from the regionfile with the info from the destination gene array
