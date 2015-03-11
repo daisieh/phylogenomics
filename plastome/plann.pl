@@ -61,7 +61,14 @@ my @finished_array = ();
 my $missing_results = "";
 my $num_missing = 0;
 foreach my $subj (@$result_array) {
-print "@@@@ $subj\n";
+	my $gene_features = $result_hash->{$result_hash->{$subj}->{'gene'}}->{'features'};
+	# if it's a pseudo feature, we can go ahead and assume it's finished.
+	if ($gene_features =~ /pseudo=/) {
+		print $result_hash->{$subj}->{'gene'} . " is a pseudogene\n";
+		print Dumper ($result_hash->{$subj}) ;
+		push @finished_array, $subj;
+		next;
+	}
 	if (($result_hash->{$subj}->{'complete'} eq "0")) {
 		$missing_results .= "MISSING $subj " . $result_hash->{$subj}->{'strand'} . " " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
 		$num_missing++;
@@ -70,11 +77,6 @@ print "@@@@ $subj\n";
 		next;
 	}
 
-	# if it's a pseudo feature, we can go ahead and assume it's finished.
-	if (($result_hash->{$result_hash->{$subj}->{'gene'}}->{'gene'}) =~ /pseudo=/) {
-		print $result_hash->{$subj}->{'gene'} . " is a pseudogene\n";
-		push @finished_array, $subj;
-	}
 
 }
 
@@ -84,7 +86,6 @@ print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
 my $gene_array = align_regions_to_reference ($result_hash, \@finished_array, $gbfile);
-
 # need to annotate inverted repeats
 my ($fh, $refblast) = tempfile();
 system("blastn -query $fastafile -subject $fastafile -outfmt 5 -out $refblast -evalue 1e-200");
