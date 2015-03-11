@@ -121,7 +121,6 @@ sub parse_feature_sequences {
 					}
 					my $regseq = sequence_for_interval ($reg);
 					my $featname = $feat->{'type'};
-# 					$gene_array[$gene_id]"."_$feat_id"."_$genename"."_$featname($strand)\t$start\t$end\n$regseq\n";
 					$feat_id++;
 				}
 			}
@@ -146,7 +145,6 @@ sub clone_features {
 			my $genename = $gene->{'qualifiers'}->{'gene'} . "_$gene_id";
 			$flattened_hash->{$genename}->{'gene'} = stringify_feature(\@gene_interval, $gene);
 
-# 			print "$genename " .Dumper($flattened_hash->{$genename}->{'gene'});
 			$flattened_hash->{$genename}->{'contains'} = ();
 			foreach my $feat (@{$gene->{'contains'}}) {
 				push @{$flattened_hash->{$genename}->{'contains'}}, stringify_feature($feat->{'region'}, $feat);
@@ -489,7 +487,7 @@ sub flatten_interval {
 	my $main_end = pop @locs;
 
 	# was the original interval complemented?
-	my $r = @$int_array[0];#join (",", @$int_array);
+	my $r = @$int_array[0];
 	my ($loc1, $loc2) = split (/\.\./, $r);
 	if ($loc1 < $loc2) {
 		return "$main_start..$main_end";
