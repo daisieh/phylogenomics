@@ -64,8 +64,6 @@ foreach my $subj (@$result_array) {
 	my $gene_features = $result_hash->{$result_hash->{$subj}->{'gene'}}->{'features'};
 	# if it's a pseudo feature, we can go ahead and assume it's finished.
 	if ($gene_features =~ /pseudo=/) {
-		print $result_hash->{$subj}->{'gene'} . " is a pseudogene\n";
-		print Dumper ($result_hash->{$subj}) ;
 		push @finished_array, $subj;
 		next;
 	}

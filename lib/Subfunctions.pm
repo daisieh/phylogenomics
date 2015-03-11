@@ -1154,7 +1154,6 @@ sub blast_to_genbank {
 	my $tiny_regions = {};
 	my $tiny_region_extension_length = 20;
 	foreach my $region (@$region_array) {
-	print "%%%% $region\n";
 		my $start = $ref_hash->{$region}->{'start'};
 		my $end = $ref_hash->{$region}->{'end'};
 		if ($end - $start < 10) {
