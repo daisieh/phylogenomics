@@ -370,79 +370,82 @@ sub parse_region_array {
 	my $curr_gene_exons;
 	my $curr_gene = "";
 	my $curr_gene_hash= {};
+	my $gene = shift @$region_array;
+	my $name = $region_hash->{$gene}->{'gene'};
+	my $start = $region_hash->{$gene}->{'start'};
+	my $end = $region_hash->{$gene}->{'end'};
+	my $type = $region_hash->{$gene}->{'type'};
+	my $strand = $region_hash->{$gene}->{'strand'};
+	my $id = $region_hash->{$gene}->{'id'};
+	$curr_gene_hash = {};
+	$curr_gene_hash->{'id'} = $id;
+	push @gene_array, $curr_gene_hash;
+	# process new gene's first exon:
+	$curr_gene_exons = [];
+	my $region = "";
+	if ($strand eq "-") {
+		$region = "$end..$start";
+	} else {
+		$region = "$start..$end";
+	}
+	push @$curr_gene_exons, $region;
+	my @feat_array = ();
+	push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
+	$curr_gene_hash->{'contains'} = \@feat_array;
+	$curr_gene_hash->{'qualifiers'} = {"gene"=>$name};
+	$curr_gene = $name;
+	my $i = 0;
 	foreach my $gene (@$region_array) {
-# 	foreach my $line (@$region_array) {
-# 		if ($line =~ /^(.*?)_(\d+)_(.+?)_(.+?)\((.)\)\t(\d+)\t(\d+)$/) {
-		my ($id, $sub, $name, $type, $strand, $start, $end);# = ($1, $2, $3, $4, $5, $6, $7);
-		print "&&&& " . $gene . "\n";
-		if ($gene =~ /^(.*?)_(\d+)_(.+?)_(.+?)$/) {
-			my $id = $1;
-			if ($id == 0) { # first gene
-				$curr_gene_hash = {};
-				$curr_gene_hash->{'id'} = $id;
-				push @gene_array, $curr_gene_hash;
-				# process new gene's first exon:
-				$curr_gene_exons = ();
-				my $region = "";
-				if ($strand eq "-") {
-					$region = "$end..$start";
-				} else {
-					$region = "$start..$end";
-				}
-				push @$curr_gene_exons, $region;
-				my @feat_array = ();
-				push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
-				$curr_gene_hash->{'contains'} = \@feat_array;
-				$curr_gene_hash->{'qualifiers'} = {"gene"=>$name};
-				$curr_gene = $name;
-				next;
-			}
-
-			if ($id == $curr_gene_count) {
-				# this is another exon in the same gene
-				my $region = "";
-				if ($strand eq "-") {
-					$region = "$end..$start";
-				} else {
-					$region = "$start..$end";
-				}
-					push @$curr_gene_exons, $region;
+		my $name = $region_hash->{$gene}->{'gene'};
+		my $start = $region_hash->{$gene}->{'start'};
+		my $end = $region_hash->{$gene}->{'end'};
+		my $type = $region_hash->{$gene}->{'type'};
+		my $strand = $region_hash->{$gene}->{'strand'};
+		my $id = $region_hash->{$gene}->{'id'};
+		if ($id == $curr_gene_count) {
+			# this is another exon in the same gene
+			my $region = "";
+			if ($strand eq "-") {
+				$region = "$end..$start";
 			} else {
-				# this is a new gene
-
-				# finish processing the gene we were working on:
-				$curr_gene_hash->{'type'} = "gene";
-				$curr_gene_hash->{'region'} = max_interval ($curr_gene_exons); # largest gene region
-
-				# start processing the new gene:
-				$curr_gene_count = $id;
-				$curr_gene_hash = {};
-				$curr_gene_hash->{'id'} = $id;
-				push @gene_array, $curr_gene_hash;
-
-				# process new gene's first exon:
-				$curr_gene_exons = ();
-				my $region = "";
-				if ($strand eq "-") {
-					$region = "$end..$start";
-				} else {
-					$region = "$start..$end";
-				}
-				push @$curr_gene_exons, $region;
-				my @feat_array = ();
-				push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
-				$curr_gene_hash->{'contains'} = \@feat_array;
-				$curr_gene_hash->{'qualifiers'} = {"gene"=>$name};
-				$curr_gene = $name;
+				$region = "$start..$end";
 			}
-		}
+			push @$curr_gene_exons, $region;
+		} else {
+			# this is a new gene
 
+			# finish processing the gene we were working on:
+			$curr_gene_hash->{'type'} = "gene";
+			$curr_gene_hash->{'region'} = max_interval ($curr_gene_exons); # largest gene region
+			my $temp = shift @$curr_gene_exons;
+
+			# start processing the new gene:
+			$curr_gene_count = $id;
+			$curr_gene_hash = {};
+			$curr_gene_hash->{'id'} = $id;
+			push @gene_array, $curr_gene_hash;
+
+			# process new gene's first exon:
+			$curr_gene_exons = [];
+			my $region = "";
+			if ($strand eq "-") {
+				$region = "$end..$start";
+			} else {
+				$region = "$start..$end";
+			}
+			push @$curr_gene_exons, $region;
+			my @feat_array = ();
+			push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
+			$curr_gene_hash->{'contains'} = \@feat_array;
+			$curr_gene_hash->{'qualifiers'} = {"gene"=>$name};
+			$curr_gene = $name;
+		}
 	}
 
 	# finish processing the gene we were working on:
 	$curr_gene_hash->{'type'} = "gene";
 	$curr_gene_hash->{'region'} = max_interval ($curr_gene_exons); # largest gene region
-
+	shift @$curr_gene_exons;
 	return \@gene_array;
 }
 
