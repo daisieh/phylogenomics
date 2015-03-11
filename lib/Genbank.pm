@@ -346,18 +346,6 @@ sub parse_gene_array_to_features {
 	return (\@gene_hasharray, \@gene_index_array);
 }
 
-sub write_region_array {
-	my $ref_hash = shift;
-	my $ref_array = shift;
-
-	my @region_array = ();
-	foreach my $subj (@$ref_array) {
-		print "###$subj\n";
-		push @region_array, $subj; #"$subj($ref_hash->{$subj}->{'strand'})\t$ref_hash->{$subj}->{'start'}\t$ref_hash->{$subj}->{'end'}\n";
-	}
-	return $ref_hash, \@region_array;
-}
-
 sub parse_region_array {
 	my $region_hash = shift;
 	my $region_array = shift;
