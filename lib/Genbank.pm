@@ -143,8 +143,25 @@ sub clone_features {
 			my @gene_interval = ($interval_str);
 			# we need to disambiguate different copies of the gene
 			my $genename = $gene->{'qualifiers'}->{'gene'} . "_$gene_id";
-			$flattened_hash->{$genename}->{'gene'} = stringify_feature(\@gene_interval, $gene);
-
+			my $strand = "+";
+			my $reg = @{$gene->{'region'}}[0];
+			my ($start, $end) = split (/\.\./, $reg);
+			if ($end < $start) {
+				$strand = "-";
+				my $oldend = $start;
+				$start = $end;
+				$end = $oldend;
+			}
+			my $regseq = sequence_for_interval ($reg);
+			push @flattened_names, $genename;
+			$flattened_hash->{$genename}->{'strand'} = $strand;
+			$flattened_hash->{$genename}->{'start'} = $start;
+			$flattened_hash->{$genename}->{'end'} = $end;
+			$flattened_hash->{$genename}->{'characters'} = $regseq;
+			$flattened_hash->{$genename}->{'gene'} = $genename;
+			$flattened_hash->{$genename}->{'type'} = "gene";
+			$flattened_hash->{$genename}->{'id'} = $gene_id;
+			$flattened_hash->{$genename}->{'features'} = stringify_feature($gene->{'region'}, $gene);
 			$flattened_hash->{$genename}->{'contains'} = ();
 			foreach my $feat (@{$gene->{'contains'}}) {
 				push @{$flattened_hash->{$genename}->{'contains'}}, stringify_feature($feat->{'region'}, $feat);
@@ -167,6 +184,8 @@ sub clone_features {
 					$flattened_hash->{$fullname}->{'end'} = $end;
 					$flattened_hash->{$fullname}->{'characters'} = $regseq;
 					$flattened_hash->{$fullname}->{'gene'} = $genename;
+					$flattened_hash->{$fullname}->{'type'} = $featname;
+					$flattened_hash->{$fullname}->{'id'} = $gene_id;
 					$feat_id++;
 				}
 			}
@@ -203,13 +222,21 @@ sub write_sequin_tbl {
 	foreach my $gene (@$gene_array) {
 		# first, print overall gene information
 		my $genename = $gene->{'qualifiers'}->{'gene'};
+		if ($genename =~ /(.+)_\d+/) {
+			$genename = $1;
+		}
+
 		foreach my $r (@{$gene->{'region'}}) {
 			my $type = $gene->{'type'};
 			$r =~ /(\d+)\.\.(\d+)/;
 			$result_string .= "$1\t$2\t$type\n";
 		}
 		foreach my $q (keys %{$gene->{'qualifiers'}}) {
-			$result_string .= "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
+			my $qual = $gene->{qualifiers}->{$q};
+			if ($q eq "gene") {
+				$qual = $genename;
+			}
+			$result_string .= "\t\t\t$q\t$qual\n";
 		}
 
 		# then, print each feature contained.
