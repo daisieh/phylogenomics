@@ -1264,11 +1264,12 @@ sub align_regions_to_reference {
 
 	# fill in the genes from the regionfile with the info from the destination gene array
 	my @final_gene_array = ();
-	my $new_gene = shift @$gene_index_array;
+	my $new_gene;
 	for (my $id=0;$id<@$ref_gene_array; $id++) {
 		my $dest_gene = @$ref_gene_array[$id];
 		if ($new_gene->{'qualifiers'}->{'gene'} ne $dest_gene->{'qualifiers'}->{'gene'}) {
 			$new_gene = shift @$gene_index_array;
+			$new_gene->{'name'} = $dest_gene->{'qualifiers'}->{'gene'};
 			if (!defined $new_gene) { last; }
 		} else {
 			next;
