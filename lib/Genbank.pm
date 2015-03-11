@@ -18,12 +18,11 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl write_region_array parse_region_array parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl parse_region_array parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
 
-# my @gene_array = ();
 my $line = "";
 my $in_features = 0;
 my $in_sequence = 0;
@@ -202,7 +201,6 @@ sub write_sequin_tbl {
 
 	# print header
 	my $result_string = ">Features\t$name\n";
-
 	# start printing genes
 	foreach my $gene (@$gene_array) {
 		# first, print overall gene information
@@ -212,7 +210,6 @@ sub write_sequin_tbl {
 			$r =~ /(\d+)\.\.(\d+)/;
 			$result_string .= "$1\t$2\t$type\n";
 		}
-# 		print "$genename " . Dumper ($gene->{qualifiers});
 		foreach my $q (keys %{$gene->{'qualifiers'}}) {
 			$result_string .= "\t\t\t$q\t$gene->{qualifiers}->{$q}\n";
 		}
@@ -492,7 +489,7 @@ sub stringify_feature {
 		my $feat = "$key=$feature->{qualifiers}->{$key}";
 		push @features, $feat;
 	}
-	$result_string = "$feature->{type}\t".join(",",@$regions)."\t".join("#",@features)."\n";
+	$result_string = "$feature->{type}\t".join(",",@$regions)."\t".join("#",@features);
 	return $result_string;
 }
 
