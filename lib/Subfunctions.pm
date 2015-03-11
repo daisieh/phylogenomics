@@ -1165,14 +1165,16 @@ sub blast_to_genbank {
 		}
 	}
 
- 	my ($fastafh, $subjectfasta) = tempfile();
+#  	my ($fastafh, $subjectfasta) = tempfile();
+	my $subjectfasta = "temp.fasta";
+	open my $fastafh, ">", $subjectfasta;
 	foreach my $ref (@$region_array) {
 		print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
 	}
 	close $fastafh;
 
- 	my (undef, $blastfile) = tempfile();
-
+#  	my (undef, $blastfile) = tempfile();
+my $blastfile = "temp.xml";
 	system("blastn -query $fastafile -subject $subjectfasta -outfmt 5 -out $blastfile -word_size 10");
 
 	# choose the best hits:
@@ -1256,33 +1258,35 @@ sub align_regions_to_reference {
 	my $ref_array = shift;
 	my $refgbfile = shift;
 
-	my $gene_index_array = Genbank::parse_region_array(Genbank::write_region_array ($ref_hash, $ref_array));
-
-	my ($destination_gene_array, $destination_gene_index_array) = Genbank::parse_feature_table (Genbank::parse_genbank($refgbfile));
-	my $dest_gene_hash = {};
-	foreach my $id (@$destination_gene_index_array) {
-		$dest_gene_hash->{$id} = shift $destination_gene_array;
-	}
+	my $gene_index_array = Genbank::parse_region_array($ref_hash, $ref_array);
+	my ($ref_gene_array, undef) = Genbank::parse_feature_table (Genbank::parse_genbank($refgbfile));
 
 	# fill in the genes from the regionfile with the info from the destination gene array
 	my @final_gene_array = ();
-	foreach my $gene (@$gene_index_array) {
-		my $id = delete $gene->{'id'};
-		my $dest_gene = $dest_gene_hash->{$id};
+	my $new_gene;
+	for (my $id=0;$id<@$ref_gene_array; $id++) {
+		my $dest_gene = @$ref_gene_array[$id];
+		if ($new_gene->{'qualifiers'}->{'gene'} ne $dest_gene->{'qualifiers'}->{'gene'}) {
+			$new_gene = shift @$gene_index_array;
+			$new_gene->{'name'} = $dest_gene->{'qualifiers'}->{'gene'};
+			if (!defined $new_gene) { last; }
+		} else {
+			next;
+		}
 
 		foreach my $q (keys %{$dest_gene->{'qualifiers'}}) {
-			if (!(exists $gene->{'qualifiers'}->{$q})) {
-				$gene->{'qualifiers'}->{$q} = $dest_gene->{'qualifiers'}->{$q}
+			if (!(exists $new_gene->{'qualifiers'}->{$q})) {
+				$new_gene->{'qualifiers'}->{$q} = $dest_gene->{'qualifiers'}->{$q}
 			}
 		}
 		my @new_contains = ();
 		foreach my $destcontains (@{$dest_gene->{'contains'}}) {
-			my $genecontains = shift $gene->{'contains'};
+			my $genecontains = shift @{$new_gene->{'contains'}};
 			$destcontains->{'region'} = $genecontains->{'region'};
 			push @new_contains, $destcontains;
 		}
-		$gene->{'contains'} = \@new_contains;
-		push @final_gene_array, $gene;
+		$new_gene->{'contains'} = \@new_contains;
+		push @final_gene_array, $new_gene;
 	}
 
 	return \@final_gene_array;
