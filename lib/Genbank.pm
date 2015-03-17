@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl parse_region_array parse_feature_table parse_gene_array_to_features set_sequence get_sequence get_name write_features_as_fasta clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl parse_region_array parse_feature_table set_sequence get_sequence get_name write_features_as_fasta clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -297,63 +297,6 @@ sub parse_feature_table {
 			$gene_id = $id;
 			$curr_gene = $this_feat;
 			$curr_gene->{'id'} = $id;
-			push @gene_index_array, $id;
-			push @gene_hasharray, $curr_gene;
-		}
-	}
-	return (\@gene_hasharray, \@gene_index_array);
-}
-
-sub parse_gene_array_to_features {
-	my $gene_array = shift;
-
-	my @gene_hasharray = ();
-	my @gene_index_array = ();
-	my @featuretable = ();
-	my $gene_id = 0;
-	foreach my $gene (@$gene_array) {
-		if ($gene->{'type'} eq "gene") {
-			my $interval_str = flatten_interval ($gene->{'region'});
-			my $geneseq = sequence_for_interval ($interval_str);
-			my $genename = $gene->{'qualifiers'}->{'gene'};
-			foreach my $feat (@{$gene->{'contains'}}) {}
-			my $interval_str = flatten_interval ($gene->{'region'});
-			my @gene_interval = ($interval_str);
-			push @featuretable, "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
-			foreach my $feat (@{$gene->{'contains'}}) {
-				push @featuretable, "$gene_id\t" . stringify_feature ($feat->{'region'}, $feat);
-			}
-			$gene_id++;
-		}
-	}
-
-	$gene_id = -1;
-	my $curr_gene = {};
-	foreach my $line (@featuretable) {
-		my ($id, $type, $regionstr, $qualstr, undef) = split ("\t", $line);
-		# first, assemble the feature into a hash.
-		my $this_feat = {};
-		$this_feat->{'qualifiers'} = {};
-		my @quals = split("#", $qualstr);
-		foreach my $q (@quals) {
-			if ($q =~ /^(.*?)=(.*)$/) {
-				$this_feat->{'qualifiers'}->{$1} = $2;
-			}
-		}
-		$this_feat->{'region'} = ();
-		my @regions = split(",", $regionstr);
-		foreach my $r (@regions) {
-			push @{$this_feat->{'region'}}, $r;
-		}
-
-		$this_feat->{'type'} = $type;
-		# then, check to see if this is a subfeature of the current gene (if its id # is the same as the current gene_id)
-		if ($id == $gene_id) {
-			# if it is, push it into the "contains" array.
-			push @{$curr_gene->{'contains'}}, $this_feat;
-		} else {
-			$gene_id = $id;
-			$curr_gene = $this_feat;
 			push @gene_index_array, $id;
 			push @gene_hasharray, $curr_gene;
 		}
