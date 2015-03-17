@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl parse_region_array parse_feature_table set_sequence get_sequence get_name write_features_as_fasta clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl parse_region_array parse_feature_table_from_genbank set_sequence get_sequence get_name write_features_as_fasta clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -161,10 +161,10 @@ sub clone_features {
 			$flattened_hash->{$genename}->{'gene'} = $genename;
 			$flattened_hash->{$genename}->{'type'} = "gene";
 			$flattened_hash->{$genename}->{'id'} = $gene_id;
-			$flattened_hash->{$genename}->{'features'} = stringify_feature($gene->{'region'}, $gene);
-			$flattened_hash->{$genename}->{'contains'} = ();
+			$flattened_hash->{$genename}->{'qualifiers'} = qualifiers_for_feature($gene);
+			$flattened_hash->{$genename}->{'contains'} = "";
 			foreach my $feat (@{$gene->{'contains'}}) {
-				push @{$flattened_hash->{$genename}->{'contains'}}, stringify_feature($feat->{'region'}, $feat);
+				push @{$flattened_hash->{$genename}->{'qualifiers'}}, @{qualifiers_for_feature($feat)};
 				my $feat_id = 0;
 				foreach my $reg (@{$feat->{'region'}}) {
 					my $strand = "+";
@@ -249,59 +249,36 @@ sub write_sequin_tbl {
 
 }
 
-sub parse_feature_table {
-	my $gene_array = shift;
+sub parse_feature_table_from_genbank {
+	my $gbfile = shift;
+	my $gene_array = Genbank::parse_genbank($gbfile);
 
 	my @feature_table = ();
 	my $gene_id = 0;
+	my @gene_hasharray = ();
+	my $curr_gene = {};
 	foreach my $gene (@$gene_array) {
 		if ($gene->{'type'} eq "gene") {
-			my $interval_str = flatten_interval ($gene->{'region'});
-			my @gene_interval = ($interval_str);
-			push @feature_table, "$gene_id\t" . stringify_feature(\@gene_interval, $gene);
+			# make an entry for the main gene
+			my $this_feat = {};
+			$this_feat->{'qualifiers'} = $gene->{'qualifiers'};
+			$this_feat->{'region'} = flatten_interval ($gene->{'region'});
+			$this_feat->{'type'} = $gene->{'type'};
+			$this_feat->{'id'} = $gene_id;
+			$this_feat->{'contains'} = [];
+			push @gene_hasharray, $this_feat;
 			foreach my $feat (@{$gene->{'contains'}}) {
-				push @feature_table, "$gene_id\t" . stringify_feature ($feat->{'region'}, $feat);
+				# then make an entry for each subcomponent
+				my $this_subfeat = {};
+				$this_subfeat->{'qualifiers'} = $feat->{'qualifiers'};
+				$this_subfeat->{'region'} = $feat->{'region'};
+				$this_subfeat->{'type'} = $feat->{'type'};
+				push @{$this_feat->{'contains'}}, $this_subfeat;
 			}
-			$gene_id++;
 		}
 	}
 
-	my @gene_hasharray = ();
-	my @gene_index_array = ();
-	my $gene_id = -1;
-	my $curr_gene = {};
-	foreach my $line (@feature_table) {
-		my ($id, $type, $regionstr, $qualstr, undef) = split ("\t", $line);
-		# first, assemble the feature into a hash.
-		my $this_feat = {};
-		$this_feat->{'qualifiers'} = {};
-		my @quals = split("#", $qualstr);
-		foreach my $q (@quals) {
-			if ($q =~ /^(.*?)=(.*)$/) {
-				$this_feat->{'qualifiers'}->{$1} = $2;
-			}
-		}
-		$this_feat->{'region'} = ();
-		my @regions = split(",", $regionstr);
-		foreach my $r (@regions) {
-			push @{$this_feat->{'region'}}, $r;
-		}
-
-		$this_feat->{'type'} = $type;
-
-		# then, check to see if this is a subfeature of the current gene (if its id # is the same as the current gene_id)
-		if ($id == $gene_id) {
-			# if it is, push it into the "contains" array.
-			push @{$curr_gene->{'contains'}}, $this_feat;
-		} else {
-			$gene_id = $id;
-			$curr_gene = $this_feat;
-			$curr_gene->{'id'} = $id;
-			push @gene_index_array, $id;
-			push @gene_hasharray, $curr_gene;
-		}
-	}
-	return (\@gene_hasharray, \@gene_index_array);
+	return \@gene_hasharray;
 }
 
 sub parse_region_array {
@@ -309,43 +286,18 @@ sub parse_region_array {
 	my $region_array = shift;
 
 	my @gene_array = ();
-	my $curr_gene_count = 0;
 	my $curr_gene_exons;
-	my $curr_gene = "";
-	my $curr_gene_hash= {};
-	my $gene = shift @$region_array;
-	my $name = $region_hash->{$gene}->{'gene'};
-	my $start = $region_hash->{$gene}->{'start'};
-	my $end = $region_hash->{$gene}->{'end'};
-	my $type = $region_hash->{$gene}->{'type'};
-	my $strand = $region_hash->{$gene}->{'strand'};
-	my $id = $region_hash->{$gene}->{'id'};
-	$curr_gene_hash = {};
-	$curr_gene_hash->{'id'} = $id;
-	push @gene_array, $curr_gene_hash;
-	# process new gene's first exon:
-	$curr_gene_exons = [];
-	my $region = "";
-	if ($strand eq "-") {
-		$region = "$end..$start";
-	} else {
-		$region = "$start..$end";
-	}
-	push @$curr_gene_exons, $region;
-	my @feat_array = ();
-	push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
-	$curr_gene_hash->{'contains'} = \@feat_array;
-	$curr_gene_hash->{'qualifiers'} = {"gene"=>$name};
-	$curr_gene = $name;
-	my $i = 0;
+	my $curr_gene_hash;
+	my $curr_gene_count = -1;
+	my $name;
 	foreach my $gene (@$region_array) {
-		my $name = $region_hash->{$gene}->{'gene'};
 		my $start = $region_hash->{$gene}->{'start'};
 		my $end = $region_hash->{$gene}->{'end'};
 		my $type = $region_hash->{$gene}->{'type'};
 		my $strand = $region_hash->{$gene}->{'strand'};
 		my $id = $region_hash->{$gene}->{'id'};
 		if ($id == $curr_gene_count) {
+			print "\tEXON $id $name\n";
 			# this is another exon in the same gene
 			my $region = "";
 			if ($strand eq "-") {
@@ -356,13 +308,16 @@ sub parse_region_array {
 			push @$curr_gene_exons, $region;
 		} else {
 			# this is a new gene
-
-			# finish processing the gene we were working on:
-			$curr_gene_hash->{'type'} = "gene";
-			$curr_gene_hash->{'region'} = max_interval ($curr_gene_exons); # largest gene region
-			my $temp = shift @$curr_gene_exons;
-
+			if (defined $curr_gene_hash) {
+				# finish processing the gene we were working on:
+				$curr_gene_hash->{'type'} = "gene";
+				$curr_gene_hash->{'region'} = max_interval ($curr_gene_exons); # largest gene region
+				my $temp = shift @$curr_gene_exons;
+				print "Finish $name: max region $temp, exons " . join (",", @$curr_gene_exons) . "\n";
+			}
 			# start processing the new gene:
+			$name = $region_hash->{$gene}->{'gene'};
+			print "NEW GENE $id $name\n";
 			$curr_gene_count = $id;
 			$curr_gene_hash = {};
 			$curr_gene_hash->{'id'} = $id;
@@ -381,14 +336,15 @@ sub parse_region_array {
 			push @feat_array, {"region"=>$curr_gene_exons, "type"=>$type};
 			$curr_gene_hash->{'contains'} = \@feat_array;
 			$curr_gene_hash->{'qualifiers'} = {"gene"=>$name};
-			$curr_gene = $name;
 		}
 	}
 
 	# finish processing the gene we were working on:
 	$curr_gene_hash->{'type'} = "gene";
 	$curr_gene_hash->{'region'} = max_interval ($curr_gene_exons); # largest gene region
-	shift @$curr_gene_exons;
+	my $temp = shift @$curr_gene_exons;
+	print "Finish $name: max region $temp, exons " . join (",", @$curr_gene_exons) . "\n";
+
 	return \@gene_array;
 }
 
@@ -440,6 +396,17 @@ sub stringify_feature {
 	}
 	$result_string = "$feature->{type}\t".join(",",@$regions)."\t".join("#",@features);
 	return $result_string;
+}
+
+sub qualifiers_for_feature {
+	my $feature = shift;
+
+	my @features = [];
+	foreach my $key (keys %{$feature->{'qualifiers'}}) {
+		my $feat = "$key=$feature->{qualifiers}->{$key}";
+		push @features, $feat;
+	}
+	return \@features;
 }
 
 
