@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl parse_region_array parse_feature_table_from_genbank set_sequence get_sequence get_name write_features_as_fasta clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl parse_region_array feature_table_from_genbank set_sequence get_sequence get_name write_features_as_fasta clone_features);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -249,12 +249,11 @@ sub write_sequin_tbl {
 
 }
 
-sub parse_feature_table_from_genbank {
+sub feature_table_from_genbank {
 	my $gbfile = shift;
 	my $gene_array = Genbank::parse_genbank($gbfile);
 
 	my @feature_table = ();
-	my $gene_id = 0;
 	my @gene_hasharray = ();
 	my $curr_gene = {};
 	foreach my $gene (@$gene_array) {
@@ -264,7 +263,6 @@ sub parse_feature_table_from_genbank {
 			$this_feat->{'qualifiers'} = $gene->{'qualifiers'};
 			$this_feat->{'region'} = flatten_interval ($gene->{'region'});
 			$this_feat->{'type'} = $gene->{'type'};
-			$this_feat->{'id'} = $gene_id;
 			$this_feat->{'contains'} = [];
 			push @gene_hasharray, $this_feat;
 			foreach my $feat (@{$gene->{'contains'}}) {
