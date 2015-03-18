@@ -1168,8 +1168,19 @@ sub blast_to_genbank {
 #  	my ($fastafh, $subjectfasta) = tempfile();
 	my $subjectfasta = "temp.fasta";
 	open my $fastafh, ">", $subjectfasta;
+
+	my @main_gene_array = ();
 	foreach my $ref (@$region_array) {
-		print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
+		# if 'features' exists, it's a main gene.
+		if (exists $ref_hash->{$ref}->{'qualifiers'}) {
+			push @main_gene_array, $ref;
+			# if it is a main gene, only push the sequence into the fasta file if it doesn't have subcomponents.
+			if (@{$ref_hash->{$ref}->{'contains'}} == 0) {
+				print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
+			}
+		} else {
+			print $fastafh ">$ref\t$ref_hash->{$ref}->{'start'}\t$ref_hash->{$ref}->{'end'}\n$ref_hash->{$ref}->{'characters'}\n";
+		}
 	}
 	close $fastafh;
 
@@ -1186,14 +1197,13 @@ my $blastfile = "temp.xml";
 		my @hsps = sort Blast::sort_hsps_by_score @{$hit->{'hsps'}};
 		my @best_hsps = ();
 		foreach my $hsp (@hsps) {
-			if ($hsp->{'score'} > 50) {
+			if ($hsp->{'bit-score'} > 30) {
 				push @best_hsps, $hsp;
 			} else {
 				last;
 			}
 		}
-
-		my $best_hit = shift @hsps;
+		my $best_hit = $best_hsps[0];
 
 		# fix the lengths back for tiny regions.
 		if (exists $tiny_regions->{$subj}) {
@@ -1208,35 +1218,68 @@ my $blastfile = "temp.xml";
 
 		my (undef, $refgeneseq, undef) = Subfunctions::split_seq ($refseq, $ref_hash->{$subj}->{'start'}, $ref_hash->{$subj}->{'end'});
 		$ref_hash->{$subj}->{'reference'} = $refgeneseq;
-		$ref_hash->{$subj}->{'refstart'} = $ref_hash->{$subj}->{'start'};
-		$ref_hash->{$subj}->{'refend'} = $ref_hash->{$subj}->{'end'};
+		$ref_hash->{$subj}->{'refstart'} = delete $ref_hash->{$subj}->{'start'};
+		$ref_hash->{$subj}->{'refend'} = delete $ref_hash->{$subj}->{'end'};
 		$ref_hash->{$subj}->{'complete'} = 0;
 		$ref_hash->{$subj}->{'gaps'} = "none";
-		# copy the best hit values back into the reference array:
-		if ($best_hit->{'align-len'} == $ref_hash->{$subj}->{'align-len'}) {
-			my @best_one = ($best_hit);
-			$ref_hash->{$subj}->{'hsps'} = \@best_one;
-			$ref_hash->{$subj}->{'start'} = $best_hit->{'query-from'};
-			$ref_hash->{$subj}->{'end'} = $best_hit->{'query-to'};
-
-			# need to check for whether or not the gaps are in threes.
-			my $hseq_gaps = $best_hit->{'hseq'};
-			my $qseq_gaps = $best_hit->{'qseq'};
-			$hseq_gaps =~ s/---//g;
-			$qseq_gaps =~ s/---//g;
-
-			$ref_hash->{$subj}->{'gaps'} = ($hseq_gaps =~ tr/[AGCT]//dr) . " " . ($qseq_gaps =~ tr/[AGCT]//dr);
-			if ((($hseq_gaps =~ /-/) ne "1") && (($qseq_gaps =~ /-/) ne "1")) {
-				$ref_hash->{$subj}->{'complete'} = 1;
-			}
-		}
-		else {
-			# the entire reference gene was not matched: save off the reference gene as-is and save the hits for later.
-			$ref_hash->{$subj}->{'hsps'} = \@best_hsps;
-		}
+		$ref_hash->{$subj}->{'hsps'} = \@best_hsps;
 	}
 
-	return ($ref_hash, $region_array);
+	# check to see if each of the main genes is actually complete:
+	foreach my $main_gene (@main_gene_array) {
+		$ref_hash->{$main_gene}->{'complete'} = 1;
+
+		# if there weren't any components, check to see if there were hits for the main gene
+		if (@{$ref_hash->{$main_gene}->{'contains'}} == 0) {
+			if (@{$ref_hash->{$main_gene}->{'hsps'}} == 0) {
+				$ref_hash->{$main_gene}->{'complete'} = 0;
+			} else {
+				my $best_hit = @{$ref_hash->{$main_gene}->{'hsps'}}[0];
+				# copy the best hit values back into the reference array:
+				my @best_one = ($best_hit);
+				$ref_hash->{$main_gene}->{'start'} = $best_hit->{'query-from'};
+				$ref_hash->{$main_gene}->{'end'} = $best_hit->{'query-to'};
+				if ($best_hit->{'align-len'} == $ref_hash->{$main_gene}->{'align-len'}) {
+
+					my $hseq_gaps = $best_hit->{'hseq'};
+					my $qseq_gaps = $best_hit->{'qseq'};
+
+					$ref_hash->{$main_gene}->{'gaps'} = ($hseq_gaps =~ tr/[AGCT]//dr) . " " . ($qseq_gaps =~ tr/[AGCT]//dr);
+					if ((($hseq_gaps =~ /-/) ne "1") && (($qseq_gaps =~ /-/) ne "1")) {
+						$ref_hash->{$main_gene}->{'complete'} = 1;
+					}
+				}
+			}
+		} else {
+			foreach my $subj (@{$ref_hash->{$main_gene}->{'contains'}}) {
+				my $best_hit = @{$ref_hash->{$subj}->{'hsps'}}[0];
+				# copy the best hit values back into the reference array:
+				my @best_one = ($best_hit);
+				$ref_hash->{$subj}->{'hsps'} = \@best_one;
+				$ref_hash->{$subj}->{'start'} = $best_hit->{'query-from'};
+				$ref_hash->{$subj}->{'end'} = $best_hit->{'query-to'};
+				if ($best_hit->{'align-len'} == $ref_hash->{$subj}->{'align-len'}) {
+
+					# need to check for whether or not the gaps are in threes.
+					my $hseq_gaps = $best_hit->{'hseq'};
+					my $qseq_gaps = $best_hit->{'qseq'};
+					$hseq_gaps =~ s/---//g;
+					$qseq_gaps =~ s/---//g;
+
+					$ref_hash->{$subj}->{'gaps'} = ($hseq_gaps =~ tr/[AGCT]//dr) . " " . ($qseq_gaps =~ tr/[AGCT]//dr);
+					if ((($hseq_gaps =~ /-/) ne "1") && (($qseq_gaps =~ /-/) ne "1")) {
+						$ref_hash->{$subj}->{'complete'} = 1;
+					}
+				}
+
+				# if one component is not complete, the whole gene is not complete.
+				if ($ref_hash->{$subj}->{'complete'} == 0) {
+					$ref_hash->{$main_gene}->{'complete'} = 0;
+				}
+			}
+		}
+	}
+	return ($ref_hash, \@main_gene_array);
 }
 
 =head1
@@ -1258,36 +1301,39 @@ sub align_regions_to_reference {
 	my $ref_array = shift;
 	my $refgbfile = shift;
 
-	my $matched_gene_array = Genbank::parse_region_array($ref_hash, $ref_array);
 	my $ref_gene_array = Genbank::feature_table_from_genbank ($refgbfile);
-	# fill in the genes in ref_gene_array with the info from the matched_gene_array
+
+	# clone the genes from ref_gene_array, replace with the info from the matched_gene_array
 	my @final_gene_array = ();
-	my $new_gene;
-	for (my $id=0;$id<@$ref_gene_array; $id++) {
-		my $dest_gene = @$ref_gene_array[$id];
+	my $new_gene_count = 0;
+	my $dest_gene_count = 0;
+	my $new_gene = $ref_hash->{@$ref_array[$new_gene_count++]};
+	my $dest_gene = @$ref_gene_array[$dest_gene_count++];
+
+	while (defined $dest_gene) {
 		if ($new_gene->{'qualifiers'}->{'gene'} ne $dest_gene->{'qualifiers'}->{'gene'}) {
-			$new_gene = shift @$matched_gene_array;
-			$new_gene->{'name'} = $dest_gene->{'qualifiers'}->{'gene'};
-			if (!defined $new_gene) { last; }
-		} else {
+			$dest_gene = @$ref_gene_array[$dest_gene_count++];
 			next;
 		}
 
+		my $final_gene = {};
+		# dest gene has:
+		#	type:
+		$final_gene->{'type'} = $dest_gene->{'type'};
+
+		#	qualifiers:
 		foreach my $q (keys %{$dest_gene->{'qualifiers'}}) {
-			if (!(exists $new_gene->{'qualifiers'}->{$q})) {
-				$new_gene->{'qualifiers'}->{$q} = $dest_gene->{'qualifiers'}->{$q}
+			$final_gene->{'qualifiers'}->{$q} = $dest_gene->{'qualifiers'}->{$q};
+		}
+
+		# dest gene has a contains array: each of these has a subcomponent matching a contains piece in new gene
+		$final_gene->{'contains'} = ();
+		my @final_regions = ();
+
 			}
 		}
-		my @new_contains = ();
-		foreach my $destcontains (@{$dest_gene->{'contains'}}) {
-			my $genecontains = shift @{$new_gene->{'contains'}};
-			$destcontains->{'region'} = $genecontains->{'region'};
-			push @new_contains, $destcontains;
 		}
-		$new_gene->{'contains'} = \@new_contains;
-		push @final_gene_array, $new_gene;
 	}
-
 	return \@final_gene_array;
 }
 

@@ -55,23 +55,26 @@ if ($samplename eq "") {
 }
 my $queryseq = $fastahash->{@$fastaarray[0]};
 
-my ($result_hash, $result_array) = blast_to_genbank ($gbfile, $fastafile);
-
+print "blast_to_genbank\n";
+my ($result_hash, $main_gene_array) = blast_to_genbank ($gbfile, $fastafile);
 my @finished_array = ();
 my $missing_results = "";
 my $num_missing = 0;
-foreach my $subj (@$result_array) {
-	my $gene_features = $result_hash->{$result_hash->{$subj}->{'gene'}}->{'features'};
+print "checking for pseudogenes and missing hits\n";
+foreach my $main_gene (@$main_gene_array) {
+	my $gene_features = $result_hash->{$main_gene}->{'qualifiers'};
 	# if it's a pseudo feature, we can go ahead and assume it's finished.
-	if ($gene_features =~ /pseudo=/) {
-		push @finished_array, $subj;
+	if (exists $gene_features->{'pseudo'}) {
+		print "PSEUDO $main_gene\n";
+		push @finished_array, $main_gene;
 		next;
 	}
-	if (($result_hash->{$subj}->{'complete'} eq "0")) {
-		$missing_results .= "MISSING $subj " . $result_hash->{$subj}->{'strand'} . " " . $result_hash->{$subj}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$subj});
+	if ($result_hash->{$main_gene}->{'complete'} == 0) {
+		print "MISSING $main_gene\n";
+# 		$missing_results .= "MISSING $main_gene " . $result_hash->{$main_gene}->{'strand'} . " " . $result_hash->{$main_gene}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$main_gene});
 		$num_missing++;
 	} else {
-		push @finished_array, $subj;
+		push @finished_array, $main_gene;
 		next;
 	}
 
@@ -83,6 +86,7 @@ open FASTA_FH, ">", "$outfile.fsa";
 print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
+print "align_regions_to_reference\n";
 my $gene_array = align_regions_to_reference ($result_hash, \@finished_array, $gbfile);
 # need to annotate inverted repeats
 my ($fh, $refblast) = tempfile();
