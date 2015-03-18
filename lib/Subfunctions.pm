@@ -1165,8 +1165,8 @@ sub blast_to_genbank {
 		}
 	}
 
-#  	my ($fastafh, $subjectfasta) = tempfile();
-	my $subjectfasta = "temp.fasta";
+ 	my ($fastafh, $subjectfasta) = tempfile();
+# 	my $subjectfasta = "temp.fasta";
 	open my $fastafh, ">", $subjectfasta;
 
 	my @main_gene_array = ();
@@ -1184,8 +1184,8 @@ sub blast_to_genbank {
 	}
 	close $fastafh;
 
-#  	my (undef, $blastfile) = tempfile();
-my $blastfile = "temp.xml";
+ 	my (undef, $blastfile) = tempfile();
+# 	my $blastfile = "temp.xml";
 	system("blastn -query $fastafile -subject $subjectfasta -outfmt 5 -out $blastfile -word_size 10");
 
 	# choose the best hits:
