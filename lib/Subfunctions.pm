@@ -1144,7 +1144,7 @@ sub blast_to_genbank {
 	my $gbfile = shift;
 	my $fastafile = shift;
 
-	my $gene_array = Genbank::parse_genbank($gbfile);
+	my $gene_array = Genbank::simplify_genbank_array(Genbank::parse_genbank($gbfile));
 	my $refseq = Genbank::get_sequence();
 	my ($ref_hash, $region_array) = Genbank::clone_features($gene_array);
 	my ($query_hash, $query_array) = parse_fasta($fastafile);

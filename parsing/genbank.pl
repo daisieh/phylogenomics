@@ -18,7 +18,8 @@ if (!defined $outfile) {
 	$outfile = $gbfile;
 }
 
-my $gene_array = Genbank::parse_genbank($gbfile);
+my $gene_array = Genbank::simplify_genbank_array(Genbank::parse_genbank($gbfile));
+
 
 open FASTA_FH, ">", "$outfile.fasta";
 print FASTA_FH Genbank::write_features_as_fasta ($gene_array);

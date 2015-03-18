@@ -18,7 +18,7 @@ BEGIN {
 	# Inherit from Exporter to export functions and variables
 	our @ISA         = qw(Exporter);
 	# Functions and variables which are exported by default
-	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl feature_table_from_genbank set_sequence get_sequence get_name write_features_as_fasta clone_features);
+	our @EXPORT      = qw(parse_genbank sequence_for_interval sequin_feature stringify_feature parse_feature_desc parse_interval parse_qualifiers within_interval write_sequin_tbl feature_table_from_genbank set_sequence get_sequence get_name write_features_as_fasta clone_features simplify_genbank_array);
 	# Functions and variables which can be optionally exported
 	our @EXPORT_OK   = qw();
 }
@@ -97,6 +97,25 @@ sub parse_genbank {
 	}
 	close FH;
 	return \@gene_array;
+}
+
+sub simplify_genbank_array {
+	my $gene_array = shift;
+
+	my @simplified_array = ();
+	foreach my $feat (@$gene_array) {
+		if ($feat->{'type'} =~ /gene|source/) {
+			my @newcontains = ();
+			foreach my $subfeat (@{$feat->{'contains'}}) {
+				if ($subfeat->{'type'} !~ /exon|intron|STS/) {
+					push @newcontains, $subfeat;
+				}
+			}
+			$feat->{'contains'} = \@newcontains;
+			push @simplified_array, $feat;
+		}
+	}
+	return \@simplified_array;
 }
 
 sub parse_feature_sequences {
@@ -244,7 +263,7 @@ sub write_sequin_tbl {
 
 sub feature_table_from_genbank {
 	my $gbfile = shift;
-	my $gene_array = Genbank::parse_genbank($gbfile);
+	my $gene_array = Genbank::simplify_genbank_array(Genbank::parse_genbank($gbfile));
 
 	my @feature_array = ();
 	foreach my $gene (@$gene_array) {
