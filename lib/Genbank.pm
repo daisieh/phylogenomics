@@ -219,65 +219,55 @@ sub write_sequin_tbl {
 
 	# print header
 	my $result_string = ">Features\t$name\n";
+
 	# start printing genes
 	foreach my $gene (@$gene_array) {
-		# first, print overall gene information
-		my $genename = $gene->{'qualifiers'}->{'gene'};
-		if ($genename =~ /(.+)_\d+/) {
-			$genename = $1;
-		}
-
 		my $type = $gene->{'type'};
 		foreach my $r (@{$gene->{'region'}}) {
-			$r =~ /(\d+)\.\.(\d+)/;
-			$result_string .= "$1\t$2\t$type\n";
-		}
-		foreach my $q (keys %{$gene->{'qualifiers'}}) {
-			my $qual = $gene->{qualifiers}->{$q};
-			if ($q eq "gene") {
-				$qual = $genename;
-			}
-			$result_string .= "\t\t\t$q\t$qual\n";
-		}
+			if ($r =~ /(\d+)\.\.(\d+)/) {
+				# first, print the main feature:
+				$result_string .= "$1\t$2\t$type\n";
+				foreach my $q (keys %{$gene->{'qualifiers'}}) {
+					my $qual = $gene->{qualifiers}->{$q};
+					$result_string .= "\t\t\t$q\t$qual\n";
+				}
 
-		# then, print each feature contained.
-		foreach my $feat (@{$gene->{'contains'}}) {
-			$result_string .= Genbank::sequin_feature ($feat->{'region'}, $feat);
+				# then, print each feature contained.
+				foreach my $feat (@{$gene->{'contains'}}) {
+					$result_string .= Genbank::sequin_feature ($feat->{'region'}, $feat);
+				}
+			}
 		}
 	}
-
 	return $result_string;
-
 }
 
 sub feature_table_from_genbank {
 	my $gbfile = shift;
 	my $gene_array = Genbank::parse_genbank($gbfile);
 
-	my @feature_table = ();
-	my @gene_hasharray = ();
-	my $curr_gene = {};
+	my @feature_array = ();
 	foreach my $gene (@$gene_array) {
 		if ($gene->{'type'} eq "gene") {
 			# make an entry for the main gene
-			my $this_feat = {};
-			$this_feat->{'qualifiers'} = $gene->{'qualifiers'};
-			$this_feat->{'region'} = flatten_interval ($gene->{'region'});
-			$this_feat->{'type'} = $gene->{'type'};
-			$this_feat->{'contains'} = [];
-			push @gene_hasharray, $this_feat;
+			my $feat_hash = {};
+			$feat_hash->{'qualifiers'} = $gene->{'qualifiers'};
+			$feat_hash->{'region'} = flatten_interval ($gene->{'region'});
+			$feat_hash->{'type'} = $gene->{'type'};
+			$feat_hash->{'contains'} = [];
+			push @feature_array, $feat_hash;
 			foreach my $feat (@{$gene->{'contains'}}) {
 				# then make an entry for each subcomponent
-				my $this_subfeat = {};
-				$this_subfeat->{'qualifiers'} = $feat->{'qualifiers'};
-				$this_subfeat->{'region'} = $feat->{'region'};
-				$this_subfeat->{'type'} = $feat->{'type'};
-				push @{$this_feat->{'contains'}}, $this_subfeat;
+				my $subfeat_hash = {};
+				$subfeat_hash->{'qualifiers'} = $feat->{'qualifiers'};
+				$subfeat_hash->{'region'} = $feat->{'region'};
+				$subfeat_hash->{'type'} = $feat->{'type'};
+				push @{$feat_hash->{'contains'}}, $subfeat_hash;
 			}
 		}
 	}
 
-	return \@gene_hasharray;
+	return \@feature_array;
 }
 
 sub sequence_for_interval {
