@@ -1330,8 +1330,31 @@ sub align_regions_to_reference {
 		$final_gene->{'contains'} = ();
 		my @final_regions = ();
 
+		foreach my $subcomponent (@{$dest_gene->{'contains'}}) {
+			# each subcomponent will have qualifiers, type, region array
+			my $newcontains = {};
+			push @{$final_gene->{'contains'}}, $newcontains;
+			$newcontains->{'qualifiers'} = $subcomponent->{'qualifiers'};
+			$newcontains->{'type'} = $subcomponent->{'type'};
+			$newcontains->{'region'} = \@final_regions;
+			foreach my $subcomp (@{$new_gene->{'contains'}}) {
+				my $reg = "$ref_hash->{$subcomp}->{'start'}..$ref_hash->{$subcomp}->{'end'}";
+				push @final_regions, $reg;
 			}
 		}
+
+		# if there weren't any regions in subcomponents, make the region out of the main gene region
+		if (@final_regions == 0) {
+			push @final_regions, "$new_gene->{'start'}..$new_gene->{'end'}";
+		}
+		#	region: this should be a stringified max interval from the new gene
+		$final_gene->{'region'} = Genbank::max_interval(\@final_regions);
+
+		push @final_gene_array, $final_gene;
+		$new_gene = $ref_hash->{@$ref_array[$new_gene_count++]};
+
+		if (!defined $new_gene) {
+			last;
 		}
 	}
 	return \@final_gene_array;
