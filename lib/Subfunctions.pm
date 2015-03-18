@@ -1361,34 +1361,46 @@ sub align_regions_to_reference {
 }
 
 sub align_hits_to_ref {
-	my $hit_hash = shift;
+	my $ref_hash = shift;
+	my $gene_name = shift;
 
-	my @hits = sort Blast::sort_hsps_by_hit_start @{$hit_hash->{'hsps'}};
-	my $result_string = "  REFERENCE:\n";
-	$result_string .= " " x (11 - (length $hit_hash->{'refstart'})) . "$hit_hash->{'refstart'} ";
-	$result_string .= "$hit_hash->{'reference'} $hit_hash->{'refend'}\n";
-	$result_string .= "  MATCHES:\n";
-	my $offset = $hit_hash->{'refstart'} - 1;
-	foreach my $hit (@hits) {
-		if ($hit->{'hit-from'} > $hit->{'hit-to'}) {
-			next;
+	my @bits = ();
+	if (@{$ref_hash->{$gene_name}->{'contains'}} > 0) {
+		foreach my $bit (@{$ref_hash->{$gene_name}->{'contains'}}) {
+			push @bits, $bit;
 		}
-		my $front_pad = ($hit->{'hit-from'} - 1);
-		my $back_pad = (length($hit_hash->{'reference'}) - $hit->{'hit-to'});
-
-		my $hseq = '-'x $front_pad . $hit->{'hseq'} . '-' x $back_pad;
-		$result_string .= "Ref" . " " x (8 - (length ($hit->{'hit-from'} + $offset))) . ($hit->{'hit-from'} + $offset) . " ";
-		$result_string .= "$hseq " . ($hit->{'hit-to'} + $offset) . "\n";
-
-		my $midline = '-'x $front_pad . $hit->{'midline'} . '-' x $back_pad;
-		$result_string .= " " x 12;
-		$result_string .= "$midline\n";
-
-		my $qseq = '-'x $front_pad . $hit->{'qseq'} . '-' x $back_pad;
-		$result_string .= "New" . " " x (8 - (length $hit->{'query-from'})) . "$hit->{'query-from'} ";
-		$result_string .= "$qseq $hit->{'query-to'}\n\n";
+	} else {
+		push @bits, $gene_name;
 	}
+	my $result_string = "";
+	foreach my $bit (@bits) {
+		$result_string = "  REFERENCE $bit:\n";
+		my $hit_hash = $ref_hash->{$bit};
+		my @hits = sort Blast::sort_hsps_by_hit_start @{$hit_hash->{'hsps'}};
+		$result_string .= " " x (11 - (length $hit_hash->{'refstart'})) . "$hit_hash->{'refstart'} ";
+		$result_string .= "$hit_hash->{'reference'} $hit_hash->{'refend'}\n";
+		$result_string .= "  MATCHES:\n";
+		my $offset = $hit_hash->{'refstart'} - 1;
+		foreach my $hit (@hits) {
+			if ($hit->{'hit-from'} > $hit->{'hit-to'}) {
+				next;
+			}
+			my $front_pad = ($hit->{'hit-from'} - 1);
+			my $back_pad = (length($hit_hash->{'reference'}) - $hit->{'hit-to'});
 
+			my $hseq = '-'x $front_pad . $hit->{'hseq'} . '-' x $back_pad;
+			$result_string .= "Ref" . " " x (8 - (length ($hit->{'hit-from'} + $offset))) . ($hit->{'hit-from'} + $offset) . " ";
+			$result_string .= "$hseq " . ($hit->{'hit-to'} + $offset) . "\n";
+
+			my $midline = '-'x $front_pad . $hit->{'midline'} . '-' x $back_pad;
+			$result_string .= " " x 12;
+			$result_string .= "$midline\n";
+
+			my $qseq = '-'x $front_pad . $hit->{'qseq'} . '-' x $back_pad;
+			$result_string .= "New" . " " x (8 - (length $hit->{'query-from'})) . "$hit->{'query-from'} ";
+			$result_string .= "$qseq $hit->{'query-to'}\n\n";
+		}
+	}
  	return $result_string;
 }
 
