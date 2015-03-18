@@ -63,15 +63,9 @@ my $num_missing = 0;
 print "checking for pseudogenes and missing hits\n";
 foreach my $main_gene (@$main_gene_array) {
 	my $gene_features = $result_hash->{$main_gene}->{'qualifiers'};
-	# if it's a pseudo feature, we can go ahead and assume it's finished.
-	if (exists $gene_features->{'pseudo'}) {
-		print "PSEUDO $main_gene\n";
-		push @finished_array, $main_gene;
-		next;
-	}
 	if ($result_hash->{$main_gene}->{'complete'} == 0) {
 		print "MISSING $main_gene\n";
-# 		$missing_results .= "MISSING $main_gene " . $result_hash->{$main_gene}->{'strand'} . " " . $result_hash->{$main_gene}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash->{$main_gene});
+		$missing_results .= "MISSING $main_gene " . $result_hash->{$main_gene}->{'strand'} . " " . $result_hash->{$main_gene}->{'gaps'} . "\n" . align_hits_to_ref ($result_hash, $main_gene);
 		$num_missing++;
 	} else {
 		push @finished_array, $main_gene;
