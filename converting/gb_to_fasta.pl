@@ -24,6 +24,9 @@ if ($help) {
 }
 
 my $gbdata = parse_genbank($gbfile);
+if ($outfile eq "") {
+	$outfile = "$gbfile.fasta";
+}
 
 open FH, ">", $outfile or die "couldn't create output file $outfile";
 print FH ">" . get_name() . "\n" . get_sequence() . "\n";
