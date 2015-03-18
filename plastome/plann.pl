@@ -55,12 +55,12 @@ if ($samplename eq "") {
 }
 my $queryseq = $fastahash->{@$fastaarray[0]};
 
-print "blast_to_genbank\n";
+print "Comparing reference genbank $gbfile to new plastome $fastafile\n";
 my ($result_hash, $main_gene_array) = blast_to_genbank ($gbfile, $fastafile);
 my @finished_array = ();
 my $missing_results = "";
 my $num_missing = 0;
-print "checking for pseudogenes and missing hits\n";
+print "Checking for pseudogenes and missing hits\n";
 foreach my $main_gene (@$main_gene_array) {
 	my $gene_features = $result_hash->{$main_gene}->{'qualifiers'};
 	if ($result_hash->{$main_gene}->{'complete'} == 0) {
@@ -80,7 +80,7 @@ open FASTA_FH, ">", "$outfile.fsa";
 print FASTA_FH ">$genbank_header\n$queryseq\n";
 close FASTA_FH;
 
-print "align_regions_to_reference\n";
+print "Aligning matched regions to reference genbank file\n";
 my $gene_array = align_regions_to_reference ($result_hash, \@finished_array, $gbfile);
 # need to annotate inverted repeats
 my ($fh, $refblast) = tempfile();
