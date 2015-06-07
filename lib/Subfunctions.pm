@@ -643,7 +643,7 @@ sub write_phylip {
 		if ($working_t =~ /^(.{10}).*$/) {
 			$working_t = $1;
 		} else {
-			$working_t .= $working_t . " " x (10 - length $working_t);
+			$working_t = $working_t . " " x (10 - length $working_t);
 		}
 		push @trunc_names, $working_t;
 	}
