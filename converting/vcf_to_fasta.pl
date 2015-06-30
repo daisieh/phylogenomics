@@ -103,7 +103,7 @@ foreach my $samplefile (@samplefiles) {
 					die "$samplefile does not have genotype data.\n";
 				}
 				$in_header = 0;
-				print "found ".@samples." samples\n";
+				print "found ".@samples." samples in $samplefile\n";
 				foreach my $sample (@samples) {
 					$sample_positions{$sample} = ();
 				}
