@@ -76,7 +76,7 @@ my @unknown_array = ();
 
 foreach my $samplefile (@samplefiles) {
 	$in_header = 1;
-	if ($samplefile ~= /\.vcf$/) {
+	if ($samplefile =~ /\.vcf$/) {
 		$samplefile .= ".vcf";
 	}
 	open VCF_FH, "<:crlf", $samplefile or die "couldn't open input file $samplefile.";
