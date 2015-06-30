@@ -1,10 +1,13 @@
 #!/usr/bin/env perl
+use FindBin;
+use lib "$FindBin::Bin/../lib";
 use CircleGraph;
 use File::Basename;
 use Getopt::Long;
 use Pod::Usage;
-require "bioperl_subfuncs.pl";
-require "circlegraphs.pl";
+use BioPerl;
+# require "bioperl_subfuncs.pl";
+# require "circlegraphs.pl";
 
 if (@ARGV == 0) {
     pod2usage(-verbose => 1);
@@ -38,7 +41,7 @@ $circlegraph_obj->outer_radius($circlegraph_obj->outer_radius - 100);
 if ($gb_file) {
 	if ($gb_file =~ /\.gb$/) {
 		open FH, ">", "$outfile.genes";
-		print FH get_locations_from_genbank_file($gb_file);
+		print FH BioPerl::get_locations_from_genbank_file($gb_file);
 		close FH;
 	    $gb_file = "$outfile.genes";
 	}
@@ -46,11 +49,11 @@ if ($gb_file) {
 }
 
 
-if ($points) {
-	$circlegraph_obj = plots_around_circle($datafile, $circlegraph_obj);
-} else {
-	$circlegraph_obj = draw_circle_graph($datafile, $circlegraph_obj);
-}
+# if ($points) {
+# 	$circlegraph_obj = plots_around_circle($datafile, $circlegraph_obj);
+# } else {
+# 	$circlegraph_obj = draw_circle_graph($datafile, $circlegraph_obj);
+# }
 
 $circlegraph_obj->draw_legend_text ({"size"=>10, "height"=>15});
 

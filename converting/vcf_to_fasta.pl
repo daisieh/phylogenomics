@@ -76,6 +76,9 @@ my @unknown_array = ();
 
 foreach my $samplefile (@samplefiles) {
 	$in_header = 1;
+	if ($samplefile ~= /\.vcf$/) {
+		$samplefile .= ".vcf";
+	}
 	open VCF_FH, "<:crlf", $samplefile or die "couldn't open input file $samplefile.";
 	my $i = 0;
 	while (my $line = readline VCF_FH) {
@@ -317,6 +320,11 @@ vcf2fasta -samplefile -output [-threshold]
   -outputfile:      optional: prefix of output fasta file
   -threshold|pl:	optional: maximum threshold for Phred-scaled likelihood (lower is best, default is 0)
   -min|coverage:    optional: read depth required to call base (default is 5)
+  -multiple
+            'multiple' => \$multiple,
+            'start=i' => \$start_pos,
+            'end=i' => \$end_pos,
+            'range=s' => \$range,
 
 =head1 DESCRIPTION
 
