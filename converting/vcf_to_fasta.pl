@@ -189,7 +189,6 @@ foreach my $samplefile (@samplefiles) {
 		}
 	}
 }
-print Dumper ($sample_positions) . "\n";
 my $result_str = "";
 
 if (@samples == 1) {
