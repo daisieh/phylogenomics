@@ -45,7 +45,6 @@ print $runline;
 my $name;
 my @samples = ();
 my @samplefiles = ();
-my %sample_positions = ();
 
 #			GT	AD	DP	GQ	PL
 #			0/0	20,0	20	60.2	0,60,816
@@ -73,8 +72,10 @@ my $format_hash = {};
 my $info_hash = {};
 my @format_array = ();
 my @unknown_array = ();
+my $sample_positions = ();
 
 foreach my $samplefile (@samplefiles) {
+	my @samples_in_file = ();
 	$in_header = 1;
 	if ($samplefile !~ /\.vcf$/) {
 		$samplefile .= ".vcf";
@@ -98,22 +99,23 @@ foreach my $samplefile (@samplefiles) {
 			}
 	
 			if ($line =~ m/^#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\t*(FORMAT\t.+)$/) {
-				@samples = split(/\t/,$1);
-				if ((shift @samples) !~ /FORMAT/) {
+				my @newsamples = split(/\t/,$1);
+				if ((shift @newsamples) !~ /FORMAT/) {
 					die "$samplefile does not have genotype data.\n";
 				}
 				$in_header = 0;
-				print "found ".@samples." samples in $samplefile\n";
-				foreach my $sample (@samples) {
-					$sample_positions{$sample} = ();
+				print "found ".@newsamples." samples in $samplefile\n";
+				foreach my $sample (@newsamples) {
+					print "hi $sample \n";
+					$sample_positions->{$sample} = ();
+					push @samples_in_file, $sample;
+					push @samples, $sample;
 				}
 			}
 		} else {
-		
 			# process sample lines
 			#Chr19	15894518	.	G	A	113.75	.	.	GT:AD:DP:GQ:PL	0/0:20,0:20:60.2:0,60,816	0/0:12,0:12:36.11:0,36,454	0/0:15,0:15:45.09:0,45,555	0/0:10,0:10:30.1:0,30,417	0/0:17,0:17:51.11:0,51,642	0/1:13,3:16:52.21:52,0,434	./.:6,0:6:18.06:0,18,235	0/0:15,0:15:45.14:0,45,578	./.:5,0:5:15.05:0,15,207	0/0:19,0:19:57.03:0,57,634	0/0:10,0:10:30.04:0,30,352	0/0:14,0:15:39.09:0,39,483	0/0:16,0:16:48.15:0,48,621	0/0:14,0:14:42.14:0,42,552	0/0:24,0:24:69.21:0,69,878	0/0:11,0:11:33.11:0,33,437	0/0:14,0:14:42.07:0,42,502	0/0:33,0:33:99:0,99,1054	0/0:23,0:23:69.07:0,69,784	./.:7,0:7:21.07:0,21,285	0/0:21,0:21:63.17:0,63,804	0/0:13,0:13:39.07:0,39,471	0/1:20,4:24:61.58:62,0,652	0/1:18,5:23:74.47:74,0,623	0/0:19,0:19:57.19:0,57,772	0/0:27,0:27:78.1:0,78,904	0/0:22,0:22:66.21:0,66,861	0/0:12,0:12:36.1:0,36,443	0/0:12,0:12:36.05:0,36,415	0/0:11,0:11:30.09:0,30,370	0/0:37,0:37:99:0,111,1304	0/0:17,0:17:51.17:0,51,686	0/0:16,0:16:48.15:0,48,612	0/0:12,0:12:36.08:0,36,433	0/0:14,0:14:36.1:0,36,441	./.:8,0:8:24.08:0,24,328	0/0:19,0:19:57.15:0,57,734	0/0:28,0:28:84.21:0,84,1054	0/0:12,0:12:36.11:0,36,456
 			my ($chrom,$pos,$id,$ref,$alt,$qual,$filter,$info,$format,$samples) = split (/\t/,$line, 10);
-
 			# check if a positional range was specified:
 			if ($pos < $start_pos) {
 				next;
@@ -122,6 +124,10 @@ foreach my $samplefile (@samplefiles) {
 				last;
 			}
 
+			if ($info =~ /INDEL/) {
+				print "$info\n";
+				next;
+			}
 			chomp $samples;
 			my @samples_at_pos = split (/\t/,$samples);
 			my $info_depth = 0;
@@ -156,13 +162,14 @@ foreach my $samplefile (@samplefiles) {
 			# if we're missing calls for a position, fill in ambiguities for all samples at this position
 			while ($i < $pos) {
 				for (my $j=0;$j<@samples_at_pos;$j++) {
-					push @{$sample_positions{$samples[$j]}}, \@AMBIGUOUS_POS;
+					push @{$sample_positions->{$samples_in_file[$j]}}, \@AMBIGUOUS_POS;
 				}
 				$i++;
 			}
 
 			# now process the calls for the specified position for all samples.
 			for (my $j=0;$j<@samples_at_pos;$j++) {
+# 				print "$j $i $samples_in_file[$j]\n";
 				my $depth = 0;
 				my $pl = "";
 				my @sample_fields = split (/:/, $samples_at_pos[$j]);
@@ -183,11 +190,14 @@ foreach my $samplefile (@samplefiles) {
 				
 				if ($depth == undef) { $depth = 0; }
 				my @this_pos = ($ref, $alt, $depth, $pl);
-				push @{$sample_positions{$samples[$j]}}, \@this_pos;
+				push @{$sample_positions->{$samples_in_file[$j]}}, \@this_pos;
+# 			print "$samples[$j] $i\n";
 			}
 			$i++;
 		}
 	}
+		print "foo $i\n";
+print "sample positions is " . Dumper (keys $sample_positions) . "\n";
 }
 my $result_str = "";
 
@@ -206,8 +216,10 @@ if ($outfile eq "") {
 }
 
 foreach my $sample (@samples) {
+	print "$sample\n";
 	my $seq = "";
-	my @positions = @{$sample_positions{$sample}};
+	my $posstring = "";
+	my @positions = @{$sample_positions->{$sample}};
 # 	my @indels = @{$sample_positions{$name."_indels"}};
 # 	if ($indels == 1) {
 # 		foreach my $line (@indels) {
@@ -286,18 +298,34 @@ foreach my $sample (@samples) {
 # 					print "$depth\t$genotype = $alt\n";
 				}
 				$seq .= $alt;
+				print "$pos $alt\n";
+				$pos =~ /.*(\d)$/;
+				$posstring .= $1;
 			} elsif ($pl <= $pl_thresh) {
 				$seq .= $ref;
+				print "$pos $ref\n";
+				$pos =~ /.*(\d)$/;
+				$posstring .= $1;
 			} else {
 				$seq .= "N";
+				print "$pos >>>>N\n";
+				$pos =~ /.*(\d)$/;
+				$posstring .= $1;
 			}
 		} else {
 			if ($indels != 1) {
 				$seq .= "n";
+				print "$pos n\n";
+				$pos =~ /.*(\d)$/;
+				$posstring .= $1;
+			} else {
+				print "$pos XXX\n";
+				$pos =~ /.*(\d)$/;
+				$posstring .= $1;
 			}
 		}
 	}
-	print $fh ">$sample\n$seq\n";
+	print $fh ">$sample\n$seq\n$posstring\n";
 
 }
 
