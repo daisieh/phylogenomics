@@ -72,7 +72,7 @@ def make_clade_with_node(node):
     for next_node in in_clade:
         res = make_clade_with_node(next_node)
         if res is not None:
-            result += '\n' + make_clade_with_node(next_node)
+            result += '\n' + res
     return result
         
 def parse_pub_to_taxonomy(pubstring):
