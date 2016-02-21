@@ -109,6 +109,19 @@ if (!(-s $raxmlinfofile)) {
 }
 print "found the RAxML run $raxmlinfofile\n";
 
+# metadata that opentree takes:
+# <meta datatype="xsd:string" property="ot:branchLengthDescription" xsi:type="nex:LiteralMeta"/>
+# <meta datatype="xsd:string" property="ot:branchLengthMode" xsi:type="nex:LiteralMeta">ot:changesCount</meta>
+# <meta datatype="xsd:string" property="ot:branchLengthTimeUnit" xsi:type="nex:LiteralMeta">Myr</meta>
+# <meta datatype="xsd:string" property="ot:curatedType" xsi:type="nex:LiteralMeta">Maximum likelihood</meta>
+# <meta datatype="xsd:string" property="ot:inGroupClade" xsi:type="nex:LiteralMeta">node5</meta>
+# <meta datatype="xsd:string" property="ot:nodeLabelMode" xsi:type="nex:LiteralMeta"/>
+# <meta datatype="xsd:string" property="ot:nodeLabelTimeUnit" xsi:type="nex:LiteralMeta"/>
+# <meta datatype="xsd:string" property="ot:outGroupEdge" xsi:type="nex:LiteralMeta"/>
+# <meta datatype="xsd:string" property="ot:specifiedRoot" xsi:type="nex:LiteralMeta">node1</meta>
+# <meta datatype="xsd:boolean" property="ot:unrootedTree" xsi:type="nex:LiteralMeta"/>
+
+
 open FH, "<:crlf", $raxmlinfofile;
 $raxml_data->{"params"} = "";
 $raxml_data->{"input"} = "";
