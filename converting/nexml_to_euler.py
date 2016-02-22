@@ -12,10 +12,12 @@ edgelookupdict = {}
 otulookupdict = {}
 root = ''
 publication = ''
+unnamed_nodes = []
 def main():
     filename = sys.argv[1]
     file_name, extension = os.path.splitext(sys.argv[1])
     outputfile = '%s.txt' % filename
+    conversion_file = '%s.csv' % file_name
     f = open(filename, 'r')
     xmldict = ''
     if (re.match('\.(ne)*xml$',extension)):
@@ -41,6 +43,8 @@ def main():
         simplenodelist.append(node['@id'])
         if '@root' in node:
             root = node['@id']
+    if root not in otudict:
+        unnamed_nodes.append(root)
     for edge in edgelist:
         source = edge['@source']
         target = edge['@target']
@@ -53,6 +57,11 @@ def main():
     outf.write(result)
     outf.close()
 
+    convf = open(conversion_file, 'w')
+    for n in unnamed_nodes:
+        convf.write('%s,\n' % n)
+    convf.close()    
+    
 def make_clade_with_node(node):
     result = ''
     if node not in edgelookupdict:
@@ -64,6 +73,7 @@ def make_clade_with_node(node):
             named_clade.append(otudict[clade_member])
         else:
             named_clade.append(clade_member)
+            unnamed_nodes.append(clade_member)
     result += ('(%s %s)' % (node, ' '.join(named_clade)))
     for next_node in in_clade:
         res = make_clade_with_node(next_node)
