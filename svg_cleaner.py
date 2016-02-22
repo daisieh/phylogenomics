@@ -9,8 +9,14 @@ from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
 total_width = 0
 total_height = 0
+translate_x = 0
+translate_y = 0
+scale_width = 1.0
+scale_height = 1.0
+
 def main():
     filename = sys.argv[1]
+    # potrace -o outputfile -s -k 0.8 -W 10 -H 10 raw_pbm_file
     outputfile = 'test.svg'
     
     outdict = {}
@@ -34,13 +40,17 @@ def main():
     outdict['svg']['circle'] = []
     xmlpaths = []
     style = {}
+    transform = ''
     if 'path' in xmldict:
         xmlpaths = xmldict['path']
     elif 'g' in xmldict:
         xmlpaths = xmldict['g']['path']
         del xmldict['g']['path']
         style = "fill:#FF0000; stroke:none;"
-        print style
+        if '@transform' in xmldict['g']:
+            transform = xmldict['g']['@transform']
+            if transform != '':
+                parse_transform(transform)
     for path in xmlpaths:
         oldpath = {}
         if '@style' in path:
@@ -53,8 +63,7 @@ def main():
         else:
             oldpath['@style'] = style
         polygon = path_to_polygon(path['@d'])
-        next = bounding_box(polygon)
-        if threshold_area(bounding_box(polygon), 0.4):
+        if threshold_area(bounding_box(polygon), 0.6):
             oldpath['@d'] = polygon_to_path(polygon)
         if ('@style' in oldpath) and ('@d' in oldpath):
             outdict['svg']['path'].append(oldpath) 
@@ -62,6 +71,25 @@ def main():
     outf = open(outputfile,'w')
     outf.write(xmltodict.unparse(outdict, pretty=True))
     outf.close()
+
+def parse_transform(transform):
+    global translate_x
+    global translate_y
+    global scale_width
+    global scale_height
+    translatematcher = re.match('translate\((.*?),*(.*?)\)', transform)
+    if translatematcher is not None:
+        translate_x = translatematcher.group(1)
+        if translatematcher.group(2) is not None:
+            translate_y = translatematcher.group(2)
+    scalematcher = re.search('scale\((.*?),*(.*?)\)', transform)
+    if scalematcher is not None:
+        scale_width = scalematcher.group(1)
+        if scalematcher.group(2) is not None:
+            scale_height = scalematcher.group(2)
+       
+def cleanup_polygon(polygon):
+    return    
 
 def path_to_polygon(path):
     polygon = []
@@ -72,24 +100,22 @@ def path_to_polygon(path):
     nodes = re.findall('[ML]\s*(\d+\.*\d*,\d+\.*\d*)\s*', new_path.d())
     for n in nodes:
         coords = n.split(',')
-        polygon.append('%s %s' % (coords[0], coords[1]))
+#         coords[0] = 
+        polygon.append([coords[0], coords[1]])
     return polygon
 
 def polygon_to_path(polygon):
-    return 'M' + 'L'.join(polygon) + 'Z'
-    
-def rotate_polygon(polygon):
-    curr_min = re.split(' ', polygon[0])
-    for i in range(len(polygon)):
-        polygon.append(polygon.pop(0))
-        curr_point = re.split(' ', polygon[0])
-      
+    path_points = []
+    for point in polygon:
+        path_points.append(' '.join(point))
+    return 'M' + 'L'.join(path_points) + 'Z'
+          
 def polygon_to_circles(polygon):
     circlelist = []
     for i in range(len(polygon)):
         circledict = {}
-        coords = re.split(' ', polygon[i])
-        circledict['@r'] = '3'
+        coords = polygon[i]
+        circledict['@r'] = '10'
         circledict['@stroke'] = 'none'
         circledict['@fill'] = '#c6c6%(number)02x' % {"number":(i*16)}
         circledict['@cx'] = coords[0]
@@ -107,8 +133,8 @@ def average_color(col):
     return average
 
 def threshold_area(rect, threshold):
-    mins = re.split(' ', rect[0])
-    maxs = re.split(' ', rect[2])
+    mins = rect[0]
+    maxs = rect[2]
     min_x = float(mins[0])
     min_y = float(mins[1])
     max_x = float(maxs[0])
@@ -124,7 +150,7 @@ def bounding_box(polygon):
     x_points = []
     y_points = []
     for point in polygon:
-        coord = re.split(' ', point)
+        coord = point
         x_points.append(coord[0])
         y_points.append(coord[1])
     max_x = max(x_points)
@@ -134,7 +160,7 @@ def bounding_box(polygon):
 #     print total_width
 #     print abs((float(max_x) - float(min_x)) / float(total_width))
 #     if (abs((float(max_x) - float(min_x)) / float(total_width)) > 0.04) or (abs((float(max_y) - float(min_y)) / float(total_height)) > 0.04):
-    return ['%s %s' % (min_x, min_y), '%s %s' % (min_x, max_y), '%s %s' % (max_x, max_y), '%s %s' % (max_x, min_y)] 
+    return [[min_x, min_y],[min_x, max_y],[max_x, max_y],[max_x, min_y]]
     
 if __name__ == '__main__':
     main()
