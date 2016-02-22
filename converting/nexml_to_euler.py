@@ -76,11 +76,19 @@ def make_clade_with_node(node):
     return result
         
 def parse_pub_to_taxonomy(pubstring):
-    #A. E. Marvaldi, R. G. Oberprieler, C. H. C. Lyal, T. Bradbury, R. S. Anderson, 2006, ' Phylogeny of the Oxycoryninae sensu lato (Coleoptera:Belidae) and evolution of host-plant associations ', Invertebrate Systematics, vol. 20, no. 4, p. 447
     result = ''
-    matcher = re.match("(.+)\s*,\s*(\d+)\s*,\s*('.+')", pubstring)
-    authors = matcher.group(1)
-    year = matcher.group(2)
+    authors = ''
+    year = ''
+    matcher = re.match("(.+)\s*,\s*(\d+).*", pubstring)
+    # A. E. Marvaldi, R. G. Oberprieler, C. H. C. Lyal, T. Bradbury, R. S. Anderson, 2006, ' Phylogeny of the Oxycoryninae sensu lato (Coleoptera:Belidae) and evolution of host-plant associations ', Invertebrate Systematics, vol. 20, no. 4, p. 447
+    if matcher is not None:
+        authors = matcher.group(1)
+        year = matcher.group(2)
+    matcher = re.match("(.+)\s*\((\d+)\).*", pubstring)
+    # Vanin, S.A. (1976) Taxonomic revision of the South American Belidae (Coleoptera). Arquivos de Zoologia, Vol. 28: 1-75
+    if matcher is not None:
+        authors = matcher.group(1)
+        year = matcher.group(2)
     authorlist = re.split(',', authors)
     lastname = max(re.split('\s', authorlist[0]))
     
