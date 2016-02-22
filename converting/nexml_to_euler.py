@@ -14,13 +14,10 @@ root = ''
 publication = ''
 def main():
     filename = sys.argv[1]
-    outputfile = '%s.txt' % filename
     file_name, extension = os.path.splitext(sys.argv[1])
+    outputfile = '%s.txt' % filename
     f = open(filename, 'r')
     xmldict = ''
-#     if extension == '.json':
-#         xmldict = json.load(f)
-#         print xmldict
     if (re.match('\.(ne)*xml$',extension)):
         xml = f.read()
         xmldict = xmltodict.parse(xml)['nex:nexml']
@@ -29,9 +26,11 @@ def main():
         return;
     edgelist = xmldict['trees']['tree']['edge']
     nodelist = xmldict['trees']['tree']['node']
-    otulist = xmldict['otus']['otu']
+    otulist = []
+    if 'otus' in xmldict:
+        otulist = xmldict['otus']['otu']
     for otu in otulist:
-        otulookupdict[otu['@id']] = otu['@label']
+        otulookupdict[otu['@id']] = otu['@label'].replace(' ','_')
     for x in xmldict['meta']:
         if '@property' in x:
             if x['@property'] == 'ot:studyPublicationReference':
@@ -53,9 +52,6 @@ def main():
     result = '%s\n%s' % (parse_pub_to_taxonomy(publication),make_clade_with_node(root))
     outf.write(result)
     outf.close()
-    
-    # starting with root, write out clade statements:
-    # for each statement, look at the targets: 
 
 def make_clade_with_node(node):
     result = ''
