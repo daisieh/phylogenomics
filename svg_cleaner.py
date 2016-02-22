@@ -42,7 +42,6 @@ def main():
         style = "fill:#FF0000; stroke:none;"
         print style
     for path in xmlpaths:
-#         boxpath = {}
         oldpath = {}
         if '@style' in path:
             matcher = re.match("^(.*fill:#)(.+?)(;.*$)", path['@style'])
@@ -60,42 +59,9 @@ def main():
         if ('@style' in oldpath) and ('@d' in oldpath):
             outdict['svg']['path'].append(oldpath) 
             outdict['svg']['circle'].extend(polygon_to_circles(polygon))    
-#     print json.dumps(outdict)    
     outf = open(outputfile,'w')
     outf.write(xmltodict.unparse(outdict, pretty=True))
     outf.close()
-    
-def path_to_polygon_old(path):
-    polygon = []
-    nodes = re.findall('([MLHVCSQTAZ][-*\d\.\s]+)', path, re.I)
-    start_x = 0
-    start_y = 0
-    print "hi"
-    for n in nodes:
-        print n
-        movematch = re.match('(M)(.+?) (.+?)$', n, re.I)
-        linematch = re.match('(L)(.+?) (.+?)$', n, re.I)
-        curvematch = re.match('(C)(.+?) (.+?) (.+?) (.+?) (.+?) (.+?)$', n, re.I)
-        if curvematch is not None:
-            if curvematch.group(1) == 'C':
-                polygon.append('%s %s' % (curvematch.group(6), curvematch.group(7)))
-            else:
-                print 'relative'
-                polygon.append('%s %s' % (float(curvematch.group(6)) + start_x, float(curvematch.group(7)) + start_y))
-        elif movematch is not None:
-            if movematch.group(1) == 'M':
-                start_x = float(movematch.group(2))
-                start_y = float(movematch.group(3))
-                polygon.append('%s %s' % (movematch.group(2), movematch.group(3)))
-            else:
-                polygon.append('%s %s' % (float(movematch.group(2)) + start_x, float(movematch.group(3)) + start_y))
-        elif linematch is not None:
-            print linematch.group(0)
-            if linematch.group(1) == 'L':
-                polygon.append('%s %s' % (linematch.group(2), linematch.group(3)))
-            else:
-                polygon.append('%s %s' % (float(linematch.group(2)) + start_x, float(linematch.group(3)) + start_y))
-    return polygon
 
 def path_to_polygon(path):
     polygon = []
