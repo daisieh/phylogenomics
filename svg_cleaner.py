@@ -38,6 +38,7 @@ def main():
     xmlpaths = []
     style = {}
     transform = ''
+    paths = [] 
     
     # parse original paths
     if 'path' in xmldict:
@@ -49,22 +50,32 @@ def main():
             transform = xmldict['g']['@transform']
             if transform != '':
                 parse_transform(transform)
-    polygons = []
+    raw_polygons = []
     for path in xmlpaths:
         polygon = path_to_polygon(path['@d'])
-        if threshold_area(bounding_box(polygon), 0.6):
-            polygons.append(polygon)
+        raw_polygons.append(polygon)
 
     global max_x, max_y, min_x, min_y
     global scale_width, scale_height
     max_x = abs(max_x * scale_width)
     max_y = abs(max_y * scale_height)
-    for polygon in polygons:
+    polygons = []
+    for polygon in raw_polygons:
         polygon = scale(polygon, scale_width, scale_height)
         polygon = translate(polygon, 0, max_y)
+        if threshold_area(bounding_box(polygon), 0.6):
+            path = {}
+            path['@d'] = nodes_to_path(polygon)
+            path['@style'] = "fill:#CCCCCC; stroke:#999999; stroke-width:1"
+            paths.append(path) 
+            polygons.append(polygon)
+        else:
+            path = {}
+            path['@d'] = nodes_to_path(polygon)
+            path['@style'] = "fill:#EEEEEE; stroke:#EEEEEE; stroke-width:1"
+            paths.append(path) 
 
-    lines = []
-    segments = []    
+    segments = []   
     radius = max_y / (int(numtaxa)*5)
     polygon_total = []
     for polygon in polygons:
@@ -72,21 +83,22 @@ def main():
         polygon = simplify_polygon(polygon)
         polygon = cleanup_polygon(polygon, radius*1.8)
         polygon = simplify_polygon(polygon)
-        segments.extend(lineify_polygon(polygon))
-        segments = remove_dups(segments)
-        lines.extend(segments_to_lines(segments))
-#         polygon_total.extend(polygon)
-#         circles.extend(polygon_to_circles(polygon))    
-#         path = {}
-#         path['@d'] = polygon_to_path(polygon)
-#         path['@style'] = "fill:#FF0000; stroke:#FF0000;"
-#         paths.append(path) 
+        segments.extend(lineify_path(polygon))
+        path = {}
+        path['@d'] = nodes_to_path(polygon)
+        path['@style'] = "fill:#FF0000; stroke:#FF0000;"
+        paths.append(path) 
     
-    make_tree(segments)
+    (nodes, edges, otus) = make_tree(segments)
+    lines = []
+    circles = []
+    circles.extend(nodes_to_circles(nodes))
+    circles.extend(nodes_to_circles(otus))    
+    lines.extend(segments_to_lines(edges))
     outdict['svg'] = {}
     outdict['svg']['width'] = xmldict['@width']
     outdict['svg']['height'] = xmldict['@height']
-    outdict['svg']['g'] = [{'line':lines}]
+    outdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
 
     outf = open(outputfile,'w')
     outf.write(xmltodict.unparse(outdict, pretty=True))
@@ -113,16 +125,17 @@ def parse_transform(transform):
             scale_height = float(scalematcher.group(2))
             
 def make_tree(segments):
+    remove_dups(segments)
     vert_lines = set()
     horiz_lines = set()
     nodes = set()
     levels = set()   
     for seg in segments:
-        nodes.add(int(seg[1]))
-        nodes.add(int(seg[3]))
-        levels.add(int(seg[0]))
-        levels.add(int(seg[2]))
-        seg_str = '%s %s %s %s' % (seg[0], seg[1], seg[2], seg[3])
+        nodes.add('%03d' % int(seg[1]))
+        nodes.add('%03d' % int(seg[3]))
+        levels.add('%03d' % int(seg[0]))
+        levels.add('%03d' % int(seg[2]))
+        seg_str = '%03d %03d %03d %03d' % (int(seg[0]), int(seg[1]), int(seg[2]), int(seg[3]))
         if seg[0] == seg[2]:
             vert_lines.add(seg_str)
         elif seg[1] == seg[3]:
@@ -132,24 +145,81 @@ def make_tree(segments):
     levels = list(levels)
     # sort them backwards because we want to work from the leaves back
     levels.sort(cmp=lambda x,y: cmp(int(y), int(x)))
-    print "there are %s levels" % levels
     # how many different nodes are there?
     nodes = list(nodes)
     nodes.sort(cmp=lambda x,y: cmp(int(x), int(y)))
-    print "there are %s nodes" % nodes        
-#     
-#     result_segments = []
-#     # starting from the leaves
-#     for i in range(len(levels)-1):
-#         out_x = levels[i]
-#         in_x = levels[i+1]
-#         # what are the node-lines that represent nodes at this level?
-#         node_lines = set()
-#         for line in vert_lines:
-#             if 
-                
-            
-        
+    
+    # for each level, make a node-level out of it by finding the main endpoints of the verticals that go with it.
+    node_dict = {}
+    sorted_verts = list(vert_lines)
+    sorted_verts.sort(cmp=lambda x,y: cmp(x, y))
+    for line in sorted_verts:
+        coords = re.split(' ',line)
+        x = int(coords[0])
+        y1 = int(coords[1])
+        y2 = int(coords[3])
+        if x not in node_dict:
+            node_dict[x] = [];
+        if y1 == y2:
+            continue        
+        node_dict[x].append([y1,y2])
+    
+    node_dict_keys = node_dict.keys()
+    node_dict.keys().sort()
+    for k in node_dict_keys:
+        if len(node_dict[k]) == 0:
+            continue
+        coalesced_nodes = []
+        current_node = node_dict[k][0]
+        coalesced_nodes.append(current_node)
+        for edge in node_dict[k]:
+            e1 = int(current_node[0])
+            e2 = int(current_node[1])
+            y1 = int(edge[0])
+            y2 = int(edge[1])
+            # if y1 is in between edge's ends, we're working on this same node
+            if y1 <= e2 and y1 >= e1:
+                # if y2 is larger than e2, replace e2
+                if y2 > e2:
+                    current_node = [e1,y2]
+                    coalesced_nodes[len(coalesced_nodes)-1] = current_node
+            # if y2 is bigger than e2:
+            elif y1 > e2:
+                # this is a different node, add this to node_dict[x]
+                current_node = [y1, y2]
+                coalesced_nodes.append(current_node)
+        node_dict[k] = coalesced_nodes
+    
+    # okay, now we know what the nodes are. Match up the edges.
+    edges = []
+    otus = []
+    nodes = set()
+    for line in horiz_lines:
+        coords = re.split(' ',line)
+        x1 = int(coords[0])
+        x2 = int(coords[2])
+        y1 = int(coords[1])
+        y2 = int(coords[3])
+        # we want to make the y1 equal to the y1 of the node
+        # look for the node that this x1 is in:
+        for node in node_dict[x1]:
+            if y1 >= node[0] and y1 <= node[1]:
+                y1 = node[0]
+        if len(node_dict[x2]) == 0:
+            otus.append([x2, y2])
+        else:
+            for node in node_dict[x2]:
+                if y2 >= node[0] and y2 <= node[1]:
+                    y2 = node[0]
+            nodes.add('%d %d' % (x1, y1))
+            nodes.add('%d %d' % (x2, y2))
+        edges.append([x1, y1, x2, y2])
+    final_nodes = []
+    for node in nodes:
+        coords = re.split(' ',node)
+        final_nodes.append([int(coords[0]), int(coords[1])])
+    return (final_nodes, edges, otus)
+
 def remove_dups(segments):
     seg_set = set()
     vert_set = set()
@@ -163,14 +233,9 @@ def remove_dups(segments):
         # clean up vertical lines
         if seg[0] == seg[2]:
             if int(seg[1]) < int(seg[3]):
-                vert_set.add('%d %d %d %d' % (seg[0], seg[1], seg[2], seg[3]))
+                seg_set.add('%d %d %d %d' % (seg[0], seg[1], seg[2], seg[3]))
             else:
-                vert_set.add('%d %d %d %d' % (seg[0], seg[3], seg[2], seg[1]))
-    
-    # remove the smaller vertical lines, if they overlap with a longer line.
-    sorted_verts = list(vert_set)
-    sorted_verts.sort(cmp=lambda x,y: cmp(y, x))
-    pruned_verts = []
+                seg_set.add('%d %d %d %d' % (seg[0], seg[3], seg[2], seg[1]))
     
     seg_list = []
     for seg in seg_set:
@@ -182,10 +247,10 @@ def remove_dups(segments):
 def segments_to_lines(segments):
     lines = []
     for seg in segments:
-        lines.append({'@x1':str(seg[0]), '@y1':str(seg[1]), '@x2':str(seg[2]), '@y2':str(seg[3]), '@stroke-width':'5', '@stroke':'green'})
+        lines.append({'@x1':str(seg[0]), '@y1':str(seg[1]), '@x2':str(seg[2]), '@y2':str(seg[3]), '@stroke-width':'3', '@stroke':'green'})
     return lines
 
-def lineify_polygon(polygon):
+def lineify_path(polygon):
     lines = []
     segment_hash = {}
     last_node = polygon[0]
@@ -264,20 +329,21 @@ def path_to_polygon(path):
         polygon.append([int(coords[0]), int(coords[1])])
     return polygon
     
-def polygon_to_path(polygon):
+def nodes_to_path(nodes):
     path_points = []
-    for point in polygon:
+    for point in nodes:
         path_points.append('%d %d' % (point[0],point[1]))
     return 'M' + 'L'.join(path_points) + 'Z'
           
-def polygon_to_circles(polygon):
+def nodes_to_circles(nodes):
     circlelist = []
-    for i in range(len(polygon)):
+    for i in range(len(nodes)):
         circledict = {}
-        coords = polygon[i]
+        coords = nodes[i]
         circledict['@r'] = '3'
-        circledict['@stroke'] = 'none'
-        circledict['@fill'] = '#c6c6%(number)02x' % {"number":(i)}
+        circledict['@stroke'] = 'black'
+        circledict['@stroke-width'] = '1'
+        circledict['@fill'] = 'yellow'
         circledict['@cx'] = str(coords[0])
         circledict['@cy'] = str(coords[1])
         circlelist.append(circledict)
