@@ -20,7 +20,7 @@ def main():
     filename = sys.argv[1]
     numtaxa = sys.argv[2]
     # potrace -o outputfile -s -k 0.8 -W 10 -H 10 raw_pbm_file
-    
+    outfile = 'test'
     file_name, extension = os.path.splitext(sys.argv[1])
     if extension != '.svg':
         print "can't open this file"
@@ -87,89 +87,87 @@ def main():
         path['@name'] = "cleaned path"
         path['@style'] = "fill:none; stroke:#FF0000; stroke-width:2"
         paths.append(path) 
-#     
-#     # make the raw tree for making nexml:
-#     (nodes, edges, otus) = make_tree(segments)
-#     
-#     # generate nexml:
-#     nodedict = {}
-#     otudict = {}
-#     index = 1
-#     for otu in otus:
-#         otudict[str(otu)] = 'otu%d' % index
-#         index = index+1
-# 
-#     nodes.extend(otus)
-#     index = 1  
-#     for node in nodes:
-#         nodedict[str(node)] = 'node%d' % index
-#         index = index+1
-#     
-#     nexmldict = {}
-#     nexmldict['nex:nexml'] = {'@xmlns:nex':'http://www.nexml.org/2009'}
-#     nexmldict['nex:nexml']['@xmlns']="http://www.nexml.org/2009"
-#     nexmldict['nex:nexml']['@xmlns:rdf']="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-#     nexmldict['nex:nexml']['@xmlns:xsd']="http://www.w3.org/2001/XMLSchema#"
-#     nexmldict['nex:nexml']['@xmlns:xsi']="http://www.w3.org/2001/XMLSchema-instance" 
-#     nexmldict['nex:nexml']['@version'] = '0.9'
-#     nexmldict['nex:nexml']['otus'] = {'@about':'#otus', '@id':'otus','@label':'taxa'}
-#     nexmldict['nex:nexml']['otus']['otu'] = []
-#     for otu in otus:
-#         nexml_otu = {'@id':otudict[str(otu)]}
-#         nexml_otu['@about'] = '#%s' % otudict[str(otu)]
-#         nexml_otu['@label'] = otudict[str(otu)]
-#         nexmldict['nex:nexml']['otus']['otu'].append(nexml_otu)
-#     
-#     nexmldict['nex:nexml']['trees']= {'@about':'#trees1','@id':'trees1','@label':'trees','@otus':'otus'}
-# #         <tree about="#tree37" id="tree37" label="test_tree" xsi:type="nex:FloatTree">
-#     currtree = {'@id':'tree1', '@about':'#tree1', '@label':'tree', '@xsi:type':'nex:FloatTree'}
-#     nexmldict['nex:nexml']['trees']['tree'] = [currtree]
-#     currtree['node'] = []
-#     for node in nodes:
-#         nexml_node = {'@id':nodedict[str(node)]}
-#         if str(node) in otudict:
-#             nexml_node['@otu'] = otudict[str(node)]
-#         currtree['node'].append(nexml_node)   
-# 
-#     nexmldict['nex:nexml']['trees']['edge'] = []
-#     index = 1
-#     currtree['edge'] = []
-#     for edge in edges:
-#         nexml_edge = {}
-#         nexml_edge['@id'] = 'edge%d' % index
-#         nexml_edge['@length'] = str(edge[2]-edge[0])
-#         nexml_edge['@source'] = nodedict[str([edge[0],edge[1]])]
-#         nexml_edge['@target'] = nodedict[str([edge[2],edge[3]])]
-#         currtree['edge'].append(nexml_edge)  
-#         index = index+1 
-# 
-#     outf = open('test.xml','w')
-#     outf.write(xmltodict.unparse(nexmldict, pretty=True))
-#     outf.close()
-#     
-#     # generate nexus:
-#     nexus_str = ""
-#     nexus_str += "#NEXUS\n"
-#     nexus_str += "begin TREES;\n"
-#     nexus_str += "Tree tree=\n"
-#     nexus_str += tree_to_nexus(otus, nodes, edges)
-#     nexus_str += ";\nEnd;\n"
-#     
-#     outf = open('test.nex','w')
-#     outf.write(nexus_str)
-#     outf.close()
+
+    # make the raw tree for making nexml:
+    (nodes, edges, otus) = make_tree(segments)
+    
+    # generate nexml:
+    nodedict = {}
+    otudict = {}
+    index = 1
+    for otu in otus:
+        otudict[str(otu)] = 'otu%d' % index
+        index = index+1
+
+    nodes.extend(otus)
+    index = 1  
+    for node in nodes:
+        nodedict[str(node)] = 'node%d' % index
+        index = index+1
+    
+    nexmldict = {}
+    nexmldict['nex:nexml'] = {'@xmlns:nex':'http://www.nexml.org/2009'}
+    nexmldict['nex:nexml']['@xmlns']="http://www.nexml.org/2009"
+    nexmldict['nex:nexml']['@xmlns:rdf']="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    nexmldict['nex:nexml']['@xmlns:xsd']="http://www.w3.org/2001/XMLSchema#"
+    nexmldict['nex:nexml']['@xmlns:xsi']="http://www.w3.org/2001/XMLSchema-instance" 
+    nexmldict['nex:nexml']['@version'] = '0.9'
+    nexmldict['nex:nexml']['otus'] = {'@about':'#otus', '@id':'otus','@label':'taxa'}
+    nexmldict['nex:nexml']['otus']['otu'] = []
+    for otu in otus:
+        nexml_otu = {'@id':otudict[str(otu)]}
+        nexml_otu['@about'] = '#%s' % otudict[str(otu)]
+        nexml_otu['@label'] = otudict[str(otu)]
+        nexmldict['nex:nexml']['otus']['otu'].append(nexml_otu)
+    
+    nexmldict['nex:nexml']['trees']= {'@about':'#trees1','@id':'trees1','@label':'trees','@otus':'otus'}
+    currtree = {'@id':'tree1', '@about':'#tree1', '@label':'tree', '@xsi:type':'nex:FloatTree'}
+    nexmldict['nex:nexml']['trees']['tree'] = [currtree]
+    currtree['node'] = []
+    for node in nodes:
+        nexml_node = {'@id':nodedict[str(node)]}
+        if str(node) in otudict:
+            nexml_node['@otu'] = otudict[str(node)]
+        currtree['node'].append(nexml_node)   
+
+    nexmldict['nex:nexml']['trees']['edge'] = []
+    index = 1
+    currtree['edge'] = []
+    for edge in edges:
+        nexml_edge = {}
+        nexml_edge['@id'] = 'edge%d' % index
+        nexml_edge['@length'] = str(edge[2]-edge[0])
+        nexml_edge['@source'] = nodedict[str([edge[0],edge[1]])]
+        nexml_edge['@target'] = nodedict[str([edge[2],edge[3]])]
+        currtree['edge'].append(nexml_edge)  
+        index = index+1 
+
+    outf = open(outfile+'.xml','w')
+    outf.write(xmltodict.unparse(nexmldict, pretty=True))
+    outf.close()
+    
+    # generate nexus:
+    nexus_str = "#NEXUS\n"
+    nexus_str += "begin TREES;\n"
+    nexus_str += "Tree tree=\n"
+    nexus_str += tree_to_nexus(otus, nodes, edges)
+    nexus_str += ";\nEnd;\n"
+    
+    outf = open(outfile+'.nex','w')
+    outf.write(nexus_str)
+    outf.close()
                 
     # generate svg:
     lines = []
-#     circles.extend(nodes_to_circles(nodes))
-#     lines.extend(segments_to_lines(edges))
+    circles.extend(nodes_to_circles(nodes))
+    lines.extend(segments_to_lines(edges))
     svgdict = {}
     svgdict['svg'] = {}
     svgdict['svg']['width'] = xmldict['@width']
     svgdict['svg']['height'] = xmldict['@height']
     svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
 
-    outf = open('test.svg','w')
+    outf = open(outfile+'.svg','w')
     outf.write(xmltodict.unparse(svgdict, pretty=True))
     outf.close()
 
@@ -234,26 +232,12 @@ def make_tree(segments):
     segments = remove_dups(segments)
     vert_lines = set()
     horiz_lines = set()
-    nodes = set()
-    levels = set()   
     for seg in segments:
-        nodes.add('%03d' % int(seg[1]))
-        nodes.add('%03d' % int(seg[3]))
-        levels.add('%03d' % int(seg[0]))
-        levels.add('%03d' % int(seg[2]))
         seg_str = '%03d %03d %03d %03d' % (int(seg[0]), int(seg[1]), int(seg[2]), int(seg[3]))
         if seg[0] == seg[2]:
             vert_lines.add(seg_str)
         elif seg[1] == seg[3]:
             horiz_lines.add(seg_str)
-    
-    # how many different levels are there?
-    levels = list(levels)
-    # sort them backwards because we want to work from the leaves back
-    levels.sort(cmp=lambda x,y: cmp(int(y), int(x)))
-    # how many different nodes are there?
-    nodes = list(nodes)
-    nodes.sort(cmp=lambda x,y: cmp(int(x), int(y)))
     
     # for each level, make a node-level out of it by finding the main endpoints of the verticals that go with it.
     node_dict = {}
@@ -283,8 +267,8 @@ def make_tree(segments):
             e2 = int(current_node[1])
             y1 = int(edge[0])
             y2 = int(edge[1])
-            # if y1 is in between edge's ends, we're working on this same node
-            if y1 <= e2 and y1 >= e1:
+            # if y1 is in between edge's ends, we're working on this same node (with a little buffer for fuzzy edges)
+            if (e1 <= y1) and (y1 <= e2+2):
                 # if y2 is larger than e2, replace e2
                 if y2 > e2:
                     current_node = [e1,y2]
@@ -297,7 +281,7 @@ def make_tree(segments):
         node_dict[k] = coalesced_nodes
     
     # okay, now we know what the nodes are. Match up the edges.
-    edges = []
+    edges = set()
     otus = []
     nodes = set()
     for line in horiz_lines:
@@ -308,12 +292,11 @@ def make_tree(segments):
         y2 = int(coords[3])
         # we want to make the y1 equal to the y1 of the node
         # look for the node that this x1 is in:
-        print line
         if x1 in node_dict:
             for node in node_dict[x1]:
                 if y1 >= node[0] and y1 <= node[1]:
                     y1 = node[0]
-            if len(node_dict[x2]) == 0:
+            if x2 not in node_dict:
                 otus.append([x2, y2])
             else:
                 for node in node_dict[x2]:
@@ -321,16 +304,20 @@ def make_tree(segments):
                         y2 = node[0]
                 nodes.add('%d %d' % (x1, y1))
                 nodes.add('%d %d' % (x2, y2))
-            edges.append([x1, y1, x2, y2])
+            edges.add('%d %d %d %d' % (x1, y1, x2, y2))
     final_nodes = []
     for node in nodes:
         coords = re.split(' ',node)
         final_nodes.append([int(coords[0]), int(coords[1])])
-    return (final_nodes, edges, otus)
+    final_edges = []
+    for edge in edges:
+        coords = re.split(' ',edge)
+        final_edges.append([int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])])
+
+    return (final_nodes, final_edges, otus)
 
 def remove_dups(segments):
     seg_set = set()
-    vert_set = set()
     for seg in segments:
         # clean up horizontal lines
         if seg[1] == seg[3]:
@@ -347,9 +334,9 @@ def remove_dups(segments):
     
     seg_list = []
     for seg in seg_set:
-        seg_list.append(re.split(' ',seg))
-    for seg in vert_set:
-        seg_list.append(re.split(' ',seg))
+        coord = re.split(' ',seg)
+        if (coord[0] != coord[2]) or (coord[1] != coord[3]):
+            seg_list.append([int(coord[0]),int(coord[1]),int(coord[2]),int(coord[3])])
     return seg_list
     
 def segments_to_lines(segments):
