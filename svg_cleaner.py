@@ -18,7 +18,6 @@ min_y = 0
 
 def main():
     filename = sys.argv[1]
-    numtaxa = sys.argv[2]
     # potrace -o outputfile -s -k 0.8 -W 10 -H 10 raw_pbm_file
     outfile = 'test'
     file_name, extension = os.path.splitext(sys.argv[1])
@@ -74,7 +73,6 @@ def main():
             paths.append(path) 
 
     segments = []   
-    radius = max_y / (int(numtaxa)*5)
     radius = 10
     polygon_total = []
     for polygon in polygons:
