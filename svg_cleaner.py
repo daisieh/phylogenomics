@@ -20,10 +20,7 @@ def main():
     filename = sys.argv[1]
     numtaxa = sys.argv[2]
     # potrace -o outputfile -s -k 0.8 -W 10 -H 10 raw_pbm_file
-    outputfile = 'test.svg'
     
-    outdict = {}
-    outdict['svg'] = []
     file_name, extension = os.path.splitext(sys.argv[1])
     if extension != '.svg':
         print "can't open this file"
@@ -84,25 +81,136 @@ def main():
         polygon = cleanup_polygon(polygon, radius*1.8)
         polygon = simplify_polygon(polygon)
         segments.extend(lineify_path(polygon))
+        
+        # this path is for the cleaned-up lines
         path = {}
         path['@d'] = nodes_to_path(polygon)
-        path['@style'] = "fill:#FF0000; stroke:#FF0000;"
+        path['@name'] = "cleaned path"
+        path['@style'] = "fill:none; stroke:#FF0000; stroke-width:2"
         paths.append(path) 
     
+    # make the raw tree for making nexml:
     (nodes, edges, otus) = make_tree(segments)
+    
+    # generate nexml:
+    nodedict = {}
+    otudict = {}
+    index = 1
+    for otu in otus:
+        otudict[str(otu)] = 'otu%d' % index
+        index = index+1
+
+    nodes.extend(otus)
+    index = 1  
+    for node in nodes:
+        nodedict[str(node)] = 'node%d' % index
+        index = index+1
+    
+    nexmldict = {}
+    nexmldict['nex:nexml'] = {'@xmlns:nex':'http://www.nexml.org/2009'}
+    nexmldict['nex:nexml']['@xmlns']="http://www.nexml.org/2009"
+    nexmldict['nex:nexml']['@xmlns:rdf']="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    nexmldict['nex:nexml']['@xmlns:xsd']="http://www.w3.org/2001/XMLSchema#"
+    nexmldict['nex:nexml']['@xmlns:xsi']="http://www.w3.org/2001/XMLSchema-instance" 
+    nexmldict['nex:nexml']['@version'] = '0.9'
+    nexmldict['nex:nexml']['otus'] = {'@about':'#otus', '@id':'otus','@label':'taxa'}
+    nexmldict['nex:nexml']['otus']['otu'] = []
+    for otu in otus:
+        nexml_otu = {'@id':otudict[str(otu)]}
+        nexml_otu['@about'] = '#%s' % otudict[str(otu)]
+        nexml_otu['@label'] = otudict[str(otu)]
+        nexmldict['nex:nexml']['otus']['otu'].append(nexml_otu)
+    
+    nexmldict['nex:nexml']['trees']= {'@about':'#trees1','@id':'trees1','@label':'trees','@otus':'otus'}
+#         <tree about="#tree37" id="tree37" label="test_tree" xsi:type="nex:FloatTree">
+    currtree = {'@id':'tree1', '@about':'#tree1', '@label':'tree', '@xsi:type':'nex:FloatTree'}
+    nexmldict['nex:nexml']['trees']['tree'] = [currtree]
+    currtree['node'] = []
+    for node in nodes:
+        nexml_node = {'@id':nodedict[str(node)]}
+        if str(node) in otudict:
+            nexml_node['@otu'] = otudict[str(node)]
+        currtree['node'].append(nexml_node)   
+
+    nexmldict['nex:nexml']['trees']['edge'] = []
+    index = 1
+    currtree['edge'] = []
+    for edge in edges:
+        nexml_edge = {}
+        nexml_edge['@id'] = 'edge%d' % index
+        nexml_edge['@length'] = str(edge[2]-edge[0])
+        nexml_edge['@source'] = nodedict[str([edge[0],edge[1]])]
+        nexml_edge['@target'] = nodedict[str([edge[2],edge[3]])]
+        currtree['edge'].append(nexml_edge)  
+        index = index+1 
+
+    outf = open('test.xml','w')
+    outf.write(xmltodict.unparse(nexmldict, pretty=True))
+    outf.close()
+    
+    # generate nexus:
+    nexus_str = ""
+    nexus_str += "#NEXUS\n"
+    nexus_str += "begin TREES;\n"
+    nexus_str += "Tree tree=\n"
+    nexus_str += tree_to_nexus(otus, nodes, edges)
+    nexus_str += ";\nEnd;\n"
+    
+    outf = open('test.nex','w')
+    outf.write(nexus_str)
+    outf.close()
+                
+    # generate svg:
     lines = []
     circles = []
-    circles.extend(nodes_to_circles(nodes))
-    circles.extend(nodes_to_circles(otus))    
-    lines.extend(segments_to_lines(edges))
-    outdict['svg'] = {}
-    outdict['svg']['width'] = xmldict['@width']
-    outdict['svg']['height'] = xmldict['@height']
-    outdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
+#     circles.extend(nodes_to_circles(nodes))
+#     lines.extend(segments_to_lines(edges))
+    svgdict = {}
+    svgdict['svg'] = {}
+    svgdict['svg']['width'] = xmldict['@width']
+    svgdict['svg']['height'] = xmldict['@height']
+    svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
 
-    outf = open(outputfile,'w')
-    outf.write(xmltodict.unparse(outdict, pretty=True))
+    outf = open('test.svg','w')
+    outf.write(xmltodict.unparse(svgdict, pretty=True))
     outf.close()
+
+def tree_to_nexus(otus, nodes, edges):
+    otudict = {}
+    nodedict = {}
+    for i in range(len(otus)):
+        nodedict[str(otus[i])] = str('otu%d' % i)
+    # find the root: it's the node that is not the y2 of any edge
+    root = None
+    for node in nodes:
+        targetnum = 0
+        sourcenum = 0
+        if str(node) not in nodedict:
+            nodedict[str(node)] = []
+        for edge in edges:
+            if edge[1] == node[1] and edge[0] == node[0]:
+                targetnum += 1
+                edgenex = str([edge[2],edge[3]])
+                nodedict[str(node)].append(edgenex)
+            if edge[3] == node[1] and edge[2] == node[0]:
+                sourcenum += 1
+        if sourcenum == 0:
+            root = node
+    return replace_nodes(nodedict, str(root))
+
+def replace_nodes(nodedict, newick):
+    # find the nodes in newick:
+    nodematcher = re.findall('\[\d+, \d+\]',newick)
+    if len(nodematcher) is 0:
+        return newick
+    else:
+        for node in nodematcher:
+            # replace the node with the children of the node
+            child = str(nodedict[node])
+            if '[' in child:
+                child = '(' + str(', '.join(nodedict[node])) + ')'
+            newick = newick.replace(node, child)                
+    return replace_nodes(nodedict, newick)
 
 def scale(polygon, scale_width, scale_height):
     for node in polygon:
@@ -125,7 +233,7 @@ def parse_transform(transform):
             scale_height = float(scalematcher.group(2))
             
 def make_tree(segments):
-    remove_dups(segments)
+    segments = remove_dups(segments)
     vert_lines = set()
     horiz_lines = set()
     nodes = set()
@@ -202,18 +310,20 @@ def make_tree(segments):
         y2 = int(coords[3])
         # we want to make the y1 equal to the y1 of the node
         # look for the node that this x1 is in:
-        for node in node_dict[x1]:
-            if y1 >= node[0] and y1 <= node[1]:
-                y1 = node[0]
-        if len(node_dict[x2]) == 0:
-            otus.append([x2, y2])
-        else:
-            for node in node_dict[x2]:
-                if y2 >= node[0] and y2 <= node[1]:
-                    y2 = node[0]
-            nodes.add('%d %d' % (x1, y1))
-            nodes.add('%d %d' % (x2, y2))
-        edges.append([x1, y1, x2, y2])
+        print line
+        if x1 in node_dict:
+            for node in node_dict[x1]:
+                if y1 >= node[0] and y1 <= node[1]:
+                    y1 = node[0]
+            if len(node_dict[x2]) == 0:
+                otus.append([x2, y2])
+            else:
+                for node in node_dict[x2]:
+                    if y2 >= node[0] and y2 <= node[1]:
+                        y2 = node[0]
+                nodes.add('%d %d' % (x1, y1))
+                nodes.add('%d %d' % (x2, y2))
+            edges.append([x1, y1, x2, y2])
     final_nodes = []
     for node in nodes:
         coords = re.split(' ',node)
