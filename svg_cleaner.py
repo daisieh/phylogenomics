@@ -15,10 +15,11 @@ max_x = 0
 max_y = 0
 min_x = 0
 min_y = 0
+radius = 0
 
 def main():
     filename = sys.argv[1]
-    # potrace -o outputfile -s -k 0.8 -W 10 -H 10 raw_pbm_file
+    # potrace -s -k 0.8 -W 10 -H 10 -o outputfile raw_pbm_file
     outfile = 'test'
     file_name, extension = os.path.splitext(sys.argv[1])
     if extension != '.svg':
@@ -54,6 +55,7 @@ def main():
 
     global max_x, max_y, min_x, min_y
     global scale_width, scale_height
+    global radius
     max_x = abs(max_x * scale_width)
     max_y = abs(max_y * scale_height)
     polygons = []
@@ -276,6 +278,13 @@ def make_tree(segments):
                 # this is a different node, add this to node_dict[x]
                 current_node = [y1, y2]
                 coalesced_nodes.append(current_node)
+        
+        # buffer the nodes with the radius:
+        global radius
+        for node in coalesced_nodes:
+            node[0] -= (radius/2)
+            node[1] += (radius/2)
+        
         node_dict[k] = coalesced_nodes
     
     # okay, now we know what the nodes are. Match up the edges.
