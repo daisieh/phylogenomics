@@ -36,7 +36,8 @@ def main():
     style = {}
     transform = ''
     paths = [] 
-    
+    circles = []
+
     # parse original paths
     if 'path' in xmldict:
         xmlpaths = xmldict['path']
@@ -74,12 +75,14 @@ def main():
 
     segments = []   
     radius = max_y / (int(numtaxa)*5)
+    radius = 10
     polygon_total = []
     for polygon in polygons:
         polygon = cleanup_polygon(polygon, radius)
-        polygon = simplify_polygon(polygon)
-        polygon = cleanup_polygon(polygon, radius*1.8)
-        polygon = simplify_polygon(polygon)
+        polygon = simplify_polygon(polygon, radius)
+#         polygon = cleanup_polygon(polygon, radius*1.8)
+#         polygon = simplify_polygon(polygon)
+        circles.extend(nodes_to_circles(polygon))
         segments.extend(lineify_path(polygon))
         
         # this path is for the cleaned-up lines
@@ -88,81 +91,80 @@ def main():
         path['@name'] = "cleaned path"
         path['@style'] = "fill:none; stroke:#FF0000; stroke-width:2"
         paths.append(path) 
-    
-    # make the raw tree for making nexml:
-    (nodes, edges, otus) = make_tree(segments)
-    
-    # generate nexml:
-    nodedict = {}
-    otudict = {}
-    index = 1
-    for otu in otus:
-        otudict[str(otu)] = 'otu%d' % index
-        index = index+1
-
-    nodes.extend(otus)
-    index = 1  
-    for node in nodes:
-        nodedict[str(node)] = 'node%d' % index
-        index = index+1
-    
-    nexmldict = {}
-    nexmldict['nex:nexml'] = {'@xmlns:nex':'http://www.nexml.org/2009'}
-    nexmldict['nex:nexml']['@xmlns']="http://www.nexml.org/2009"
-    nexmldict['nex:nexml']['@xmlns:rdf']="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    nexmldict['nex:nexml']['@xmlns:xsd']="http://www.w3.org/2001/XMLSchema#"
-    nexmldict['nex:nexml']['@xmlns:xsi']="http://www.w3.org/2001/XMLSchema-instance" 
-    nexmldict['nex:nexml']['@version'] = '0.9'
-    nexmldict['nex:nexml']['otus'] = {'@about':'#otus', '@id':'otus','@label':'taxa'}
-    nexmldict['nex:nexml']['otus']['otu'] = []
-    for otu in otus:
-        nexml_otu = {'@id':otudict[str(otu)]}
-        nexml_otu['@about'] = '#%s' % otudict[str(otu)]
-        nexml_otu['@label'] = otudict[str(otu)]
-        nexmldict['nex:nexml']['otus']['otu'].append(nexml_otu)
-    
-    nexmldict['nex:nexml']['trees']= {'@about':'#trees1','@id':'trees1','@label':'trees','@otus':'otus'}
-#         <tree about="#tree37" id="tree37" label="test_tree" xsi:type="nex:FloatTree">
-    currtree = {'@id':'tree1', '@about':'#tree1', '@label':'tree', '@xsi:type':'nex:FloatTree'}
-    nexmldict['nex:nexml']['trees']['tree'] = [currtree]
-    currtree['node'] = []
-    for node in nodes:
-        nexml_node = {'@id':nodedict[str(node)]}
-        if str(node) in otudict:
-            nexml_node['@otu'] = otudict[str(node)]
-        currtree['node'].append(nexml_node)   
-
-    nexmldict['nex:nexml']['trees']['edge'] = []
-    index = 1
-    currtree['edge'] = []
-    for edge in edges:
-        nexml_edge = {}
-        nexml_edge['@id'] = 'edge%d' % index
-        nexml_edge['@length'] = str(edge[2]-edge[0])
-        nexml_edge['@source'] = nodedict[str([edge[0],edge[1]])]
-        nexml_edge['@target'] = nodedict[str([edge[2],edge[3]])]
-        currtree['edge'].append(nexml_edge)  
-        index = index+1 
-
-    outf = open('test.xml','w')
-    outf.write(xmltodict.unparse(nexmldict, pretty=True))
-    outf.close()
-    
-    # generate nexus:
-    nexus_str = ""
-    nexus_str += "#NEXUS\n"
-    nexus_str += "begin TREES;\n"
-    nexus_str += "Tree tree=\n"
-    nexus_str += tree_to_nexus(otus, nodes, edges)
-    nexus_str += ";\nEnd;\n"
-    
-    outf = open('test.nex','w')
-    outf.write(nexus_str)
-    outf.close()
+#     
+#     # make the raw tree for making nexml:
+#     (nodes, edges, otus) = make_tree(segments)
+#     
+#     # generate nexml:
+#     nodedict = {}
+#     otudict = {}
+#     index = 1
+#     for otu in otus:
+#         otudict[str(otu)] = 'otu%d' % index
+#         index = index+1
+# 
+#     nodes.extend(otus)
+#     index = 1  
+#     for node in nodes:
+#         nodedict[str(node)] = 'node%d' % index
+#         index = index+1
+#     
+#     nexmldict = {}
+#     nexmldict['nex:nexml'] = {'@xmlns:nex':'http://www.nexml.org/2009'}
+#     nexmldict['nex:nexml']['@xmlns']="http://www.nexml.org/2009"
+#     nexmldict['nex:nexml']['@xmlns:rdf']="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+#     nexmldict['nex:nexml']['@xmlns:xsd']="http://www.w3.org/2001/XMLSchema#"
+#     nexmldict['nex:nexml']['@xmlns:xsi']="http://www.w3.org/2001/XMLSchema-instance" 
+#     nexmldict['nex:nexml']['@version'] = '0.9'
+#     nexmldict['nex:nexml']['otus'] = {'@about':'#otus', '@id':'otus','@label':'taxa'}
+#     nexmldict['nex:nexml']['otus']['otu'] = []
+#     for otu in otus:
+#         nexml_otu = {'@id':otudict[str(otu)]}
+#         nexml_otu['@about'] = '#%s' % otudict[str(otu)]
+#         nexml_otu['@label'] = otudict[str(otu)]
+#         nexmldict['nex:nexml']['otus']['otu'].append(nexml_otu)
+#     
+#     nexmldict['nex:nexml']['trees']= {'@about':'#trees1','@id':'trees1','@label':'trees','@otus':'otus'}
+# #         <tree about="#tree37" id="tree37" label="test_tree" xsi:type="nex:FloatTree">
+#     currtree = {'@id':'tree1', '@about':'#tree1', '@label':'tree', '@xsi:type':'nex:FloatTree'}
+#     nexmldict['nex:nexml']['trees']['tree'] = [currtree]
+#     currtree['node'] = []
+#     for node in nodes:
+#         nexml_node = {'@id':nodedict[str(node)]}
+#         if str(node) in otudict:
+#             nexml_node['@otu'] = otudict[str(node)]
+#         currtree['node'].append(nexml_node)   
+# 
+#     nexmldict['nex:nexml']['trees']['edge'] = []
+#     index = 1
+#     currtree['edge'] = []
+#     for edge in edges:
+#         nexml_edge = {}
+#         nexml_edge['@id'] = 'edge%d' % index
+#         nexml_edge['@length'] = str(edge[2]-edge[0])
+#         nexml_edge['@source'] = nodedict[str([edge[0],edge[1]])]
+#         nexml_edge['@target'] = nodedict[str([edge[2],edge[3]])]
+#         currtree['edge'].append(nexml_edge)  
+#         index = index+1 
+# 
+#     outf = open('test.xml','w')
+#     outf.write(xmltodict.unparse(nexmldict, pretty=True))
+#     outf.close()
+#     
+#     # generate nexus:
+#     nexus_str = ""
+#     nexus_str += "#NEXUS\n"
+#     nexus_str += "begin TREES;\n"
+#     nexus_str += "Tree tree=\n"
+#     nexus_str += tree_to_nexus(otus, nodes, edges)
+#     nexus_str += ";\nEnd;\n"
+#     
+#     outf = open('test.nex','w')
+#     outf.write(nexus_str)
+#     outf.close()
                 
     # generate svg:
     lines = []
-    circles = []
 #     circles.extend(nodes_to_circles(nodes))
 #     lines.extend(segments_to_lines(edges))
     svgdict = {}
@@ -370,6 +372,7 @@ def lineify_path(polygon):
     return lines
        
 def cleanup_polygon(polygon, radius):
+    
     # find all the horizontal points
     x_sort_dict = {}
     x_sort_points = [x for x in polygon]
@@ -384,39 +387,122 @@ def cleanup_polygon(polygon, radius):
     new_polygon = []
     for point in polygon:
         new_polygon.append(x_sort_dict['%d %d' % (point[0],point[1])])
-        
-    # find all the vertical points
-    sort_dict = {}
-    y_sort_points = [x for x in new_polygon]
-    y_sort_points.sort(cmp=lambda x,y: cmp(float(x[1]), float(y[1])))
-    curr_y = 0
-    for point in y_sort_points:
-        if float(point[1]) > (float(curr_y) + float(radius)):
-            curr_y = point[1]
-        sort_dict['%d %d' % (point[0],point[1])] = [point[0],curr_y]
+ #        
+#     # find all the vertical points
+#     sort_dict = {}
+#     y_sort_points = [p for p in new_polygon]
+#     y_sort_points.sort(cmp=lambda x,y: cmp(float(x[1]), float(y[1])))
+#     curr_y = 0
+#     for point in y_sort_points:
+#         if float(point[1]) > (float(curr_y) + float(radius)):
+#             curr_y = point[1]
+#         sort_dict['%d %d' % (point[0],point[1])] = [point[0],curr_y]
     polygon = []
+    
+    # for convenience:
+    x = 0
+    y = 1
+
+    last_point = [-1,-1]
     for point in new_polygon:
-        polygon.append(sort_dict['%d %d' % (point[0],point[1])])
+        # if the current point is not close to the last_point, add it: 
+        # NOT (
+        #     last_point[x]-radius < point[x] < last_point[x]+radius
+        # AND last_point[y]-radius < point[y] < last_point[y]+radius
+        #     )
+        if not((point[x] >= last_point[x] - radius) and (point[x] <= last_point[x] + radius) and (point[y] >= last_point[y] - radius) and (point[y] <= last_point[y] + radius)):
+#             polygon.append(sort_dict['%d %d' % (point[0],point[1])])
+            polygon.append(point)
+        last_point = polygon[len(polygon)-1]
+    polygon.append(polygon[0])
     return polygon   
 
 # remove all in-between singletons from a cleaned-up polygon
-def simplify_polygon(polygon):
-    new_polygon = [polygon[0]]
-    for i in range(len(polygon)-2):
-        add_me = True
-        # if the three y-vals are equal
-        if (polygon[i][1] == polygon[i+1][1]) and (polygon[i+1][1] == polygon[i+2][1]):
-            # if polygon[i+1][0] is between polygon[i][0] and polygon[i+2][0], do not add
-            if (polygon[i][0] < polygon[i+1][0] and polygon[i+1][0] < polygon[i+2][0]) or (polygon[i][0] > polygon[i+1][0] and polygon[i+1][0] > polygon[i+2][0]):
-                add_me = False
-        # if the three x-vals are equal
-        if (polygon[i][0] == polygon[i+1][0]) and (polygon[i+1][0] == polygon[i+2][0]):
-            # if polygon[i+1][1] is between polygon[i][1] and polygon[i+2][1], do not add
-            if (polygon[i][1] < polygon[i+1][1] and polygon[i+1][1] < polygon[i+2][1]) or (polygon[i][1] > polygon[i+1][1] and polygon[i+1][1] > polygon[i+2][1]):
-                add_me = False
-        if add_me == True:
-            new_polygon.append(polygon[i+1])
+def simplify_polygon(polygon, radius):
+    # for convenience:
+    x = 0
+    y = 1
+    
+    new_polygon = [polygon.pop(0), polygon.pop(0), polygon.pop(0)]
+#     for i in range(len(polygon)-2):
+#         node1 = polygon[i]
+#         node2 = polygon[i+1]
+#         node3 = polygon[i+2]
+    while polygon is not None:
+        node1 = new_polygon.pop()
+        node2 = new_polygon.pop()
+        node3 = new_polygon.pop()
+
+        #         1 o---o 2
+        #         3 o--/
+        # node 2 is a point:
+        # node1[y] == node3[y] and 
+        if (node3[x] < node2[x]) and (node1[x] < node2[x]):
+            if ((node2[y] >= node1[y] - radius) and (node2[y] <= node3[y] + radius)) or ((node2[y] >= node3[y] - radius) and (node2[y] <= node1[y] + radius)):
+        # if this happens, make sure that node3[x] is the same as node1[x]
+                print "point! " + str([node1, node2, node3])
+
+        keep_node = True
+        
+        # case 1: o---o---o
+        #         1   2   3
+        # if the three y-vals are equal AND if node2[x] is between node1[x] and node3[x], do not keep
+        if (node1[y] == node2[y]) and (node2[y] == node3[y]):  
+            if (node1[x] < node2[x] and node2[x] < node3[x]) or (node1[x] > node2[x] and node2[x] > node3[x]):
+                keep_node = False
+        
+        # case 2: o 1
+        #         |
+        #         o 2
+        #         |
+        #         o 3
+        # if the three x-vals are equal AND if node2[y] is between node1[y] and node3[y], do not keep
+        if (node1[x] == node2[x]) and (node2[x] == node3[x]):
+            if (node1[y] < node2[y] and node2[y] < node3[y]) or (node1[y] > node2[y] and node2[y] > node3[y]):
+                keep_node = False
+        
+        # case 3:     o 1
+        #             |
+        #       3 o---o 2
+        # keep
+
+        # case 4: 2   1
+        #         o---o
+        #         |
+        #       3 o
+        # keep
+        
+        
+        # case 6: o---o
+        #              \
+        #               o
+        
+        
+        
+        new_polygon.append(node1)
+        if keep_node == True:
+            new_polygon.append(node2)
+        new_polygon.append(node3)
+        if len(polygon) == 0:
+            break
+        new_polygon.append(polygon.pop(0))
+        print new_polygon
+
+#     polygon = new_polygon
+#     new_polygon = [polygon[x]]
+#     for i in range(len(polygon)-2):
+#         node1 = polygon[i]
+#         node2 = polygon[i+1]
+#         node3 = polygon[i+2]
+#         # compare the y-vals of the three nodes. If the y-val of the third node is different from the first two, change it to the other value.
+#         if (node1[y] == node2[y]) and (node3[y] <= node2[y]+5) and (node3[y] >= node2[y]-5):
+#             print "old " + str([node1[y], node2[y], node3[y]])
+#             polygon[i+2][y] = node2[y]
+#             print [node1[y], node2[y], node3[y]]
+#         new_polygon.append(node2)
+
     return new_polygon
+#     return polygon
 
 def path_to_polygon(path):
     polygon = []
