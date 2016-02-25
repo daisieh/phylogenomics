@@ -19,7 +19,8 @@ radius = 0
 
 def main():
     filename = sys.argv[1]
-    # potrace -s -k 0.8 -W 10 -H 10 -o outputfile raw_pbm_file
+    # convert input_image -threshold 50% raw.pbm
+    # potrace -s -k 0.8 -W 10 -H 10 -o output.svg raw.pbm
     outfile = 'test'
     file_name, extension = os.path.splitext(sys.argv[1])
     if extension != '.svg':
