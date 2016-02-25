@@ -79,8 +79,6 @@ def main():
     polygon_total = []
     for polygon in polygons:
         polygon = cleanup_polygon(polygon, radius)
-        polygon = simplify_polygon(polygon, radius)
-        circles.extend(nodes_to_circles(polygon))
         segments.extend(lineify_path(polygon))
         
         # this path is for the cleaned-up lines
@@ -370,10 +368,13 @@ def lineify_path(polygon):
     return lines
        
 def cleanup_polygon(polygon, radius):
-    
+    # for convenience:
+    x = 0
+    y = 1
+
     # find all the horizontal points
     x_sort_dict = {}
-    x_sort_points = [x for x in polygon]
+    x_sort_points = [p for p in polygon]
     x_sort_points.sort(cmp=lambda x,y: cmp(float(x[0]), float(y[0])))
     
     curr_x = 0
@@ -385,22 +386,9 @@ def cleanup_polygon(polygon, radius):
     new_polygon = []
     for point in polygon:
         new_polygon.append(x_sort_dict['%d %d' % (point[0],point[1])])
- #        
-#     # find all the vertical points
-#     sort_dict = {}
-#     y_sort_points = [p for p in new_polygon]
-#     y_sort_points.sort(cmp=lambda x,y: cmp(float(x[1]), float(y[1])))
-#     curr_y = 0
-#     for point in y_sort_points:
-#         if float(point[1]) > (float(curr_y) + float(radius)):
-#             curr_y = point[1]
-#         sort_dict['%d %d' % (point[0],point[1])] = [point[0],curr_y]
+
     polygon = []
     
-    # for convenience:
-    x = 0
-    y = 1
-
     last_point = [-1,-1]
     for point in new_polygon:
         # if the current point is not close to the last_point, add it: 
@@ -409,11 +397,10 @@ def cleanup_polygon(polygon, radius):
         # AND last_point[y]-radius < point[y] < last_point[y]+radius
         #     )
         if not((point[x] >= last_point[x] - radius) and (point[x] <= last_point[x] + radius) and (point[y] >= last_point[y] - radius) and (point[y] <= last_point[y] + radius)):
-#             polygon.append(sort_dict['%d %d' % (point[0],point[1])])
             polygon.append(point)
         last_point = polygon[len(polygon)-1]
     polygon.append(polygon[0])
-    return polygon   
+    return simplify_polygon(polygon, radius)   
 
 # remove all in-between singletons from a cleaned-up polygon
 def simplify_polygon(polygon, radius):
@@ -523,14 +510,6 @@ def nodes_to_circles(nodes):
         circledict['@cy'] = str(coords[1])
         circlelist.append(circledict)
     return circlelist
-
-def average_color(col):
-    matcher = re.match("(..)(..)(..)", col)
-    r = matcher.group(1)
-    g = matcher.group(2)
-    b = matcher.group(3)
-    average = (int(r,16) + int(g,16) + int(b,16))/3
-    return average
 
 def threshold_area(rect, threshold):
     mins = rect[0]
