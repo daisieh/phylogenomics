@@ -80,8 +80,6 @@ def main():
     for polygon in polygons:
         polygon = cleanup_polygon(polygon, radius)
         polygon = simplify_polygon(polygon, radius)
-#         polygon = cleanup_polygon(polygon, radius*1.8)
-#         polygon = simplify_polygon(polygon)
         circles.extend(nodes_to_circles(polygon))
         segments.extend(lineify_path(polygon))
         
@@ -422,87 +420,68 @@ def simplify_polygon(polygon, radius):
     # for convenience:
     x = 0
     y = 1
-    
     new_polygon = [polygon.pop(0), polygon.pop(0), polygon.pop(0)]
-#     for i in range(len(polygon)-2):
-#         node1 = polygon[i]
-#         node2 = polygon[i+1]
-#         node3 = polygon[i+2]
     while polygon is not None:
-        node1 = new_polygon.pop()
-        node2 = new_polygon.pop()
         node3 = new_polygon.pop()
-
-        #         1 o---o 2
-        #         3 o--/
-        # node 2 is a point:
-        # node1[y] == node3[y] and 
-        if (node3[x] < node2[x]) and (node1[x] < node2[x]):
-            if ((node2[y] >= node1[y] - radius) and (node2[y] <= node3[y] + radius)) or ((node2[y] >= node3[y] - radius) and (node2[y] <= node1[y] + radius)):
-        # if this happens, make sure that node3[x] is the same as node1[x]
-                print "point! " + str([node1, node2, node3])
+        node2 = new_polygon.pop()
+        node1 = new_polygon.pop()
 
         keep_node = True
+        #### FIRST: normalize the tips
+        #         1 o---o 2
+        #         3 o--/
+        # node2 is a tip:
+        # if node2[x] is greater than either node1[x] or node3[x]
+        # AND node1[y] - radius <= node2[y] <= node3[y] + radius (or the reverse)
+        if (node3[x] < node2[x]) and (node1[x] < node2[x]):
+            if ((node2[y] >= node1[y] - radius) and (node2[y] <= node3[y] + radius)) or ((node2[y] >= node3[y] - radius) and (node2[y] <= node1[y] + radius)):
+                # make the y the average of the three nodes' y
+                avg_y = (node1[y] + node2[y] + node3[y])/3
+                node1[y] = avg_y
+                node2[y] = avg_y
+                node3[y] = avg_y
         
-        # case 1: o---o---o
-        #         1   2   3
-        # if the three y-vals are equal AND if node2[x] is between node1[x] and node3[x], do not keep
-        if (node1[y] == node2[y]) and (node2[y] == node3[y]):  
-            if (node1[x] < node2[x] and node2[x] < node3[x]) or (node1[x] > node2[x] and node2[x] > node3[x]):
-                keep_node = False
-        
-        # case 2: o 1
-        #         |
-        #         o 2
-        #         |
-        #         o 3
-        # if the three x-vals are equal AND if node2[y] is between node1[y] and node3[y], do not keep
-        if (node1[x] == node2[x]) and (node2[x] == node3[x]):
-            if (node1[y] < node2[y] and node2[y] < node3[y]) or (node1[y] > node2[y] and node2[y] > node3[y]):
-                keep_node = False
-        
-        # case 3:     o 1
-        #             |
-        #       3 o---o 2
-        # keep
-
-        # case 4: 2   1
+        #### SECOND: normalize knees
         #         o---o
-        #         |
-        #       3 o
-        # keep
-        
-        
-        # case 6: o---o
         #              \
         #               o
+        # node2 is a knee:
+        # if node2[x] is between node1[x] and node3[x]
+        if ((node1[x] <= node2[x]) and (node2[x] <= node3[x])) or ((node3[x] <= node2[x]) and (node2[x] <= node1[x])):
+            r = radius
+            # if it's a near-right-angle, normalize.
+            # these are ones where 1[x] == 2[x] but 3[x] is not that, and 3[y] and 2[y] are within the average of their two +/- radius.
+            if (node1[x] == node2[x]) and (node3[x] != node2[x]):
+                avg_y = (node2[y] + node3[y])/2
+                if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)):
+                    node3[y] = node2[y]
+            # it could also be the opposite: 2[x] == 3[x] and 1[x] is not that. 1[y] should be the same as, or nearly, 2[y].
+            elif (node3[x] == node2[x]) and (node1[x] != node2[x]):
+                avg_y = (node2[y] + node1[y])/2
+                if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)):
+                    node1[y] = node2[y]
+            # if it's a nearly-straight knee, straighten it out.
+            else:
+                r = radius / 2
+                avg_y = (node1[y] + node2[y] + node3[y])/3
+                if ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)) and ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)): 
+                    # make the y the average of the three nodes' y
+                    node1[y] = avg_y
+                    node2[y] = avg_y
+                    node3[y] = avg_y
+                    keep_node = False
         
-        
-        
+        #### FINALLY: append nodes, without node2 if it's a straight knee
         new_polygon.append(node1)
-        if keep_node == True:
+        if keep_node:
             new_polygon.append(node2)
         new_polygon.append(node3)
         if len(polygon) == 0:
             break
         new_polygon.append(polygon.pop(0))
-        print new_polygon
 
-#     polygon = new_polygon
-#     new_polygon = [polygon[x]]
-#     for i in range(len(polygon)-2):
-#         node1 = polygon[i]
-#         node2 = polygon[i+1]
-#         node3 = polygon[i+2]
-#         # compare the y-vals of the three nodes. If the y-val of the third node is different from the first two, change it to the other value.
-#         if (node1[y] == node2[y]) and (node3[y] <= node2[y]+5) and (node3[y] >= node2[y]-5):
-#             print "old " + str([node1[y], node2[y], node3[y]])
-#             polygon[i+2][y] = node2[y]
-#             print [node1[y], node2[y], node3[y]]
-#         new_polygon.append(node2)
-
+    new_polygon.pop()
     return new_polygon
-#     return polygon
 
 def path_to_polygon(path):
     polygon = []
