@@ -15,12 +15,13 @@ max_x = 0
 max_y = 0
 min_x = 0
 min_y = 0
+radius = 0
 
 def main():
     filename = sys.argv[1]
-    numtaxa = sys.argv[2]
-    # potrace -o outputfile -s -k 0.8 -W 10 -H 10 raw_pbm_file
-    
+    # convert input_image -threshold 50% raw.pbm
+    # potrace -s -k 0.8 -W 10 -H 10 -o output.svg raw.pbm
+    outfile = 'test'
     file_name, extension = os.path.splitext(sys.argv[1])
     if extension != '.svg':
         print "can't open this file"
@@ -36,7 +37,8 @@ def main():
     style = {}
     transform = ''
     paths = [] 
-    
+    circles = []
+
     # parse original paths
     if 'path' in xmldict:
         xmlpaths = xmldict['path']
@@ -54,6 +56,7 @@ def main():
 
     global max_x, max_y, min_x, min_y
     global scale_width, scale_height
+    global radius
     max_x = abs(max_x * scale_width)
     max_y = abs(max_y * scale_height)
     polygons = []
@@ -73,13 +76,10 @@ def main():
             paths.append(path) 
 
     segments = []   
-    radius = max_y / (int(numtaxa)*5)
+    radius = 10
     polygon_total = []
     for polygon in polygons:
         polygon = cleanup_polygon(polygon, radius)
-        polygon = simplify_polygon(polygon)
-        polygon = cleanup_polygon(polygon, radius*1.8)
-        polygon = simplify_polygon(polygon)
         segments.extend(lineify_path(polygon))
         
         # this path is for the cleaned-up lines
@@ -88,7 +88,7 @@ def main():
         path['@name'] = "cleaned path"
         path['@style'] = "fill:none; stroke:#FF0000; stroke-width:2"
         paths.append(path) 
-    
+
     # make the raw tree for making nexml:
     (nodes, edges, otus) = make_tree(segments)
     
@@ -122,7 +122,6 @@ def main():
         nexmldict['nex:nexml']['otus']['otu'].append(nexml_otu)
     
     nexmldict['nex:nexml']['trees']= {'@about':'#trees1','@id':'trees1','@label':'trees','@otus':'otus'}
-#         <tree about="#tree37" id="tree37" label="test_tree" xsi:type="nex:FloatTree">
     currtree = {'@id':'tree1', '@about':'#tree1', '@label':'tree', '@xsi:type':'nex:FloatTree'}
     nexmldict['nex:nexml']['trees']['tree'] = [currtree]
     currtree['node'] = []
@@ -144,34 +143,32 @@ def main():
         currtree['edge'].append(nexml_edge)  
         index = index+1 
 
-    outf = open('test.xml','w')
+    outf = open(outfile+'.xml','w')
     outf.write(xmltodict.unparse(nexmldict, pretty=True))
     outf.close()
     
     # generate nexus:
-    nexus_str = ""
-    nexus_str += "#NEXUS\n"
+    nexus_str = "#NEXUS\n"
     nexus_str += "begin TREES;\n"
     nexus_str += "Tree tree=\n"
     nexus_str += tree_to_nexus(otus, nodes, edges)
     nexus_str += ";\nEnd;\n"
     
-    outf = open('test.nex','w')
+    outf = open(outfile+'.nex','w')
     outf.write(nexus_str)
     outf.close()
                 
     # generate svg:
     lines = []
-    circles = []
-#     circles.extend(nodes_to_circles(nodes))
-#     lines.extend(segments_to_lines(edges))
+    circles.extend(nodes_to_circles(nodes))
+    lines.extend(segments_to_lines(edges))
     svgdict = {}
     svgdict['svg'] = {}
     svgdict['svg']['width'] = xmldict['@width']
     svgdict['svg']['height'] = xmldict['@height']
     svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
 
-    outf = open('test.svg','w')
+    outf = open(outfile+'.svg','w')
     outf.write(xmltodict.unparse(svgdict, pretty=True))
     outf.close()
 
@@ -236,26 +233,12 @@ def make_tree(segments):
     segments = remove_dups(segments)
     vert_lines = set()
     horiz_lines = set()
-    nodes = set()
-    levels = set()   
     for seg in segments:
-        nodes.add('%03d' % int(seg[1]))
-        nodes.add('%03d' % int(seg[3]))
-        levels.add('%03d' % int(seg[0]))
-        levels.add('%03d' % int(seg[2]))
         seg_str = '%03d %03d %03d %03d' % (int(seg[0]), int(seg[1]), int(seg[2]), int(seg[3]))
         if seg[0] == seg[2]:
             vert_lines.add(seg_str)
         elif seg[1] == seg[3]:
             horiz_lines.add(seg_str)
-    
-    # how many different levels are there?
-    levels = list(levels)
-    # sort them backwards because we want to work from the leaves back
-    levels.sort(cmp=lambda x,y: cmp(int(y), int(x)))
-    # how many different nodes are there?
-    nodes = list(nodes)
-    nodes.sort(cmp=lambda x,y: cmp(int(x), int(y)))
     
     # for each level, make a node-level out of it by finding the main endpoints of the verticals that go with it.
     node_dict = {}
@@ -285,8 +268,8 @@ def make_tree(segments):
             e2 = int(current_node[1])
             y1 = int(edge[0])
             y2 = int(edge[1])
-            # if y1 is in between edge's ends, we're working on this same node
-            if y1 <= e2 and y1 >= e1:
+            # if y1 is in between edge's ends, we're working on this same node (with a little buffer for fuzzy edges)
+            if (e1 <= y1) and (y1 <= e2+2):
                 # if y2 is larger than e2, replace e2
                 if y2 > e2:
                     current_node = [e1,y2]
@@ -296,10 +279,17 @@ def make_tree(segments):
                 # this is a different node, add this to node_dict[x]
                 current_node = [y1, y2]
                 coalesced_nodes.append(current_node)
+        
+        # buffer the nodes with the radius:
+        global radius
+        for node in coalesced_nodes:
+            node[0] -= (radius/2)
+            node[1] += (radius/2)
+        
         node_dict[k] = coalesced_nodes
     
     # okay, now we know what the nodes are. Match up the edges.
-    edges = []
+    edges = set()
     otus = []
     nodes = set()
     for line in horiz_lines:
@@ -310,12 +300,11 @@ def make_tree(segments):
         y2 = int(coords[3])
         # we want to make the y1 equal to the y1 of the node
         # look for the node that this x1 is in:
-        print line
         if x1 in node_dict:
             for node in node_dict[x1]:
                 if y1 >= node[0] and y1 <= node[1]:
                     y1 = node[0]
-            if len(node_dict[x2]) == 0:
+            if x2 not in node_dict:
                 otus.append([x2, y2])
             else:
                 for node in node_dict[x2]:
@@ -323,16 +312,20 @@ def make_tree(segments):
                         y2 = node[0]
                 nodes.add('%d %d' % (x1, y1))
                 nodes.add('%d %d' % (x2, y2))
-            edges.append([x1, y1, x2, y2])
+            edges.add('%d %d %d %d' % (x1, y1, x2, y2))
     final_nodes = []
     for node in nodes:
         coords = re.split(' ',node)
         final_nodes.append([int(coords[0]), int(coords[1])])
-    return (final_nodes, edges, otus)
+    final_edges = []
+    for edge in edges:
+        coords = re.split(' ',edge)
+        final_edges.append([int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])])
+
+    return (final_nodes, final_edges, otus)
 
 def remove_dups(segments):
     seg_set = set()
-    vert_set = set()
     for seg in segments:
         # clean up horizontal lines
         if seg[1] == seg[3]:
@@ -349,9 +342,9 @@ def remove_dups(segments):
     
     seg_list = []
     for seg in seg_set:
-        seg_list.append(re.split(' ',seg))
-    for seg in vert_set:
-        seg_list.append(re.split(' ',seg))
+        coord = re.split(' ',seg)
+        if (coord[0] != coord[2]) or (coord[1] != coord[3]):
+            seg_list.append([int(coord[0]),int(coord[1]),int(coord[2]),int(coord[3])])
     return seg_list
     
 def segments_to_lines(segments):
@@ -370,9 +363,13 @@ def lineify_path(polygon):
     return lines
        
 def cleanup_polygon(polygon, radius):
+    # for convenience:
+    x = 0
+    y = 1
+
     # find all the horizontal points
     x_sort_dict = {}
-    x_sort_points = [x for x in polygon]
+    x_sort_points = [p for p in polygon]
     x_sort_points.sort(cmp=lambda x,y: cmp(float(x[0]), float(y[0])))
     
     curr_x = 0
@@ -384,38 +381,88 @@ def cleanup_polygon(polygon, radius):
     new_polygon = []
     for point in polygon:
         new_polygon.append(x_sort_dict['%d %d' % (point[0],point[1])])
-        
-    # find all the vertical points
-    sort_dict = {}
-    y_sort_points = [x for x in new_polygon]
-    y_sort_points.sort(cmp=lambda x,y: cmp(float(x[1]), float(y[1])))
-    curr_y = 0
-    for point in y_sort_points:
-        if float(point[1]) > (float(curr_y) + float(radius)):
-            curr_y = point[1]
-        sort_dict['%d %d' % (point[0],point[1])] = [point[0],curr_y]
+
     polygon = []
+    
+    last_point = [-1,-1]
     for point in new_polygon:
-        polygon.append(sort_dict['%d %d' % (point[0],point[1])])
-    return polygon   
+        # if the current point is not close to the last_point, add it: 
+        # NOT (
+        #     last_point[x]-radius < point[x] < last_point[x]+radius
+        # AND last_point[y]-radius < point[y] < last_point[y]+radius
+        #     )
+        if not((point[x] >= last_point[x] - radius) and (point[x] <= last_point[x] + radius) and (point[y] >= last_point[y] - radius) and (point[y] <= last_point[y] + radius)):
+            polygon.append(point)
+        last_point = polygon[len(polygon)-1]
+    polygon.append(polygon[0])
+    return simplify_polygon(polygon, radius)   
 
 # remove all in-between singletons from a cleaned-up polygon
-def simplify_polygon(polygon):
-    new_polygon = [polygon[0]]
-    for i in range(len(polygon)-2):
-        add_me = True
-        # if the three y-vals are equal
-        if (polygon[i][1] == polygon[i+1][1]) and (polygon[i+1][1] == polygon[i+2][1]):
-            # if polygon[i+1][0] is between polygon[i][0] and polygon[i+2][0], do not add
-            if (polygon[i][0] < polygon[i+1][0] and polygon[i+1][0] < polygon[i+2][0]) or (polygon[i][0] > polygon[i+1][0] and polygon[i+1][0] > polygon[i+2][0]):
-                add_me = False
-        # if the three x-vals are equal
-        if (polygon[i][0] == polygon[i+1][0]) and (polygon[i+1][0] == polygon[i+2][0]):
-            # if polygon[i+1][1] is between polygon[i][1] and polygon[i+2][1], do not add
-            if (polygon[i][1] < polygon[i+1][1] and polygon[i+1][1] < polygon[i+2][1]) or (polygon[i][1] > polygon[i+1][1] and polygon[i+1][1] > polygon[i+2][1]):
-                add_me = False
-        if add_me == True:
-            new_polygon.append(polygon[i+1])
+def simplify_polygon(polygon, radius):
+    # for convenience:
+    x = 0
+    y = 1
+    new_polygon = [polygon.pop(0), polygon.pop(0), polygon.pop(0)]
+    while polygon is not None:
+        node3 = new_polygon.pop()
+        node2 = new_polygon.pop()
+        node1 = new_polygon.pop()
+
+        keep_node = True
+        #### FIRST: normalize the tips
+        #         1 o---o 2
+        #         3 o--/
+        # node2 is a tip:
+        # if node2[x] is greater than either node1[x] or node3[x]
+        # AND node1[y] - radius <= node2[y] <= node3[y] + radius (or the reverse)
+        if (node3[x] < node2[x]) and (node1[x] < node2[x]):
+            if ((node2[y] >= node1[y] - radius) and (node2[y] <= node3[y] + radius)) or ((node2[y] >= node3[y] - radius) and (node2[y] <= node1[y] + radius)):
+                # make the y the average of the three nodes' y
+                avg_y = (node1[y] + node2[y] + node3[y])/3
+                node1[y] = avg_y
+                node2[y] = avg_y
+                node3[y] = avg_y
+        
+        #### SECOND: normalize knees
+        #         o---o
+        #              \
+        #               o
+        # node2 is a knee:
+        # if node2[x] is between node1[x] and node3[x]
+        if ((node1[x] <= node2[x]) and (node2[x] <= node3[x])) or ((node3[x] <= node2[x]) and (node2[x] <= node1[x])):
+            r = radius
+            # if it's a near-right-angle, normalize.
+            # these are ones where 1[x] == 2[x] but 3[x] is not that, and 3[y] and 2[y] are within the average of their two +/- radius.
+            if (node1[x] == node2[x]) and (node3[x] != node2[x]):
+                avg_y = (node2[y] + node3[y])/2
+                if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)):
+                    node3[y] = node2[y]
+            # it could also be the opposite: 2[x] == 3[x] and 1[x] is not that. 1[y] should be the same as, or nearly, 2[y].
+            elif (node3[x] == node2[x]) and (node1[x] != node2[x]):
+                avg_y = (node2[y] + node1[y])/2
+                if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)):
+                    node1[y] = node2[y]
+            # if it's a nearly-straight knee, straighten it out.
+            else:
+                r = radius / 2
+                avg_y = (node1[y] + node2[y] + node3[y])/3
+                if ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)) and ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)): 
+                    # make the y the average of the three nodes' y
+                    node1[y] = avg_y
+                    node2[y] = avg_y
+                    node3[y] = avg_y
+                    keep_node = False
+        
+        #### FINALLY: append nodes, without node2 if it's a straight knee
+        new_polygon.append(node1)
+        if keep_node:
+            new_polygon.append(node2)
+        new_polygon.append(node3)
+        if len(polygon) == 0:
+            break
+        new_polygon.append(polygon.pop(0))
+
+    new_polygon.pop()
     return new_polygon
 
 def path_to_polygon(path):
@@ -458,14 +505,6 @@ def nodes_to_circles(nodes):
         circledict['@cy'] = str(coords[1])
         circlelist.append(circledict)
     return circlelist
-
-def average_color(col):
-    matcher = re.match("(..)(..)(..)", col)
-    r = matcher.group(1)
-    g = matcher.group(2)
-    b = matcher.group(3)
-    average = (int(r,16) + int(g,16) + int(b,16))/3
-    return average
 
 def threshold_area(rect, threshold):
     mins = rect[0]
