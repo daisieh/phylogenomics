@@ -21,8 +21,8 @@ def main():
     filename = sys.argv[1]
     # convert input_image -threshold 50% raw.pbm
     # potrace -s -k 0.8 -W 10 -H 10 -o output.svg raw.pbm
-    outfile = 'test'
     file_name, extension = os.path.splitext(sys.argv[1])
+    outfile = file_name
     if extension != '.svg':
         print "can't open this file"
         return
