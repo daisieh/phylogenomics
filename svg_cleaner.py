@@ -61,8 +61,8 @@ def main():
     for path in xmlpaths:
         polygon = path_to_polygon(path['@d'])
         raw_polygons.append(polygon)
-        points.append(polygon[0])
-        points.append(polygon[len(polygon)-1])
+#         points.append(polygon[0])
+#         points.append(polygon[len(polygon)-1])
 
     global max_x, max_y, min_x, min_y
     global scale_width, scale_height
@@ -89,12 +89,7 @@ def main():
     for polygon in polygons:
         print "this polygon starts with %s-%s, ends with %s-%s" % (polygon[0], polygon[1], polygon[len(polygon)-2], polygon[len(polygon)-1])
         polygon = simplify_polygon(polygon)
-#         polygon = simplify_polygon(polygon)
-#         polygon = simplify_polygon(polygon)
-#         print polygon
         segments.extend(lineify_path(polygon))
-#         polygon = simplify_polygon(polygon)
-#         polygon = simplify_polygon(polygon)
         print polygon
         # this path is for the cleaned-up lines
         path = {}
@@ -106,7 +101,7 @@ def main():
     # generate raw svg first-pass, in case something fails during tree building:
     circles.extend(nodes_to_circles(points))
     lines = []
-    lines.extend(segments_to_lines(segments, 'blue', 1))
+#     lines.extend(segments_to_lines(segments, 'blue', 4))
     svgdict = {}
     svgdict['svg'] = {}
     svgdict['svg']['width'] = xmldict['@width']
@@ -394,7 +389,7 @@ def lineify_path(polygon):
         last_node = node
 
     global points
-    points = []
+#     points = []
     raw_otus = set()
     last_seg = segments.pop(0)
     while len(segments) > 0:
@@ -403,7 +398,7 @@ def lineify_path(polygon):
         if (last_seg[1] == last_seg[3]) and (last_seg[3] == curr_seg[1]) and (curr_seg[1] == curr_seg[3]):
             if (last_seg[2] == curr_seg[0]):
                 print "adding otu"
-                points.append([curr_seg[0],curr_seg[1]])
+#                 points.append([curr_seg[0],curr_seg[1]])
                 raw_otus.add(curr_seg[1])
         last_seg = curr_seg
 
@@ -417,7 +412,7 @@ def simplify_polygon(polygon):
     x = 0
     y = 1
     global points
-    print "start simplify %s %s" % (str([polygon[0],polygon[1],polygon[2]]), str([polygon[len(polygon)-3],polygon[len(polygon)-2],polygon[len(polygon)-1]]))
+    print "start simplify %d %s %s" % (len(polygon),str([polygon[0],polygon[1],polygon[2]]), str([polygon[len(polygon)-3],polygon[len(polygon)-2],polygon[len(polygon)-1]]))
     points = []
     changes_made = False
     # we need to make sure we start with the last thing in polygon
@@ -431,8 +426,12 @@ def simplify_polygon(polygon):
     while len(polygon) > 0:
         node3 = new_polygon.pop()
         node2 = new_polygon.pop()
-        node1 = new_polygon.pop()
-
+        if len(new_polygon) > 0:
+            node1 = new_polygon.pop()
+        else:
+            node1 = polygon.pop()
+        
+#         print "%s %d" % (str(node1), len(new_polygon))
         keep_node = True
 #         print "looking at " + str([node1, node2, node3]) + " plus %d nodes" % (len(polygon)-1)
 
@@ -443,6 +442,7 @@ def simplify_polygon(polygon):
                 polygon.insert(0,node3)
                 new_polygon.append(node1)
                 new_polygon.append(polygon.pop(0))
+                print "dup " + str(node2)
                 continue
         
         #### FIRST: normalize the tips
@@ -451,37 +451,43 @@ def simplify_polygon(polygon):
             node1[y] = node2[y]
             node3[y] = node2[y]
 #             points.append(node2)
-            print "tip " + str([node1, node2, node3])
+#             print "tip " + str([node1, node2, node3])
             tips += 1
         #### SECOND: normalize knees
         # if node2[x] is between node1[x] and node3[x]
+        theta = math.degrees(math.atan2(math.fabs((node3[y]-node2[y])),math.fabs((node3[x]-node2[x]))))
         if ((node1[x] <= node2[x]) and (node2[x] <= node3[x])) or ((node3[x] <= node2[x]) and (node2[x] <= node1[x])):
-            # calculate an angle between n1 and n2:
-            theta = math.degrees(math.atan2(math.fabs((node3[y]-node2[y])),math.fabs((node3[x]-node2[x]))))
-            if (0 < theta) and (theta <= 30.0): # node 3 coming from node 2 should be horizontal
-                node3[y] = node2[y]
-                changes_made = True
-            elif (theta >= 60.0) and (theta < 90): # node 3 coming from node 2 should be vertical
-                node3[x] = node2[x]
-                changes_made = True
-            else:   # node 1 and node 2 are the ones that need to be straightened.
+            if (node2[x]==node1[x]): # vertical, so snap node 3's x into line
+#                 print "V %f: %s" % (theta, str([node1, node2, node3]))
+                if (theta >= 45): # theta == 90 means this is a straight knee
+                    node3[x] = node2[x]
+                    if (theta != 90):
+                        changes_made = True                
+            elif (node2[y]==node1[y]): #horizontal
+#                 print "H %f: %s" % (theta, str([node1, node2, node3]))
+                if (theta <= 45): # theta == 90 means this is a straight knee
+                    node3[y] = node2[y]
+                    if (theta != 0):
+                        changes_made = True
+            else:
+                # calculate an angle between n1 and n2:
                 theta = math.degrees(math.atan2(math.fabs((node1[y]-node2[y])),math.fabs((node1[x]-node2[x]))))
-                if (0 < theta) and (theta <= 30.0):
-                    node2[y] = node1[y]
-                    node3[y] = node1[y]
-                    changes_made = True
-                elif (theta >= 60.0) and (theta < 90):
-                    node2[x] = node1[x]
-                    node3[x] = node1[x]
-                    changes_made = True
-                elif (theta != 0) and (theta != 90):
-                    print "node %s: %s" % (str([node1,node2,node3]), str(theta))
+                if (node3[x] == node2[x]): # vertical, so snap node 3's x into line
+#                     print "V %f: %s" % (theta, str([node1, node2, node3]))
+                    if (theta >= 45): # theta == 90 means this is a straight knee
+                        node1[x] = node2[x]
+                        if (theta != 90):
+                            changes_made = True
+                elif (node2[y]==node3[y]): #horizontal
+                    if (theta <= 45): # theta == 0 means this is a straight knee
+                        print "H %f: %s" % (theta, str([node1, node2, node3]))
+                        node1[y] = node2[y]
+                        if (theta != 0):
+                            changes_made = True
+                else:
+                    print "%f: %s" % (theta, str([node1, node2, node3]))
+                    points.append(node2)
 
-            # now let's check the angle between node 1 and node 3. If it's 0 or 90, this is a straight knee.
-            theta = math.degrees(math.atan2(math.fabs((node1[y]-node3[y])),math.fabs((node1[x]-node3[x]))))
-            if (theta == 90):
-                changes_made = True
-                keep_node = False
                                         
         #### FINALLY: append nodes, without node2 if it's a straight knee
         new_polygon.append(node1)
