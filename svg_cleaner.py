@@ -21,6 +21,7 @@ points = []
 
 def main():
     global radius
+    global points
     filename = sys.argv[1]
     if len(sys.argv) > 2:
         radius = int(sys.argv[2])
@@ -60,6 +61,8 @@ def main():
     for path in xmlpaths:
         polygon = path_to_polygon(path['@d'])
         raw_polygons.append(polygon)
+        points.append(polygon[0])
+        points.append(polygon[len(polygon)-1])
 
     global max_x, max_y, min_x, min_y
     global scale_width, scale_height
@@ -84,8 +87,15 @@ def main():
     segments = []   
     polygon_total = []
     for polygon in polygons:
-        segments.extend(lineify_path(polygon))
+        print "this polygon starts with %s-%s, ends with %s-%s" % (polygon[0], polygon[1], polygon[len(polygon)-2], polygon[len(polygon)-1])
         polygon = simplify_polygon(polygon)
+#         polygon = simplify_polygon(polygon)
+#         polygon = simplify_polygon(polygon)
+#         print polygon
+        segments.extend(lineify_path(polygon))
+#         polygon = simplify_polygon(polygon)
+#         polygon = simplify_polygon(polygon)
+        print polygon
         # this path is for the cleaned-up lines
         path = {}
         path['@d'] = nodes_to_path(polygon)
@@ -94,10 +104,9 @@ def main():
         paths.append(path) 
 
     # generate raw svg first-pass, in case something fails during tree building:
-    global points
     circles.extend(nodes_to_circles(points))
     lines = []
-#     lines.extend(segments_to_lines(segments, 'blue', 0.25))
+    lines.extend(segments_to_lines(segments, 'blue', 1))
     svgdict = {}
     svgdict['svg'] = {}
     svgdict['svg']['width'] = xmldict['@width']
@@ -108,6 +117,7 @@ def main():
     outf.write(xmltodict.unparse(svgdict, pretty=True))
     outf.close()
     
+    print "printed raw svg"
     
     # make the raw tree for making nexml:
     (nodes, edges, otus) = make_tree(segments)
@@ -375,11 +385,30 @@ def segments_to_lines(segments, color, width):
 
 def lineify_path(polygon):
     lines = []
-    segment_hash = {}
-    last_node = polygon[0]
+    segments = []
+    last_node = polygon.pop(0)
+        
     for node in polygon:
         lines.append([last_node[0], last_node[1], node[0], node[1]])
+        segments.append([last_node[0], last_node[1], node[0], node[1]])
         last_node = node
+
+    global points
+    points = []
+    raw_otus = set()
+    last_seg = segments.pop(0)
+    while len(segments) > 0:
+        curr_seg = segments.pop(0)
+        print [last_seg, curr_seg]
+        if (last_seg[1] == last_seg[3]) and (last_seg[3] == curr_seg[1]) and (curr_seg[1] == curr_seg[3]):
+            if (last_seg[2] == curr_seg[0]):
+                print "adding otu"
+                points.append([curr_seg[0],curr_seg[1]])
+                raw_otus.add(curr_seg[1])
+        last_seg = curr_seg
+
+    print raw_otus
+
     return lines
        
 # remove all in-between singletons from a cleaned-up polygon
@@ -388,12 +417,24 @@ def simplify_polygon(polygon):
     x = 0
     y = 1
     global points
-    new_polygon = [polygon.pop(0), polygon.pop(0), polygon.pop(0)]
-    while polygon is not None:
+    print "start simplify %s %s" % (str([polygon[0],polygon[1],polygon[2]]), str([polygon[len(polygon)-3],polygon[len(polygon)-2],polygon[len(polygon)-1]]))
+    points = []
+    changes_made = False
+    # we need to make sure we start with the last thing in polygon
+    new_polygon = []
+    new_polygon.insert(0,polygon.pop())
+    new_polygon.append(polygon.pop(0))
+    new_polygon.append(polygon.pop(0))
+    
+    tips = 0
+    
+    while len(polygon) > 0:
         node3 = new_polygon.pop()
         node2 = new_polygon.pop()
         node1 = new_polygon.pop()
-#         print "looking at " + str([node1, node2, node3]) + " then " + str([polygon[0],polygon[1],polygon[2]]) + " plus %d nodes" % (len(polygon)-1)
+
+        keep_node = True
+#         print "looking at " + str([node1, node2, node3]) + " plus %d nodes" % (len(polygon)-1)
 
         #### Remove duplicate or near-dup points.
         # if node1 and node2 are peculiarly close together on the y-axis, we should drop node 2 and try again:
@@ -405,42 +446,41 @@ def simplify_polygon(polygon):
                 continue
         
         #### FIRST: normalize the tips
-        #         1 o---o 2
-        #         3 o--/
-        # node2 is a tip:
         # if node2[x] is greater than either node1[x] or node3[x]
         if ((node3[x] < node2[x]) and (node1[x] < node2[x])) or ((node3[x] > node2[x]) and (node1[x] > node2[x])):
             node1[y] = node2[y]
             node3[y] = node2[y]
-            
-        keep_node = True
+#             points.append(node2)
+            print "tip " + str([node1, node2, node3])
+            tips += 1
         #### SECOND: normalize knees
-        #         o---o
-        #              \
-        #               o
-        # node2 is a knee:
         # if node2[x] is between node1[x] and node3[x]
         if ((node1[x] <= node2[x]) and (node2[x] <= node3[x])) or ((node3[x] <= node2[x]) and (node2[x] <= node1[x])):
             # calculate an angle between n1 and n2:
             theta = math.degrees(math.atan2(math.fabs((node3[y]-node2[y])),math.fabs((node3[x]-node2[x]))))
-            if theta <= 30.0: # node 3 coming from node 2 should be horizontal
+            if (0 < theta) and (theta <= 30.0): # node 3 coming from node 2 should be horizontal
                 node3[y] = node2[y]
-            elif theta >= 60.0: # node 3 coming from node 2 should be vertical
+                changes_made = True
+            elif (theta >= 60.0) and (theta < 90): # node 3 coming from node 2 should be vertical
                 node3[x] = node2[x]
+                changes_made = True
             else:   # node 1 and node 2 are the ones that need to be straightened.
                 theta = math.degrees(math.atan2(math.fabs((node1[y]-node2[y])),math.fabs((node1[x]-node2[x]))))
-                if theta <= 30.0:
+                if (0 < theta) and (theta <= 30.0):
                     node2[y] = node1[y]
                     node3[y] = node1[y]
-                elif theta >= 60.0:
+                    changes_made = True
+                elif (theta >= 60.0) and (theta < 90):
                     node2[x] = node1[x]
                     node3[x] = node1[x]
-                else:
+                    changes_made = True
+                elif (theta != 0) and (theta != 90):
                     print "node %s: %s" % (str([node1,node2,node3]), str(theta))
 
             # now let's check the angle between node 1 and node 3. If it's 0 or 90, this is a straight knee.
             theta = math.degrees(math.atan2(math.fabs((node1[y]-node3[y])),math.fabs((node1[x]-node3[x]))))
-            if (theta == 90) or (theta == 0):
+            if (theta == 90):
+                changes_made = True
                 keep_node = False
                                         
         #### FINALLY: append nodes, without node2 if it's a straight knee
@@ -452,8 +492,10 @@ def simplify_polygon(polygon):
             break
         
         new_polygon.append(polygon.pop(0))
-
-    new_polygon.pop()
+    
+    print "%d tips" % tips
+    if changes_made:
+        new_polygon = simplify_polygon(new_polygon)
     return new_polygon
 
 def path_to_polygon(path):
@@ -475,6 +517,7 @@ def path_to_polygon(path):
         if min_y > int(coords[1]):
             min_y = int(coords[1])
         polygon.append([int(coords[0]), int(coords[1])])
+    polygon.pop()
     return polygon
     
 def nodes_to_path(nodes):
@@ -488,7 +531,7 @@ def nodes_to_circles(nodes):
     for i in range(len(nodes)):
         circledict = {}
         coords = nodes[i]
-        circledict['@r'] = '1'
+        circledict['@r'] = '2'
         circledict['@stroke'] = 'black'
         circledict['@stroke-width'] = '0.25'
         circledict['@fill'] = 'yellow'
