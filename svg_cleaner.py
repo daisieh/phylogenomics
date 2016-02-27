@@ -5,6 +5,7 @@ import xmltodict
 import sys
 import json
 import os
+import math
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
 total_width = 0
@@ -83,9 +84,8 @@ def main():
     segments = []   
     polygon_total = []
     for polygon in polygons:
-#         polygon = cleanup_polygon(polygon, radius)
         segments.extend(lineify_path(polygon))
-        polygon = simplify_polygon(polygon, radius)
+        polygon = simplify_polygon(polygon)
         # this path is for the cleaned-up lines
         path = {}
         path['@d'] = nodes_to_path(polygon)
@@ -95,9 +95,9 @@ def main():
 
     # generate raw svg first-pass, in case something fails during tree building:
     global points
-#     circles.extend(nodes_to_circles(points))
+    circles.extend(nodes_to_circles(points))
     lines = []
-    lines.extend(segments_to_lines(segments, 'blue', 0.25))
+#     lines.extend(segments_to_lines(segments, 'blue', 0.25))
     svgdict = {}
     svgdict['svg'] = {}
     svgdict['svg']['width'] = xmldict['@width']
@@ -382,44 +382,8 @@ def lineify_path(polygon):
         last_node = node
     return lines
        
-def cleanup_polygon(polygon, radius):
-    # for convenience:
-    x = 0
-    y = 1
-
-    # find all the horizontal points
-    x_sort_dict = {}
-    x_sort_points = [p for p in polygon]
-    x_sort_points.sort(cmp=lambda x,y: cmp(float(x[0]), float(y[0])))
-    
-    curr_x = 0
-    for point in x_sort_points:
-        if float(point[0]) > (float(curr_x) + float(radius)):
-            curr_x = point[0]
-        x_sort_dict['%d %d' % (point[0],point[1])] = [curr_x,point[1]]
-
-    new_polygon = []
-    for point in polygon:
-        new_polygon.append(x_sort_dict['%d %d' % (point[0],point[1])])
-
-    polygon = []
-    
-    last_point = [-1,-1]
-    for point in new_polygon:
-        # if the current point is not close to the last_point, add it: 
-        # NOT (
-        #     last_point[x]-radius < point[x] < last_point[x]+radius
-        # AND last_point[y]-radius < point[y] < last_point[y]+radius
-        #     )
-        if not((point[x] >= last_point[x] - radius) and (point[x] <= last_point[x] + radius) and (point[y] >= last_point[y] - radius) and (point[y] <= last_point[y] + radius)):
-            polygon.append(point)
-        last_point = polygon[len(polygon)-1]
-    polygon.append(polygon[0])
-    polygon = simplify_polygon(polygon, radius) 
-    return polygon  
-
 # remove all in-between singletons from a cleaned-up polygon
-def simplify_polygon(polygon, radius):
+def simplify_polygon(polygon):
     # for convenience:
     x = 0
     y = 1
@@ -445,17 +409,10 @@ def simplify_polygon(polygon, radius):
         #         3 o--/
         # node2 is a tip:
         # if node2[x] is greater than either node1[x] or node3[x]
-        # AND node1[y] - radius <= node2[y] <= node3[y] + radius (or the reverse)
-        if (node3[x] < node2[x]) and (node1[x] < node2[x]):
-            if ((node2[y] >= node1[y] - radius) and (node2[y] <= node3[y] + radius)) or ((node2[y] >= node3[y] - radius) and (node2[y] <= node1[y] + radius)):
-                # make the y the average of the three nodes' y
-                avg_y = (node1[y] + node2[y] + node3[y])/3
-                node1[y] = avg_y
-                node2[y] = avg_y
-                node3[y] = avg_y
-                points.append(node2)
-#                 print "point! " + str([node1, node2, node3])
-        
+        if ((node3[x] < node2[x]) and (node1[x] < node2[x])) or ((node3[x] > node2[x]) and (node1[x] > node2[x])):
+            node1[y] = node2[y]
+            node3[y] = node2[y]
+            
         keep_node = True
         #### SECOND: normalize knees
         #         o---o
@@ -464,31 +421,28 @@ def simplify_polygon(polygon, radius):
         # node2 is a knee:
         # if node2[x] is between node1[x] and node3[x]
         if ((node1[x] <= node2[x]) and (node2[x] <= node3[x])) or ((node3[x] <= node2[x]) and (node2[x] <= node1[x])):
-            r = radius
-            # if it's a near-right-angle, normalize.
-            # these are ones where 1[x] == 2[x] but 3[x] is not that, and 3[y] and 2[y] are within the average of their two +/- radius.
-            if (node1[x] == node2[x]) and (node3[x] != node2[x]):
-                avg_y = (node2[y] + node3[y])/2
-#                 if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)):
-#                     print "rt angle %s " % str([node1, node2, node3])
-#                     node3[y] = node2[y]
-            # it could also be the opposite: 2[x] == 3[x] and 1[x] is not that. 1[y] should be the same as, or nearly, 2[y].
-            elif (node3[x] == node2[x]) and (node1[x] != node2[x]):
-                avg_y = (node2[y] + node1[y])/2
-#                 if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)):
-#                     print "rt angle %s " % str([node1, node2, node3])
-#                     node1[y] = node2[y]
-            # if it's a nearly-straight knee, straighten it out.
-            else:
-                r = radius / 2
-                avg_y = (node1[y] + node2[y] + node3[y])/3
-                if ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)) and ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)): 
-                    # make the y the average of the three nodes' y
-                    node1[y] = avg_y
-                    node2[y] = avg_y
-                    node3[y] = avg_y
-                    keep_node = False
-        
+            # calculate an angle between n1 and n2:
+            theta = math.degrees(math.atan2(math.fabs((node3[y]-node2[y])),math.fabs((node3[x]-node2[x]))))
+            if theta <= 30.0: # node 3 coming from node 2 should be horizontal
+                node3[y] = node2[y]
+            elif theta >= 60.0: # node 3 coming from node 2 should be vertical
+                node3[x] = node2[x]
+            else:   # node 1 and node 2 are the ones that need to be straightened.
+                theta = math.degrees(math.atan2(math.fabs((node1[y]-node2[y])),math.fabs((node1[x]-node2[x]))))
+                if theta <= 30.0:
+                    node2[y] = node1[y]
+                    node3[y] = node1[y]
+                elif theta >= 60.0:
+                    node2[x] = node1[x]
+                    node3[x] = node1[x]
+                else:
+                    print "node %s: %s" % (str([node1,node2,node3]), str(theta))
+
+            # now let's check the angle between node 1 and node 3. If it's 0 or 90, this is a straight knee.
+            theta = math.degrees(math.atan2(math.fabs((node1[y]-node3[y])),math.fabs((node1[x]-node3[x]))))
+            if (theta == 90) or (theta == 0):
+                keep_node = False
+                                        
         #### FINALLY: append nodes, without node2 if it's a straight knee
         new_polygon.append(node1)
         if keep_node:
@@ -534,9 +488,9 @@ def nodes_to_circles(nodes):
     for i in range(len(nodes)):
         circledict = {}
         coords = nodes[i]
-        circledict['@r'] = '3'
+        circledict['@r'] = '1'
         circledict['@stroke'] = 'black'
-        circledict['@stroke-width'] = '1'
+        circledict['@stroke-width'] = '0.25'
         circledict['@fill'] = 'yellow'
         circledict['@cx'] = str(coords[0])
         circledict['@cy'] = str(coords[1])
