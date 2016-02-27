@@ -15,10 +15,14 @@ max_x = 0
 max_y = 0
 min_x = 0
 min_y = 0
-radius = 0
+radius = 5
+points = []
 
 def main():
+    global radius
     filename = sys.argv[1]
+    if len(sys.argv) > 2:
+        radius = int(sys.argv[2])
     # convert input_image -threshold 50% raw.pbm
     # potrace -s -k 0.8 -W 10 -H 10 -o output.svg raw.pbm
     file_name, extension = os.path.splitext(sys.argv[1])
@@ -31,8 +35,10 @@ def main():
     xml = f.read()
     xmldict = xmltodict.parse(xml)['svg']
     global total_width, total_height, scale_width, scale_height
-    total_width = float(xmldict['@width'].replace('pt',''))
-    total_height = float(xmldict['@height'].replace('pt',''))
+    s = re.sub('[a-zA-Z]+', '', xmldict['@width'])
+    total_width = float(s)
+    s = re.sub('[a-zA-Z]+', '', xmldict['@height'])
+    total_height = float(s)
     xmlpaths = []
     style = {}
     transform = ''
@@ -56,7 +62,6 @@ def main():
 
     global max_x, max_y, min_x, min_y
     global scale_width, scale_height
-    global radius
     max_x = abs(max_x * scale_width)
     max_y = abs(max_y * scale_height)
     polygons = []
@@ -73,22 +78,37 @@ def main():
             path = {}
             path['@d'] = nodes_to_path(polygon)
             path['@style'] = "fill:#EEEEEE; stroke:#EEEEEE; stroke-width:1"
-            paths.append(path) 
+#             paths.append(path) 
 
     segments = []   
-    radius = 10
     polygon_total = []
     for polygon in polygons:
-        polygon = cleanup_polygon(polygon, radius)
+#         polygon = cleanup_polygon(polygon, radius)
         segments.extend(lineify_path(polygon))
-        
+        polygon = simplify_polygon(polygon, radius)
         # this path is for the cleaned-up lines
         path = {}
         path['@d'] = nodes_to_path(polygon)
         path['@name'] = "cleaned path"
-        path['@style'] = "fill:none; stroke:#FF0000; stroke-width:2"
+        path['@style'] = "fill:none; stroke:#FF0000; stroke-width:1"
         paths.append(path) 
 
+    # generate raw svg first-pass, in case something fails during tree building:
+    global points
+#     circles.extend(nodes_to_circles(points))
+    lines = []
+    lines.extend(segments_to_lines(segments, 'blue', 0.25))
+    svgdict = {}
+    svgdict['svg'] = {}
+    svgdict['svg']['width'] = xmldict['@width']
+    svgdict['svg']['height'] = xmldict['@height']
+    svgdict['svg']['g'] = [{'line':lines, 'path':paths, 'circle':circles}]
+
+    outf = open(outfile+'_raw.svg','w')
+    outf.write(xmltodict.unparse(svgdict, pretty=True))
+    outf.close()
+    
+    
     # make the raw tree for making nexml:
     (nodes, edges, otus) = make_tree(segments)
     
@@ -161,14 +181,14 @@ def main():
     # generate svg:
     lines = []
     circles.extend(nodes_to_circles(nodes))
-    lines.extend(segments_to_lines(edges))
+    lines.extend(segments_to_lines(edges, "green", 3))
     svgdict = {}
     svgdict['svg'] = {}
     svgdict['svg']['width'] = xmldict['@width']
     svgdict['svg']['height'] = xmldict['@height']
     svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
 
-    outf = open(outfile+'.svg','w')
+    outf = open(outfile+'_raw.svg','w')
     outf.write(xmltodict.unparse(svgdict, pretty=True))
     outf.close()
 
@@ -347,10 +367,10 @@ def remove_dups(segments):
             seg_list.append([int(coord[0]),int(coord[1]),int(coord[2]),int(coord[3])])
     return seg_list
     
-def segments_to_lines(segments):
+def segments_to_lines(segments, color, width):
     lines = []
     for seg in segments:
-        lines.append({'@x1':str(seg[0]), '@y1':str(seg[1]), '@x2':str(seg[2]), '@y2':str(seg[3]), '@stroke-width':'3', '@stroke':'green'})
+        lines.append({'@x1':str(seg[0]), '@y1':str(seg[1]), '@x2':str(seg[2]), '@y2':str(seg[3]), '@stroke-width':str(width), '@stroke':color})
     return lines
 
 def lineify_path(polygon):
@@ -395,20 +415,31 @@ def cleanup_polygon(polygon, radius):
             polygon.append(point)
         last_point = polygon[len(polygon)-1]
     polygon.append(polygon[0])
-    return simplify_polygon(polygon, radius)   
+    polygon = simplify_polygon(polygon, radius) 
+    return polygon  
 
 # remove all in-between singletons from a cleaned-up polygon
 def simplify_polygon(polygon, radius):
     # for convenience:
     x = 0
     y = 1
+    global points
     new_polygon = [polygon.pop(0), polygon.pop(0), polygon.pop(0)]
     while polygon is not None:
         node3 = new_polygon.pop()
         node2 = new_polygon.pop()
         node1 = new_polygon.pop()
+#         print "looking at " + str([node1, node2, node3]) + " then " + str([polygon[0],polygon[1],polygon[2]]) + " plus %d nodes" % (len(polygon)-1)
 
-        keep_node = True
+        #### Remove duplicate or near-dup points.
+        # if node1 and node2 are peculiarly close together on the y-axis, we should drop node 2 and try again:
+        if (node1[x] == node2[x]):
+            if ((node2[y] - 2 <= node1[y]) and (node1[y] <= node2[y] + 2)) or ((node1[y] - 2 <= node2[y]) and (node2[y] <= node1[y] + 2)):
+                polygon.insert(0,node3)
+                new_polygon.append(node1)
+                new_polygon.append(polygon.pop(0))
+                continue
+        
         #### FIRST: normalize the tips
         #         1 o---o 2
         #         3 o--/
@@ -422,7 +453,10 @@ def simplify_polygon(polygon, radius):
                 node1[y] = avg_y
                 node2[y] = avg_y
                 node3[y] = avg_y
+                points.append(node2)
+#                 print "point! " + str([node1, node2, node3])
         
+        keep_node = True
         #### SECOND: normalize knees
         #         o---o
         #              \
@@ -435,13 +469,15 @@ def simplify_polygon(polygon, radius):
             # these are ones where 1[x] == 2[x] but 3[x] is not that, and 3[y] and 2[y] are within the average of their two +/- radius.
             if (node1[x] == node2[x]) and (node3[x] != node2[x]):
                 avg_y = (node2[y] + node3[y])/2
-                if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)):
-                    node3[y] = node2[y]
+#                 if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)):
+#                     print "rt angle %s " % str([node1, node2, node3])
+#                     node3[y] = node2[y]
             # it could also be the opposite: 2[x] == 3[x] and 1[x] is not that. 1[y] should be the same as, or nearly, 2[y].
             elif (node3[x] == node2[x]) and (node1[x] != node2[x]):
                 avg_y = (node2[y] + node1[y])/2
-                if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)):
-                    node1[y] = node2[y]
+#                 if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)):
+#                     print "rt angle %s " % str([node1, node2, node3])
+#                     node1[y] = node2[y]
             # if it's a nearly-straight knee, straighten it out.
             else:
                 r = radius / 2
@@ -460,6 +496,7 @@ def simplify_polygon(polygon, radius):
         new_polygon.append(node3)
         if len(polygon) == 0:
             break
+        
         new_polygon.append(polygon.pop(0))
 
     new_polygon.pop()
