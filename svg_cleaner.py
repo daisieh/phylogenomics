@@ -61,8 +61,6 @@ def main():
     for path in xmlpaths:
         polygon = path_to_polygon(path['@d'])
         raw_polygons.append(polygon)
-#         points.append(polygon[0])
-#         points.append(polygon[len(polygon)-1])
 
     global max_x, max_y, min_x, min_y
     global scale_width, scale_height
@@ -90,7 +88,7 @@ def main():
         print "this polygon starts with %s-%s, ends with %s-%s" % (polygon[0], polygon[1], polygon[len(polygon)-2], polygon[len(polygon)-1])
         polygon = simplify_polygon(polygon)
         segments.extend(lineify_path(polygon))
-        print polygon
+        # print polygon
         # this path is for the cleaned-up lines
         path = {}
         path['@d'] = nodes_to_path(polygon)
@@ -389,21 +387,14 @@ def lineify_path(polygon):
         last_node = node
 
     global points
-#     points = []
     raw_otus = set()
     last_seg = segments.pop(0)
     while len(segments) > 0:
         curr_seg = segments.pop(0)
-        print [last_seg, curr_seg]
         if (last_seg[1] == last_seg[3]) and (last_seg[3] == curr_seg[1]) and (curr_seg[1] == curr_seg[3]):
             if (last_seg[2] == curr_seg[0]):
-                print "adding otu"
-#                 points.append([curr_seg[0],curr_seg[1]])
                 raw_otus.add(curr_seg[1])
         last_seg = curr_seg
-
-    print raw_otus
-
     return lines
        
 # remove all in-between singletons from a cleaned-up polygon
@@ -412,8 +403,6 @@ def simplify_polygon(polygon):
     x = 0
     y = 1
     global points
-    print "start simplify %d %s %s" % (len(polygon),str([polygon[0],polygon[1],polygon[2]]), str([polygon[len(polygon)-3],polygon[len(polygon)-2],polygon[len(polygon)-1]]))
-    points = []
     changes_made = False
     # we need to make sure we start with the last thing in polygon
     new_polygon = []
@@ -423,17 +412,16 @@ def simplify_polygon(polygon):
     
     tips = 0
     
-    while len(polygon) > 0:
+    while len(polygon) >= 0:
         node3 = new_polygon.pop()
         node2 = new_polygon.pop()
+
         if len(new_polygon) > 0:
             node1 = new_polygon.pop()
         else:
             node1 = polygon.pop()
         
-#         print "%s %d" % (str(node1), len(new_polygon))
         keep_node = True
-#         print "looking at " + str([node1, node2, node3]) + " plus %d nodes" % (len(polygon)-1)
 
         #### Remove duplicate or near-dup points.
         # if node1 and node2 are peculiarly close together on the y-axis, we should drop node 2 and try again:
@@ -442,53 +430,52 @@ def simplify_polygon(polygon):
                 polygon.insert(0,node3)
                 new_polygon.append(node1)
                 new_polygon.append(polygon.pop(0))
-                print "dup " + str(node2)
                 continue
+        
+        if (node2[y] != node1[y]) and (node2[x] != node1[x]):
+            if (math.fabs(node2[y] - node1[y]) <= 2): # so small that angles can't detect them
+                node1[y] = node2[y] 
+                changes_made = True
+            if (math.fabs(node2[x] - node1[x]) <= 2): # so small that angles can't detect them
+                node1[x] = node2[x] 
+                changes_made = True
         
         #### FIRST: normalize the tips
         # if node2[x] is greater than either node1[x] or node3[x]
         if ((node3[x] < node2[x]) and (node1[x] < node2[x])) or ((node3[x] > node2[x]) and (node1[x] > node2[x])):
             node1[y] = node2[y]
             node3[y] = node2[y]
-#             points.append(node2)
-#             print "tip " + str([node1, node2, node3])
             tips += 1
+
         #### SECOND: normalize knees
         # if node2[x] is between node1[x] and node3[x]
-        theta = math.degrees(math.atan2(math.fabs((node3[y]-node2[y])),math.fabs((node3[x]-node2[x]))))
         if ((node1[x] <= node2[x]) and (node2[x] <= node3[x])) or ((node3[x] <= node2[x]) and (node2[x] <= node1[x])):
+            theta = math.degrees(math.atan2(math.fabs((node3[y]-node2[y])),math.fabs((node3[x]-node2[x]))))
             if (node2[x]==node1[x]): # vertical, so snap node 3's x into line
-#                 print "V %f: %s" % (theta, str([node1, node2, node3]))
                 if (theta >= 45): # theta == 90 means this is a straight knee
                     node3[x] = node2[x]
+                    keep_node = False
                     if (theta != 90):
                         changes_made = True                
             elif (node2[y]==node1[y]): #horizontal
-#                 print "H %f: %s" % (theta, str([node1, node2, node3]))
-                if (theta <= 45): # theta == 90 means this is a straight knee
+                if (theta <= 45): # theta == 0 means this is a straight knee
                     node3[y] = node2[y]
+                    keep_node = False
                     if (theta != 0):
                         changes_made = True
             else:
                 # calculate an angle between n1 and n2:
                 theta = math.degrees(math.atan2(math.fabs((node1[y]-node2[y])),math.fabs((node1[x]-node2[x]))))
                 if (node3[x] == node2[x]): # vertical, so snap node 3's x into line
-#                     print "V %f: %s" % (theta, str([node1, node2, node3]))
                     if (theta >= 45): # theta == 90 means this is a straight knee
                         node1[x] = node2[x]
                         if (theta != 90):
                             changes_made = True
                 elif (node2[y]==node3[y]): #horizontal
                     if (theta <= 45): # theta == 0 means this is a straight knee
-                        print "H %f: %s" % (theta, str([node1, node2, node3]))
                         node1[y] = node2[y]
                         if (theta != 0):
                             changes_made = True
-                else:
-                    print "%f: %s" % (theta, str([node1, node2, node3]))
-                    points.append(node2)
-
-                                        
         #### FINALLY: append nodes, without node2 if it's a straight knee
         new_polygon.append(node1)
         if keep_node:
@@ -499,7 +486,6 @@ def simplify_polygon(polygon):
         
         new_polygon.append(polygon.pop(0))
     
-    print "%d tips" % tips
     if changes_made:
         new_polygon = simplify_polygon(new_polygon)
     return new_polygon
