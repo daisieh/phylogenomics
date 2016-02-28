@@ -85,10 +85,7 @@ def main():
     segments = []   
     polygon_total = []
     for polygon in polygons:
-        print "this polygon starts with %s-%s, ends with %s-%s" % (polygon[0], polygon[1], polygon[len(polygon)-2], polygon[len(polygon)-1])
         polygon = simplify_polygon(polygon)
-        segments.extend(lineify_path(polygon))
-        # print polygon
         # this path is for the cleaned-up lines
         path = {}
         path['@d'] = nodes_to_path(polygon)
@@ -96,10 +93,11 @@ def main():
         path['@style'] = "fill:none; stroke:#FF0000; stroke-width:1"
         paths.append(path) 
 
+    segments.extend(normalize_polygon_to_lines(polygon))
     # generate raw svg first-pass, in case something fails during tree building:
     circles.extend(nodes_to_circles(points))
     lines = []
-#     lines.extend(segments_to_lines(segments, 'blue', 4))
+    lines.extend(segments_to_lines(segments, 'blue', 0.25))
     svgdict = {}
     svgdict['svg'] = {}
     svgdict['svg']['width'] = xmldict['@width']
@@ -191,9 +189,10 @@ def main():
     svgdict['svg']['height'] = xmldict['@height']
     svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
 
-    outf = open(outfile+'_raw.svg','w')
-    outf.write(xmltodict.unparse(svgdict, pretty=True))
-    outf.close()
+#     outf = open(outfile+'_raw.svg','w')
+#     outf.write(xmltodict.unparse(svgdict, pretty=True))
+#     outf.close()
+    print "reprinted raw svg"
 
 def tree_to_nexus(otus, nodes, edges):
     otudict = {}
@@ -376,25 +375,142 @@ def segments_to_lines(segments, color, width):
         lines.append({'@x1':str(seg[0]), '@y1':str(seg[1]), '@x2':str(seg[2]), '@y2':str(seg[3]), '@stroke-width':str(width), '@stroke':color})
     return lines
 
+
+
+def normalize_polygon_to_lines(polygon):    
+    global radius, max_x, max_y, min_x, min_y
+    lines = lineify_path(polygon)
+    print len(lines)
+
+    root_level = max_x
+    otu_level = min_x
+    top_node = max_y
+    bottom_node = min_y
+    horiz_line_set = set()
+    vert_line_set = set()
+    for line in lines:
+        forward_line = (line[0],line[1],line[2],line[3])
+        if (line[0] == line[2]): # vertical lines
+#             if (line[1] < line[3]):
+#                 forward_line = (line[0],line[3],line[2],line[1])
+#             else:
+            vert_line_set.add('%d %d %d %d' % forward_line)
+        elif (line[1] == line[3]): #horiz line
+#             if (line[0] > line[2]):
+#                 forward_line = (line[2],line[1],line[0],line[3])
+#             else:
+            horiz_line_set.add('%d %d %d %d' % forward_line)
+            
+            if (forward_line[0] < root_level):
+                root_level = forward_line[0]
+            if (forward_line[2] > otu_level):
+                otu_level = forward_line[2]
+
+            if (forward_line[1] < top_node):
+                top_node = forward_line[1]
+            if (forward_line[1] > bottom_node):
+                bottom_node = forward_line[1]
+
+    
+    # use the vertical lines and find all the possible x-values from that.
+    levels = set()
+    for line in vert_line_set:
+        coord = line.split(' ')
+        levels.add(int(coord[0]))    
+    
+    levels = list(levels)
+    levels.sort()
+
+    binned_levels = set()
+    curr_bin_list = [levels[0]]
+    for level in levels:
+        if (level <= (curr_bin_list[0] + radius)):
+            curr_bin_list.append(level)
+        else:
+#             avg_bin = sum(curr_bin_list)/len(curr_bin_list)
+            avg_bin = curr_bin_list.pop()
+            binned_levels.add(avg_bin)
+            curr_bin_list = [level]
+    binned_levels.add(root_level)
+    binned_levels.add(otu_level)
+
+    # use the horiz lines and find all the possible y-values from that.
+    nodes = set()
+    for line in vert_line_set:
+        coord = line.split(' ')
+        nodes.add(int(coord[1]))    
+    
+    nodes = list(nodes)
+    nodes.sort()
+    
+    binned_nodes = set()
+    curr_bin_list = [nodes[0]]
+    for node in nodes:
+        if (node <= (curr_bin_list[0] + radius)):
+            curr_bin_list.append(node)
+        else:
+#             avg_bin = sum(curr_bin_list)/len(curr_bin_list)
+            avg_bin = curr_bin_list.pop(0)
+            for val in curr_bin_list:
+                binned_nodes.add(avg_bin)
+            print curr_bin_list
+            curr_bin_list = [node]
+
+    binned_nodes.add(top_node)
+    binned_nodes.add(bottom_node)
+    listnodes = list(binned_nodes)
+    listnodes.sort()
+    print listnodes
+    lines = []
+    for line in horiz_line_set:
+        coord = line.split(' ')
+        x1 = int(coord[0])# + radius
+        y1 = int(coord[1])
+        x2 = int(coord[2])# - 4
+        y2 = int(coord[3])
+
+        # find the bin this line's endpoints go in.
+#         while x1 not in binned_levels:
+#             x1 -= 1
+#         while x2 not in binned_levels:
+#             x2 += 1
+        lines.append([x1, y1, x2, y2])
+
+    for line in vert_line_set:
+#         print line
+        coord = line.split(' ')
+        x1 = int(coord[0])
+        y1 = int(coord[1])# + radius
+        x2 = int(coord[2])
+        y2 = int(coord[3])# - radius
+        
+        # find the bin this line's endpoints go in.
+#         while y1 not in binned_nodes:
+#             y1 -= 1
+#         while y2 not in binned_nodes:
+# #             print y2
+#             y2 += 1        
+        lines.append([x1, y1, x2, y2])
+    return lines
+
+def lines_to_polygon(lines):
+    polygon = []
+    coord = lines[0].split(' ')
+    polygon.append([int(coord[0]),int(coord[1])])
+    for line in lines:
+        coord = line.split(' ')
+        polygon.append([int(coord[2]),int(coord[3])])
+    return polygon
+    
+
 def lineify_path(polygon):
     lines = []
-    segments = []
-    last_node = polygon.pop(0)
-        
-    for node in polygon:
+    lines.append([polygon[len(polygon)-1][0], polygon[len(polygon)-1][1], polygon[0][0], polygon[0][1]])
+    last_node = polygon[0]
+    for i in range(1, len(polygon)-1):
+        node = polygon[i]
         lines.append([last_node[0], last_node[1], node[0], node[1]])
-        segments.append([last_node[0], last_node[1], node[0], node[1]])
         last_node = node
-
-    global points
-    raw_otus = set()
-    last_seg = segments.pop(0)
-    while len(segments) > 0:
-        curr_seg = segments.pop(0)
-        if (last_seg[1] == last_seg[3]) and (last_seg[3] == curr_seg[1]) and (curr_seg[1] == curr_seg[3]):
-            if (last_seg[2] == curr_seg[0]):
-                raw_otus.add(curr_seg[1])
-        last_seg = curr_seg
     return lines
        
 # remove all in-between singletons from a cleaned-up polygon
@@ -403,6 +519,7 @@ def simplify_polygon(polygon):
     x = 0
     y = 1
     global points
+    points = []
     changes_made = False
     # we need to make sure we start with the last thing in polygon
     new_polygon = []
@@ -488,6 +605,7 @@ def simplify_polygon(polygon):
     
     if changes_made:
         new_polygon = simplify_polygon(new_polygon)
+
     return new_polygon
 
 def path_to_polygon(path):
