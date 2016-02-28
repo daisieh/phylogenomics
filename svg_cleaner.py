@@ -17,6 +17,8 @@ max_y = 0
 min_x = 0
 min_y = 0
 radius = 5
+otu_level = 0
+
 points = []
 
 def main():
@@ -86,6 +88,7 @@ def main():
     polygon_total = []
     for polygon in polygons:
         polygon = simplify_polygon(polygon)
+        polygon = even_out_polygon(polygon)
         # this path is for the cleaned-up lines
         path = {}
         path['@d'] = nodes_to_path(polygon)
@@ -192,7 +195,7 @@ def main():
 #     outf = open(outfile+'_raw.svg','w')
 #     outf.write(xmltodict.unparse(svgdict, pretty=True))
 #     outf.close()
-    print "reprinted raw svg"
+#     print "reprinted raw svg"
 
 def tree_to_nexus(otus, nodes, edges):
     otudict = {}
@@ -391,15 +394,15 @@ def normalize_polygon_to_lines(polygon):
     for line in lines:
         forward_line = (line[0],line[1],line[2],line[3])
         if (line[0] == line[2]): # vertical lines
-#             if (line[1] < line[3]):
-#                 forward_line = (line[0],line[3],line[2],line[1])
-#             else:
-            vert_line_set.add('%d %d %d %d' % forward_line)
+            if (line[1] < line[3]):
+                forward_line = (line[0],line[3],line[2],line[1])
+            else:
+                vert_line_set.add('%d %d %d %d' % forward_line)
         elif (line[1] == line[3]): #horiz line
-#             if (line[0] > line[2]):
-#                 forward_line = (line[2],line[1],line[0],line[3])
-#             else:
-            horiz_line_set.add('%d %d %d %d' % forward_line)
+            if (line[0] > line[2]):
+                forward_line = (line[2],line[1],line[0],line[3])
+            else:
+                horiz_line_set.add('%d %d %d %d' % forward_line)
             
             if (forward_line[0] < root_level):
                 root_level = forward_line[0]
@@ -420,78 +423,77 @@ def normalize_polygon_to_lines(polygon):
     
     levels = list(levels)
     levels.sort()
-
-    binned_levels = set()
-    curr_bin_list = [levels[0]]
-    for level in levels:
-        if (level <= (curr_bin_list[0] + radius)):
-            curr_bin_list.append(level)
-        else:
-#             avg_bin = sum(curr_bin_list)/len(curr_bin_list)
-            avg_bin = curr_bin_list.pop()
-            binned_levels.add(avg_bin)
-            curr_bin_list = [level]
-    binned_levels.add(root_level)
-    binned_levels.add(otu_level)
-
-    # use the horiz lines and find all the possible y-values from that.
-    nodes = set()
+    
+    # sort all the vertical lines by x-value:
+    vert_lines_list = []
     for line in vert_line_set:
         coord = line.split(' ')
-        nodes.add(int(coord[1]))    
-    
-    nodes = list(nodes)
-    nodes.sort()
-    
-    binned_nodes = set()
-    curr_bin_list = [nodes[0]]
-    for node in nodes:
-        if (node <= (curr_bin_list[0] + radius)):
-            curr_bin_list.append(node)
-        else:
-#             avg_bin = sum(curr_bin_list)/len(curr_bin_list)
-            avg_bin = curr_bin_list.pop(0)
-            for val in curr_bin_list:
-                binned_nodes.add(avg_bin)
-            print curr_bin_list
-            curr_bin_list = [node]
+        x1 = int(coord[0])
+        y1 = int(coord[1])
+        x2 = int(coord[2])
+        y2 = int(coord[3])
+        
+        vert_lines_list.append([x1, y1, x2, y2])
+        
+    vert_lines_binned = sort_lines(vert_lines_list, 0, 1)
 
-    binned_nodes.add(top_node)
-    binned_nodes.add(bottom_node)
-    listnodes = list(binned_nodes)
-    listnodes.sort()
-    print listnodes
+    print vert_lines_binned
+    
     lines = []
     for line in horiz_line_set:
         coord = line.split(' ')
         x1 = int(coord[0])# + radius
-        y1 = int(coord[1])
-        x2 = int(coord[2])# - 4
-        y2 = int(coord[3])
+        y = int(coord[1])
+        x2 = int(coord[2])
 
-        # find the bin this line's endpoints go in.
-#         while x1 not in binned_levels:
-#             x1 -= 1
-#         while x2 not in binned_levels:
-#             x2 += 1
-        lines.append([x1, y1, x2, y2])
+        # if x2 is at otu_level, we don't need to worry about that end.
+        if x2 < otu_level:        
+            i = 0
+            my_nodeline = None
+            for bin in vert_lines_binned:
+                if x2 > bin[0][0]:
+                    i += 1
+                    continue
+                else:
+                    for nodeline in bin:
+                        if (nodeline[3] <= y) and (y <= nodeline[1]):
+                            my_nodeline = nodeline
+                            x2 = nodeline[0]
+                            break
+                    if my_nodeline is not None:
+                        break
+
+            print "%s is in %s" % (str(line), str(my_nodeline))
+        lines.append([x1, y, x2, y])
+        
+        #### TO DO: fix the x1 values
 
     for line in vert_line_set:
-#         print line
         coord = line.split(' ')
         x1 = int(coord[0])
         y1 = int(coord[1])# + radius
         x2 = int(coord[2])
         y2 = int(coord[3])# - radius
         
-        # find the bin this line's endpoints go in.
-#         while y1 not in binned_nodes:
-#             y1 -= 1
-#         while y2 not in binned_nodes:
-# #             print y2
-#             y2 += 1        
         lines.append([x1, y1, x2, y2])
     return lines
+
+def sort_lines(lines, key1, key2):
+    bin_by_x1 = {}
+    for line in lines:
+        if line[key1] not in bin_by_x1:
+            bin_by_x1[line[key1]] = []
+        bin_by_x1[line[key1]].append(line)
+    
+    bin_keys = list(bin_by_x1.keys())
+    bin_keys.sort()
+    
+    final_lines = []
+    for bin in bin_keys:
+        bin_by_x1[bin].sort(cmp=lambda x,y: cmp(x[key2], y[key2]))
+        final_lines.append(bin_by_x1[bin])
+    return final_lines
+
 
 def lines_to_polygon(lines):
     polygon = []
@@ -607,6 +609,67 @@ def simplify_polygon(polygon):
         new_polygon = simplify_polygon(new_polygon)
 
     return new_polygon
+    
+def even_out_polygon(polygon):
+    # for convenience:
+    x = 0
+    y = 1
+    
+    global otu_level
+    # find the maximum x-value
+    for node in polygon:
+        if (node[x] > otu_level):
+            otu_level = node[x]
+    
+    global points
+    points = []
+    changes_made = False
+    # we need to make sure we start with the last thing in polygon
+    new_polygon = []
+    new_polygon.insert(0,polygon.pop())
+    new_polygon.append(polygon.pop(0))
+    new_polygon.append(polygon.pop(0))
+    new_polygon.append(polygon.pop(0))
+    new_polygon.append(polygon.pop(0))
+        
+    while len(polygon) >= 0:
+        node4 = new_polygon.pop()
+        node3 = new_polygon.pop()
+        node2 = new_polygon.pop()
+        node1 = new_polygon.pop()
+
+        if len(new_polygon) > 0:
+            node0 = new_polygon.pop()
+        else:
+            node0 = polygon.pop()
+        
+        #### FIRST: normalize the tips
+        # if node2[x] is greater than either node1[x] or node3[x]
+        if (node1[y] == node2[y]) and (node2[y] == node3[y]):
+            if ((node3[x] < node2[x]) and (node1[x] < node2[x])):
+                new_x = node1[x]
+                if (node3[x] > node1[x]):
+                    new_x = node3[x]
+                node0 = [new_x, node0[y]]
+                node1 = [new_x, node2[y]]
+                node2 = [otu_level, node2[y]]
+                node3 = [new_x, node2[y]]
+                node4 = [new_x, node4[y]]
+
+        #### FINALLY: append nodes
+        new_polygon.append(node0)
+        new_polygon.append(node1)
+        new_polygon.append(node2)
+        new_polygon.append(node3)
+        new_polygon.append(node4)
+        if len(polygon) == 0:
+            break
+        
+        new_polygon.append(polygon.pop(0))
+    
+    return new_polygon
+
+
 
 def path_to_polygon(path):
     polygon = []
