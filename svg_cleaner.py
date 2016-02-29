@@ -5,6 +5,7 @@ import xmltodict
 import sys
 import json
 import os
+import math
 from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
 total_width = 0
@@ -15,9 +16,12 @@ max_x = 0
 max_y = 0
 min_x = 0
 min_y = 0
-radius = 0
+otu_level = 0
+
+points = []
 
 def main():
+    global points
     filename = sys.argv[1]
     # convert input_image -threshold 50% raw.pbm
     # potrace -s -k 0.8 -W 10 -H 10 -o output.svg raw.pbm
@@ -31,8 +35,10 @@ def main():
     xml = f.read()
     xmldict = xmltodict.parse(xml)['svg']
     global total_width, total_height, scale_width, scale_height
-    total_width = float(xmldict['@width'].replace('pt',''))
-    total_height = float(xmldict['@height'].replace('pt',''))
+    s = re.sub('[a-zA-Z]+', '', xmldict['@width'])
+    total_width = float(s)
+    s = re.sub('[a-zA-Z]+', '', xmldict['@height'])
+    total_height = float(s)
     xmlpaths = []
     style = {}
     transform = ''
@@ -56,7 +62,6 @@ def main():
 
     global max_x, max_y, min_x, min_y
     global scale_width, scale_height
-    global radius
     max_x = abs(max_x * scale_width)
     max_y = abs(max_y * scale_height)
     polygons = []
@@ -73,22 +78,37 @@ def main():
             path = {}
             path['@d'] = nodes_to_path(polygon)
             path['@style'] = "fill:#EEEEEE; stroke:#EEEEEE; stroke-width:1"
-            paths.append(path) 
+#             paths.append(path) 
 
     segments = []   
-    radius = 10
     polygon_total = []
     for polygon in polygons:
-        polygon = cleanup_polygon(polygon, radius)
-        segments.extend(lineify_path(polygon))
-        
+        polygon = straighten_polygon(polygon)
+        polygon = even_out_polygon(polygon)
         # this path is for the cleaned-up lines
         path = {}
         path['@d'] = nodes_to_path(polygon)
         path['@name'] = "cleaned path"
-        path['@style'] = "fill:none; stroke:#FF0000; stroke-width:2"
+        path['@style'] = "fill:none; stroke:#FF0000; stroke-width:1"
         paths.append(path) 
 
+    segments.extend(normalize_polygon_to_lines(polygon))
+    # generate raw svg first-pass, in case something fails during tree building:
+    circles.extend(nodes_to_circles(points))
+    lines = []
+    lines.extend(segments_to_lines(segments, 'blue', 4))
+    svgdict = {}
+    svgdict['svg'] = {}
+    svgdict['svg']['@width'] = xmldict['@width']
+    svgdict['svg']['@height'] = xmldict['@height']
+    svgdict['svg']['g'] = [{'line':lines, 'path':paths, 'circle':circles}]
+
+    outf = open(outfile+'_raw.svg','w')
+    outf.write(xmltodict.unparse(svgdict, pretty=True))
+    outf.close()
+    
+    print "printed raw svg"
+    
     # make the raw tree for making nexml:
     (nodes, edges, otus) = make_tree(segments)
     
@@ -158,19 +178,32 @@ def main():
     outf.write(nexus_str)
     outf.close()
                 
+
+    textdict = {}
+    textdict = []
+    # for each otu, add a text label:
+    for k in otudict.keys():
+        coordmatch = re.match('\[(\d+), (\d+)\]',k)
+        if coordmatch is not None:
+            x = coordmatch.group(1)
+            y = coordmatch.group(2)
+            textnode = {'@x':str(int(x) + 10), '@y':y,'@fill':'black','#text':otudict[k]}
+            textdict.append(textnode)
+            
     # generate svg:
-    lines = []
     circles.extend(nodes_to_circles(nodes))
-    lines.extend(segments_to_lines(edges))
+    lines.extend(segments_to_lines(edges, "green", 3))
     svgdict = {}
     svgdict['svg'] = {}
-    svgdict['svg']['width'] = xmldict['@width']
-    svgdict['svg']['height'] = xmldict['@height']
-    svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
+    svgdict['svg']['@width'] = xmldict['@width']
+    svgdict['svg']['@height'] = xmldict['@height']
+    svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles, 'text':textdict}]
+    
 
-    outf = open(outfile+'.svg','w')
+    outf = open(outfile+'_raw.svg','w')
     outf.write(xmltodict.unparse(svgdict, pretty=True))
     outf.close()
+    print "reprinted raw svg"
 
 def tree_to_nexus(otus, nodes, edges):
     otudict = {}
@@ -230,74 +263,36 @@ def parse_transform(transform):
             scale_height = float(scalematcher.group(2))
             
 def make_tree(segments):
-    segments = remove_dups(segments)
-    vert_lines = set()
-    horiz_lines = set()
+    vert_lines = []
+    horiz_lines = []
     for seg in segments:
-        seg_str = '%03d %03d %03d %03d' % (int(seg[0]), int(seg[1]), int(seg[2]), int(seg[3]))
         if seg[0] == seg[2]:
-            vert_lines.add(seg_str)
+            vert_lines.append(seg)
         elif seg[1] == seg[3]:
-            horiz_lines.add(seg_str)
+            horiz_lines.append(seg)
     
-    # for each level, make a node-level out of it by finding the main endpoints of the verticals that go with it.
+    # create a dictionary of nodes: each node has vertical endpoints and is indexed by its x value
     node_dict = {}
-    sorted_verts = list(vert_lines)
-    sorted_verts.sort(cmp=lambda x,y: cmp(x, y))
-    for line in sorted_verts:
-        coords = re.split(' ',line)
-        x = int(coords[0])
-        y1 = int(coords[1])
-        y2 = int(coords[3])
-        if x not in node_dict:
-            node_dict[x] = [];
-        if y1 == y2:
-            continue        
-        node_dict[x].append([y1,y2])
-    
-    node_dict_keys = node_dict.keys()
-    node_dict.keys().sort()
-    for k in node_dict_keys:
-        if len(node_dict[k]) == 0:
-            continue
-        coalesced_nodes = []
-        current_node = node_dict[k][0]
-        coalesced_nodes.append(current_node)
-        for edge in node_dict[k]:
-            e1 = int(current_node[0])
-            e2 = int(current_node[1])
-            y1 = int(edge[0])
-            y2 = int(edge[1])
-            # if y1 is in between edge's ends, we're working on this same node (with a little buffer for fuzzy edges)
-            if (e1 <= y1) and (y1 <= e2+2):
-                # if y2 is larger than e2, replace e2
-                if y2 > e2:
-                    current_node = [e1,y2]
-                    coalesced_nodes[len(coalesced_nodes)-1] = current_node
-            # if y2 is bigger than e2:
-            elif y1 > e2:
-                # this is a different node, add this to node_dict[x]
-                current_node = [y1, y2]
-                coalesced_nodes.append(current_node)
+    sorted_verts = sort_lines(vert_lines, 0, 1)
+
+    for bin in sorted_verts:
+        if bin[0][0] not in node_dict:
+            node_dict[bin[0][0]] = []
+        for line in bin:
+            x = line[0]
+            y1 = line[1]
+            y2 = line[3]
+            node_dict[x].append([y1,y2])
         
-        # buffer the nodes with the radius:
-        global radius
-        for node in coalesced_nodes:
-            node[0] -= (radius/2)
-            node[1] += (radius/2)
-        
-        node_dict[k] = coalesced_nodes
-    
     # okay, now we know what the nodes are. Match up the edges.
     edges = set()
     otus = []
     nodes = set()
     for line in horiz_lines:
-        coords = re.split(' ',line)
-        x1 = int(coords[0])
-        x2 = int(coords[2])
-        y1 = int(coords[1])
-        y2 = int(coords[3])
+        x1 = line[0]
+        x2 = line[2]
+        y1 = line[1]
+        y2 = line[3]
         # we want to make the y1 equal to the y1 of the node
         # look for the node that this x1 is in:
         if x1 in node_dict:
@@ -313,6 +308,7 @@ def make_tree(segments):
                 nodes.add('%d %d' % (x1, y1))
                 nodes.add('%d %d' % (x2, y2))
             edges.add('%d %d %d %d' % (x1, y1, x2, y2))
+
     final_nodes = []
     for node in nodes:
         coords = re.split(' ',node)
@@ -321,138 +317,264 @@ def make_tree(segments):
     for edge in edges:
         coords = re.split(' ',edge)
         final_edges.append([int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])])
-
+    
+    otus.sort(cmp=lambda x,y: cmp(x[1], y[1]))
+    
     return (final_nodes, final_edges, otus)
 
-def remove_dups(segments):
-    seg_set = set()
-    for seg in segments:
-        # clean up horizontal lines
-        if seg[1] == seg[3]:
-            if int(seg[0]) < int(seg[2]):
-                seg_set.add('%d %d %d %d' % (seg[0], seg[1], seg[2], seg[3]))
-            else:
-                seg_set.add('%d %d %d %d' % (seg[2], seg[1], seg[0], seg[3]))
-        # clean up vertical lines
-        if seg[0] == seg[2]:
-            if int(seg[1]) < int(seg[3]):
-                seg_set.add('%d %d %d %d' % (seg[0], seg[1], seg[2], seg[3]))
-            else:
-                seg_set.add('%d %d %d %d' % (seg[0], seg[3], seg[2], seg[1]))
-    
-    seg_list = []
-    for seg in seg_set:
-        coord = re.split(' ',seg)
-        if (coord[0] != coord[2]) or (coord[1] != coord[3]):
-            seg_list.append([int(coord[0]),int(coord[1]),int(coord[2]),int(coord[3])])
-    return seg_list
-    
-def segments_to_lines(segments):
+def segments_to_lines(segments, color, width):
     lines = []
     for seg in segments:
-        lines.append({'@x1':str(seg[0]), '@y1':str(seg[1]), '@x2':str(seg[2]), '@y2':str(seg[3]), '@stroke-width':'3', '@stroke':'green'})
+        lines.append({'@x1':str(seg[0]), '@y1':str(seg[1]), '@x2':str(seg[2]), '@y2':str(seg[3]), '@stroke-width':str(width), '@stroke':color})
     return lines
+
+def normalize_polygon_to_lines(polygon):    
+    global max_x, min_x
+    lines = lineify_path(polygon)
+
+    root_level = max_x
+    otu_level = min_x
+    horiz_line_set = set()
+    vert_line_set = set()
+    for line in lines:
+        forward_line = (line[0],line[1],line[2],line[3])
+        if (line[0] == line[2]): # vertical lines
+            if (line[1] < line[3]):
+                forward_line = (line[0],line[3],line[2],line[1])
+            else:
+                vert_line_set.add('%d %d %d %d' % forward_line)
+        elif (line[1] == line[3]): #horiz line
+            if (line[0] > line[2]):
+                forward_line = (line[2],line[1],line[0],line[3])
+            else:
+                horiz_line_set.add('%d %d %d %d' % forward_line)
+            
+            if (forward_line[0] < root_level):
+                root_level = forward_line[0]
+            if (forward_line[2] > otu_level):
+                otu_level = forward_line[2]
+    
+    # sort all the horiz lines by y-value:
+    horiz_lines_list = []
+    for line in horiz_line_set:
+        coord = line.split(' ')
+        x1 = int(coord[0])
+        y1 = int(coord[1])
+        x2 = int(coord[2])
+        y2 = int(coord[3])
+        
+        horiz_lines_list.append([x1, y1, x2, y2])
+        
+    horiz_lines_binned = sort_lines(horiz_lines_list, 1, 0)
+
+    vert_lines_list = []
+    # adjust the y2 of the vertical lines to match a horizontal line
+    for line in vert_line_set:
+        coord = line.split(' ')
+        x = int(coord[0])
+        y1 = int(coord[1])
+        y2 = int(coord[3])
+
+        my_nodeline = None
+        for bin in horiz_lines_binned:
+            if (y1 > bin[0][1]):
+                continue
+            else:
+                for nodeline in bin:
+                    if (nodeline[0] <= x) and (x <= nodeline[2]):
+                        my_nodeline = nodeline
+                        y1 = nodeline[1]
+                        break
+                if my_nodeline is not None:
+                    break
+        line = [x, y1, x, y2]
+
+        vert_lines_list.append(line)
+
+    # sort all the vertical lines by x-value:
+    vert_lines_binned = sort_lines(vert_lines_list, 0, 1)
+
+    # coalesce the vertical nodes
+    for i in range(len(vert_lines_binned)):
+        bin = vert_lines_binned[i]
+        new_bin = []
+        curr_node = bin[0]
+        for j in range(1,len(bin)):
+            line = bin[j]
+            if (curr_node[1] == line[3]):
+                curr_node[1] = line[1]
+            else:
+                new_bin.append(curr_node)
+                curr_node = bin[j]
+        new_bin.append(curr_node)
+        vert_lines_binned[i] = new_bin
+        
+    lines = []
+    for bin in vert_lines_binned:
+        for line in bin:
+            lines.append([line[0],line[3],line[2],line[1]])
+    
+    for line in horiz_line_set:
+        coord = line.split(' ')
+        x1 = int(coord[0])
+        y = int(coord[1])
+        x2 = int(coord[2])
+
+        # if x2 is at otu_level, we don't need to worry about that end.
+        if x2 < otu_level:        
+            my_nodeline = None
+            for bin in vert_lines_binned:
+                if x2 > bin[0][0]:
+                    continue
+                else:
+                    for nodeline in bin:
+                        if (nodeline[3] <= y) and (y <= nodeline[1]):
+                            my_nodeline = nodeline
+                            x2 = nodeline[0]
+                            break
+                    if my_nodeline is not None:
+                        break
+        # if x1 is at root_level, we don't need to worry about that end.
+        if x1 > root_level:    
+            my_nodeline = None
+            i = 0
+            while i < len(vert_lines_binned):
+                bin = vert_lines_binned[i]
+                if (x1 > bin[0][0]):
+                    i += 1
+                    continue
+                else:                    
+                    for nodeline in vert_lines_binned[i]:
+                        if (nodeline[3] <= y) and (y <= nodeline[1]):
+                            my_nodeline = nodeline
+                            x1 = nodeline[0]
+                            break
+                    if my_nodeline is not None:
+                        break
+                    i += 1
+            line = [x1,y,x2,y]
+
+        lines.append([x1, y, x2, y])
+        
+    return lines
+
+def sort_lines(lines, key1, key2):
+    bin_by_x1 = {}
+    for line in lines:
+        if line[key1] not in bin_by_x1:
+            bin_by_x1[line[key1]] = []
+        bin_by_x1[line[key1]].append(line)
+    
+    bin_keys = list(bin_by_x1.keys())
+    bin_keys.sort()
+    
+    final_lines = []
+    for bin in bin_keys:
+        bin_by_x1[bin].sort(cmp=lambda x,y: cmp(x[key2], y[key2]))
+        final_lines.append(bin_by_x1[bin])
+    return final_lines
+
+
+def lines_to_polygon(lines):
+    polygon = []
+    coord = lines[0].split(' ')
+    polygon.append([int(coord[0]),int(coord[1])])
+    for line in lines:
+        coord = line.split(' ')
+        polygon.append([int(coord[2]),int(coord[3])])
+    return polygon
+    
 
 def lineify_path(polygon):
     lines = []
-    segment_hash = {}
+    lines.append([polygon[len(polygon)-1][0], polygon[len(polygon)-1][1], polygon[0][0], polygon[0][1]])
     last_node = polygon[0]
-    for node in polygon:
+    for i in range(1, len(polygon)-1):
+        node = polygon[i]
         lines.append([last_node[0], last_node[1], node[0], node[1]])
         last_node = node
     return lines
        
-def cleanup_polygon(polygon, radius):
-    # for convenience:
-    x = 0
-    y = 1
-
-    # find all the horizontal points
-    x_sort_dict = {}
-    x_sort_points = [p for p in polygon]
-    x_sort_points.sort(cmp=lambda x,y: cmp(float(x[0]), float(y[0])))
-    
-    curr_x = 0
-    for point in x_sort_points:
-        if float(point[0]) > (float(curr_x) + float(radius)):
-            curr_x = point[0]
-        x_sort_dict['%d %d' % (point[0],point[1])] = [curr_x,point[1]]
-
-    new_polygon = []
-    for point in polygon:
-        new_polygon.append(x_sort_dict['%d %d' % (point[0],point[1])])
-
-    polygon = []
-    
-    last_point = [-1,-1]
-    for point in new_polygon:
-        # if the current point is not close to the last_point, add it: 
-        # NOT (
-        #     last_point[x]-radius < point[x] < last_point[x]+radius
-        # AND last_point[y]-radius < point[y] < last_point[y]+radius
-        #     )
-        if not((point[x] >= last_point[x] - radius) and (point[x] <= last_point[x] + radius) and (point[y] >= last_point[y] - radius) and (point[y] <= last_point[y] + radius)):
-            polygon.append(point)
-        last_point = polygon[len(polygon)-1]
-    polygon.append(polygon[0])
-    return simplify_polygon(polygon, radius)   
-
 # remove all in-between singletons from a cleaned-up polygon
-def simplify_polygon(polygon, radius):
+def straighten_polygon(polygon):
     # for convenience:
     x = 0
     y = 1
-    new_polygon = [polygon.pop(0), polygon.pop(0), polygon.pop(0)]
-    while polygon is not None:
+    global points
+    points = []
+    changes_made = False
+    # we need to make sure we start with the last thing in polygon
+    new_polygon = []
+    new_polygon.insert(0,polygon.pop())
+    new_polygon.append(polygon.pop(0))
+    new_polygon.append(polygon.pop(0))
+    
+    tips = 0
+    
+    while len(polygon) >= 0:
         node3 = new_polygon.pop()
         node2 = new_polygon.pop()
-        node1 = new_polygon.pop()
 
-        keep_node = True
-        #### FIRST: normalize the tips
-        #         1 o---o 2
-        #         3 o--/
-        # node2 is a tip:
-        # if node2[x] is greater than either node1[x] or node3[x]
-        # AND node1[y] - radius <= node2[y] <= node3[y] + radius (or the reverse)
-        if (node3[x] < node2[x]) and (node1[x] < node2[x]):
-            if ((node2[y] >= node1[y] - radius) and (node2[y] <= node3[y] + radius)) or ((node2[y] >= node3[y] - radius) and (node2[y] <= node1[y] + radius)):
-                # make the y the average of the three nodes' y
-                avg_y = (node1[y] + node2[y] + node3[y])/3
-                node1[y] = avg_y
-                node2[y] = avg_y
-                node3[y] = avg_y
+        if len(new_polygon) > 0:
+            node1 = new_polygon.pop()
+        else:
+            node1 = polygon.pop()
         
+        keep_node = True
+
+        #### Remove duplicate or near-dup points.
+        # if node1 and node2 are peculiarly close together on the y-axis, we should drop node 2 and try again:
+        if (node1[x] == node2[x]):
+            if ((node2[y] - 2 <= node1[y]) and (node1[y] <= node2[y] + 2)) or ((node1[y] - 2 <= node2[y]) and (node2[y] <= node1[y] + 2)):
+                polygon.insert(0,node3)
+                new_polygon.append(node1)
+                new_polygon.append(polygon.pop(0))
+                continue
+        
+        if (node2[y] != node1[y]) and (node2[x] != node1[x]):
+            if (math.fabs(node2[y] - node1[y]) <= 2): # so small that angles can't detect them
+                node1[y] = node2[y] 
+                changes_made = True
+            if (math.fabs(node2[x] - node1[x]) <= 2): # so small that angles can't detect them
+                node1[x] = node2[x] 
+                changes_made = True
+        
+        #### FIRST: normalize the tips
+        # if node2[x] is greater than either node1[x] or node3[x]
+        if ((node3[x] < node2[x]) and (node1[x] < node2[x])) or ((node3[x] > node2[x]) and (node1[x] > node2[x])):
+            node1[y] = node2[y]
+            node3[y] = node2[y]
+            tips += 1
+
         #### SECOND: normalize knees
-        #         o---o
-        #              \
-        #               o
-        # node2 is a knee:
         # if node2[x] is between node1[x] and node3[x]
         if ((node1[x] <= node2[x]) and (node2[x] <= node3[x])) or ((node3[x] <= node2[x]) and (node2[x] <= node1[x])):
-            r = radius
-            # if it's a near-right-angle, normalize.
-            # these are ones where 1[x] == 2[x] but 3[x] is not that, and 3[y] and 2[y] are within the average of their two +/- radius.
-            if (node1[x] == node2[x]) and (node3[x] != node2[x]):
-                avg_y = (node2[y] + node3[y])/2
-                if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)):
-                    node3[y] = node2[y]
-            # it could also be the opposite: 2[x] == 3[x] and 1[x] is not that. 1[y] should be the same as, or nearly, 2[y].
-            elif (node3[x] == node2[x]) and (node1[x] != node2[x]):
-                avg_y = (node2[y] + node1[y])/2
-                if ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)):
-                    node1[y] = node2[y]
-            # if it's a nearly-straight knee, straighten it out.
-            else:
-                r = radius / 2
-                avg_y = (node1[y] + node2[y] + node3[y])/3
-                if ((avg_y - r <= node1[y]) and (node1[y] <= avg_y + r)) and ((avg_y - r <= node2[y]) and (node2[y] <= avg_y + r)) and ((avg_y - r <= node3[y]) and (node3[y] <= avg_y + r)): 
-                    # make the y the average of the three nodes' y
-                    node1[y] = avg_y
-                    node2[y] = avg_y
-                    node3[y] = avg_y
+            theta = math.degrees(math.atan2(math.fabs((node3[y]-node2[y])),math.fabs((node3[x]-node2[x]))))
+            if (node2[x]==node1[x]): # vertical, so snap node 3's x into line
+                if (theta >= 45): # theta == 90 means this is a straight knee
+                    node3[x] = node2[x]
                     keep_node = False
-        
+                    if (theta != 90):
+                        changes_made = True                
+            elif (node2[y]==node1[y]): #horizontal
+                if (theta <= 45): # theta == 0 means this is a straight knee
+                    node3[y] = node2[y]
+                    keep_node = False
+                    if (theta != 0):
+                        changes_made = True
+            else:
+                # calculate an angle between n1 and n2:
+                theta = math.degrees(math.atan2(math.fabs((node1[y]-node2[y])),math.fabs((node1[x]-node2[x]))))
+                if (node3[x] == node2[x]): # vertical, so snap node 3's x into line
+                    if (theta >= 45): # theta == 90 means this is a straight knee
+                        node1[x] = node2[x]
+                        if (theta != 90):
+                            changes_made = True
+                elif (node2[y]==node3[y]): #horizontal
+                    if (theta <= 45): # theta == 0 means this is a straight knee
+                        node1[y] = node2[y]
+                        if (theta != 0):
+                            changes_made = True
         #### FINALLY: append nodes, without node2 if it's a straight knee
         new_polygon.append(node1)
         if keep_node:
@@ -460,10 +582,86 @@ def simplify_polygon(polygon, radius):
         new_polygon.append(node3)
         if len(polygon) == 0:
             break
+        
         new_polygon.append(polygon.pop(0))
+    
+    if changes_made:
+        new_polygon = straighten_polygon(new_polygon)
 
-    new_polygon.pop()
     return new_polygon
+    
+def even_out_polygon(polygon):
+    # for convenience:
+    x = 0
+    y = 1
+    polygon.insert(0,polygon[len(polygon)-1])
+    polygon.insert(0,polygon[len(polygon)-2])
+    polygon.insert(0,polygon[len(polygon)-3])
+
+    global otu_level
+    # find the maximum x-value
+    for node in polygon:
+        if (node[x] > otu_level):
+            otu_level = node[x]
+    
+    global points
+    points = []
+    changes_made = False
+    # we need to make sure we start with the last thing in polygon
+    new_polygon = []
+    new_polygon.insert(0,polygon.pop())
+    new_polygon.append(polygon.pop(0))
+    new_polygon.append(polygon.pop(0))
+    new_polygon.append(polygon.pop(0))
+    new_polygon.append(polygon.pop(0))
+        
+    while len(polygon) >= 0:
+        node4 = new_polygon.pop()
+        node3 = new_polygon.pop()
+        node2 = new_polygon.pop()
+        
+        if (node3 == node2):
+            node2 = new_polygon.pop()
+                
+        node1 = new_polygon.pop()
+        if len(new_polygon) > 0:
+            node0 = new_polygon.pop()
+        else:
+            node0 = polygon.pop()
+        
+
+        ### if node1[y] == node2[y] and node0[x] < node1[x] and node3[x] < node2[x]
+        if node1[x] == node2[x] and node0[x] < node1[x] and node3[x] < node2[x]:
+            node2[y] = node1[y]
+            node3[y] = node1[y]            
+        
+        #### FIRST: normalize the tips
+        # if node2[x] is greater than either node1[x] or node3[x]
+        if (node1[y] == node2[y]) and (node2[y] == node3[y]):
+            if ((node3[x] < node2[x]) and (node1[x] < node2[x])):
+                new_x = node1[x]
+                if (node3[x] > node1[x]):
+                    new_x = node3[x]
+                node0 = [new_x, node0[y]]
+                node1 = [new_x, node2[y]]
+                node2 = [otu_level, node2[y]]
+                node3 = [new_x, node2[y]]
+                node4 = [new_x, node4[y]]
+
+        #### FINALLY: append nodes
+        new_polygon.append(node0)
+        new_polygon.append(node1)
+        new_polygon.append(node2)
+        new_polygon.append(node3)
+        new_polygon.append(node4)
+        if len(polygon) == 0:
+            break
+        
+        new_polygon.append(polygon.pop(0))
+    
+    return new_polygon
+
+
 
 def path_to_polygon(path):
     polygon = []
@@ -484,6 +682,7 @@ def path_to_polygon(path):
         if min_y > int(coords[1]):
             min_y = int(coords[1])
         polygon.append([int(coords[0]), int(coords[1])])
+    polygon.pop()
     return polygon
     
 def nodes_to_path(nodes):
