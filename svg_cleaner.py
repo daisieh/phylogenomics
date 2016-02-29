@@ -187,7 +187,6 @@ def main():
     textdict = []
     # for each otu, add a text label:
     for k in otudict.keys():
-        print "%s: %s" %(k,str(otudict[k]))
         coordmatch = re.match('\[(\d+), (\d+)\]',k)
         if coordmatch is not None:
             x = coordmatch.group(1)
@@ -599,12 +598,9 @@ def even_out_polygon(polygon):
     # for convenience:
     x = 0
     y = 1
-    print len(polygon)
     polygon.insert(0,polygon[len(polygon)-1])
     polygon.insert(0,polygon[len(polygon)-2])
     polygon.insert(0,polygon[len(polygon)-3])
-    print str([polygon[0],polygon[1],polygon[2],polygon[3],polygon[4]])
-    print str([polygon[len(polygon)-1]])
 
     global otu_level
     # find the maximum x-value
