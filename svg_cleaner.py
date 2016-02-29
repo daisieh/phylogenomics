@@ -103,8 +103,8 @@ def main():
     lines.extend(segments_to_lines(segments, 'blue', 4))
     svgdict = {}
     svgdict['svg'] = {}
-    svgdict['svg']['width'] = xmldict['@width']
-    svgdict['svg']['height'] = xmldict['@height']
+    svgdict['svg']['@width'] = xmldict['@width']
+    svgdict['svg']['@height'] = xmldict['@height']
     svgdict['svg']['g'] = [{'line':lines, 'path':paths, 'circle':circles}]
 
     outf = open(outfile+'_raw.svg','w')
@@ -182,14 +182,28 @@ def main():
     outf.write(nexus_str)
     outf.close()
                 
+
+    textdict = {}
+    textdict = []
+    # for each otu, add a text label:
+    for k in otudict.keys():
+        print "%s: %s" %(k,str(otudict[k]))
+        coordmatch = re.match('\[(\d+), (\d+)\]',k)
+        if coordmatch is not None:
+            x = coordmatch.group(1)
+            y = coordmatch.group(2)
+            textnode = {'@x':str(int(x) + 10), '@y':y,'@fill':'black','#text':otudict[k]}
+            textdict.append(textnode)
+            
     # generate svg:
     circles.extend(nodes_to_circles(nodes))
     lines.extend(segments_to_lines(edges, "green", 3))
     svgdict = {}
     svgdict['svg'] = {}
-    svgdict['svg']['width'] = xmldict['@width']
-    svgdict['svg']['height'] = xmldict['@height']
-    svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
+    svgdict['svg']['@width'] = xmldict['@width']
+    svgdict['svg']['@height'] = xmldict['@height']
+    svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles, 'text':textdict}]
+    
 
     outf = open(outfile+'_raw.svg','w')
     outf.write(xmltodict.unparse(svgdict, pretty=True))
@@ -309,7 +323,7 @@ def make_tree(segments):
         coords = re.split(' ',edge)
         final_edges.append([int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])])
     
-    otus.sort(cmp=lambda x,y: cmp(y[1], x[1]))
+    otus.sort(cmp=lambda x,y: cmp(x[1], y[1]))
     
     return (final_nodes, final_edges, otus)
 
@@ -585,7 +599,13 @@ def even_out_polygon(polygon):
     # for convenience:
     x = 0
     y = 1
-    
+    print len(polygon)
+    polygon.insert(0,polygon[len(polygon)-1])
+    polygon.insert(0,polygon[len(polygon)-2])
+    polygon.insert(0,polygon[len(polygon)-3])
+    print str([polygon[0],polygon[1],polygon[2],polygon[3],polygon[4]])
+    print str([polygon[len(polygon)-1]])
+
     global otu_level
     # find the maximum x-value
     for node in polygon:
@@ -607,12 +627,21 @@ def even_out_polygon(polygon):
         node4 = new_polygon.pop()
         node3 = new_polygon.pop()
         node2 = new_polygon.pop()
+        
+        if (node3 == node2):
+            node2 = new_polygon.pop()
+                
         node1 = new_polygon.pop()
-
         if len(new_polygon) > 0:
             node0 = new_polygon.pop()
         else:
             node0 = polygon.pop()
+        
+
+        ### if node1[y] == node2[y] and node0[x] < node1[x] and node3[x] < node2[x]
+        if node1[x] == node2[x] and node0[x] < node1[x] and node3[x] < node2[x]:
+            node2[y] = node1[y]
+            node3[y] = node1[y]            
         
         #### FIRST: normalize the tips
         # if node2[x] is greater than either node1[x] or node3[x]
