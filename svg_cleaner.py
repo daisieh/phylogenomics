@@ -100,7 +100,7 @@ def main():
     # generate raw svg first-pass, in case something fails during tree building:
     circles.extend(nodes_to_circles(points))
     lines = []
-    lines.extend(segments_to_lines(segments, 'blue', 0.25))
+    lines.extend(segments_to_lines(segments, 'blue', 4))
     svgdict = {}
     svgdict['svg'] = {}
     svgdict['svg']['width'] = xmldict['@width']
@@ -183,7 +183,6 @@ def main():
     outf.close()
                 
     # generate svg:
-    lines = []
     circles.extend(nodes_to_circles(nodes))
     lines.extend(segments_to_lines(edges, "green", 3))
     svgdict = {}
@@ -192,10 +191,10 @@ def main():
     svgdict['svg']['height'] = xmldict['@height']
     svgdict['svg']['g'] = [{'path':paths, 'line':lines, 'circle':circles}]
 
-#     outf = open(outfile+'_raw.svg','w')
-#     outf.write(xmltodict.unparse(svgdict, pretty=True))
-#     outf.close()
-#     print "reprinted raw svg"
+    outf = open(outfile+'_raw.svg','w')
+    outf.write(xmltodict.unparse(svgdict, pretty=True))
+    outf.close()
+    print "reprinted raw svg"
 
 def tree_to_nexus(otus, nodes, edges):
     otudict = {}
@@ -381,14 +380,11 @@ def segments_to_lines(segments, color, width):
 
 
 def normalize_polygon_to_lines(polygon):    
-    global radius, max_x, max_y, min_x, min_y
+    global max_x, min_x
     lines = lineify_path(polygon)
-    print len(lines)
 
     root_level = max_x
     otu_level = min_x
-    top_node = max_y
-    bottom_node = min_y
     horiz_line_set = set()
     vert_line_set = set()
     for line in lines:
@@ -408,51 +404,77 @@ def normalize_polygon_to_lines(polygon):
                 root_level = forward_line[0]
             if (forward_line[2] > otu_level):
                 otu_level = forward_line[2]
-
-            if (forward_line[1] < top_node):
-                top_node = forward_line[1]
-            if (forward_line[1] > bottom_node):
-                bottom_node = forward_line[1]
-
     
-    # use the vertical lines and find all the possible x-values from that.
-    levels = set()
-    for line in vert_line_set:
-        coord = line.split(' ')
-        levels.add(int(coord[0]))    
-    
-    levels = list(levels)
-    levels.sort()
-    
-    # sort all the vertical lines by x-value:
-    vert_lines_list = []
-    for line in vert_line_set:
+    # sort all the horiz lines by y-value:
+    horiz_lines_list = []
+    for line in horiz_line_set:
         coord = line.split(' ')
         x1 = int(coord[0])
         y1 = int(coord[1])
         x2 = int(coord[2])
         y2 = int(coord[3])
         
-        vert_lines_list.append([x1, y1, x2, y2])
+        horiz_lines_list.append([x1, y1, x2, y2])
         
+    horiz_lines_binned = sort_lines(horiz_lines_list, 1, 0)
+
+    vert_lines_list = []
+    # adjust the y2 of the vertical lines to match a horizontal line
+    for line in vert_line_set:
+        coord = line.split(' ')
+        x = int(coord[0])
+        y1 = int(coord[1])
+        y2 = int(coord[3])
+
+        my_nodeline = None
+        for bin in horiz_lines_binned:
+            if (y1 > bin[0][1]):
+                continue
+            else:
+                for nodeline in bin:
+                    if (nodeline[0] <= x) and (x <= nodeline[2]):
+                        my_nodeline = nodeline
+                        y1 = nodeline[1]
+                        break
+                if my_nodeline is not None:
+                    break
+        line = [x, y1, x, y2]
+
+        vert_lines_list.append(line)
+
+    # sort all the vertical lines by x-value:
     vert_lines_binned = sort_lines(vert_lines_list, 0, 1)
 
-    print vert_lines_binned
-    
+    # coalesce the vertical nodes
+    for i in range(len(vert_lines_binned)):
+        bin = vert_lines_binned[i]
+        new_bin = []
+        curr_node = bin[0]
+        for j in range(1,len(bin)):
+            line = bin[j]
+            if (curr_node[1] == line[3]):
+                curr_node[1] = line[1]
+            else:
+                new_bin.append(curr_node)
+                curr_node = bin[j]
+        new_bin.append(curr_node)
+        vert_lines_binned[i] = new_bin
+        
     lines = []
+    for bin in vert_lines_binned:
+        lines.extend(bin)
+    
     for line in horiz_line_set:
         coord = line.split(' ')
-        x1 = int(coord[0])# + radius
+        x1 = int(coord[0])
         y = int(coord[1])
         x2 = int(coord[2])
 
         # if x2 is at otu_level, we don't need to worry about that end.
         if x2 < otu_level:        
-            i = 0
             my_nodeline = None
             for bin in vert_lines_binned:
                 if x2 > bin[0][0]:
-                    i += 1
                     continue
                 else:
                     for nodeline in bin:
@@ -462,20 +484,28 @@ def normalize_polygon_to_lines(polygon):
                             break
                     if my_nodeline is not None:
                         break
+        # if x1 is at root_level, we don't need to worry about that end.
+        if x1 > root_level:    
+            my_nodeline = None
+            i = 0
+            while i < len(vert_lines_binned):
+                bin = vert_lines_binned[i]
+                if (x1 > bin[0][0]):
+                    i += 1
+                    continue
+                else:                    
+                    for nodeline in vert_lines_binned[i]:
+                        if (nodeline[3] <= y) and (y <= nodeline[1]):
+                            my_nodeline = nodeline
+                            x1 = nodeline[0]
+                            break
+                    if my_nodeline is not None:
+                        break
+                    i += 1
+            line = [x1,y,x2,y]
 
-            print "%s is in %s" % (str(line), str(my_nodeline))
         lines.append([x1, y, x2, y])
         
-        #### TO DO: fix the x1 values
-
-    for line in vert_line_set:
-        coord = line.split(' ')
-        x1 = int(coord[0])
-        y1 = int(coord[1])# + radius
-        x2 = int(coord[2])
-        y2 = int(coord[3])# - radius
-        
-        lines.append([x1, y1, x2, y2])
     return lines
 
 def sort_lines(lines, key1, key2):
@@ -704,9 +734,9 @@ def nodes_to_circles(nodes):
     for i in range(len(nodes)):
         circledict = {}
         coords = nodes[i]
-        circledict['@r'] = '2'
+        circledict['@r'] = '3'
         circledict['@stroke'] = 'black'
-        circledict['@stroke-width'] = '0.25'
+        circledict['@stroke-width'] = '1'
         circledict['@fill'] = 'yellow'
         circledict['@cx'] = str(coords[0])
         circledict['@cy'] = str(coords[1])
