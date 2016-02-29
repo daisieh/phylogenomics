@@ -87,7 +87,7 @@ def main():
     segments = []   
     polygon_total = []
     for polygon in polygons:
-        polygon = simplify_polygon(polygon)
+        polygon = straighten_polygon(polygon)
         polygon = even_out_polygon(polygon)
         # this path is for the cleaned-up lines
         path = {}
@@ -254,74 +254,36 @@ def parse_transform(transform):
             scale_height = float(scalematcher.group(2))
             
 def make_tree(segments):
-    segments = remove_dups(segments)
-    vert_lines = set()
-    horiz_lines = set()
+    vert_lines = []
+    horiz_lines = []
     for seg in segments:
-        seg_str = '%03d %03d %03d %03d' % (int(seg[0]), int(seg[1]), int(seg[2]), int(seg[3]))
         if seg[0] == seg[2]:
-            vert_lines.add(seg_str)
+            vert_lines.append(seg)
         elif seg[1] == seg[3]:
-            horiz_lines.add(seg_str)
+            horiz_lines.append(seg)
     
-    # for each level, make a node-level out of it by finding the main endpoints of the verticals that go with it.
+    # create a dictionary of nodes: each node has vertical endpoints and is indexed by its x value
     node_dict = {}
-    sorted_verts = list(vert_lines)
-    sorted_verts.sort(cmp=lambda x,y: cmp(x, y))
-    for line in sorted_verts:
-        coords = re.split(' ',line)
-        x = int(coords[0])
-        y1 = int(coords[1])
-        y2 = int(coords[3])
-        if x not in node_dict:
-            node_dict[x] = [];
-        if y1 == y2:
-            continue        
-        node_dict[x].append([y1,y2])
-    
-    node_dict_keys = node_dict.keys()
-    node_dict.keys().sort()
-    for k in node_dict_keys:
-        if len(node_dict[k]) == 0:
-            continue
-        coalesced_nodes = []
-        current_node = node_dict[k][0]
-        coalesced_nodes.append(current_node)
-        for edge in node_dict[k]:
-            e1 = int(current_node[0])
-            e2 = int(current_node[1])
-            y1 = int(edge[0])
-            y2 = int(edge[1])
-            # if y1 is in between edge's ends, we're working on this same node (with a little buffer for fuzzy edges)
-            if (e1 <= y1) and (y1 <= e2+2):
-                # if y2 is larger than e2, replace e2
-                if y2 > e2:
-                    current_node = [e1,y2]
-                    coalesced_nodes[len(coalesced_nodes)-1] = current_node
-            # if y2 is bigger than e2:
-            elif y1 > e2:
-                # this is a different node, add this to node_dict[x]
-                current_node = [y1, y2]
-                coalesced_nodes.append(current_node)
+    sorted_verts = sort_lines(vert_lines, 0, 1)
+
+    for bin in sorted_verts:
+        if bin[0][0] not in node_dict:
+            node_dict[bin[0][0]] = []
+        for line in bin:
+            x = line[0]
+            y1 = line[1]
+            y2 = line[3]
+            node_dict[x].append([y1,y2])
         
-        # buffer the nodes with the radius:
-        global radius
-        for node in coalesced_nodes:
-            node[0] -= (radius/2)
-            node[1] += (radius/2)
-        
-        node_dict[k] = coalesced_nodes
-    
     # okay, now we know what the nodes are. Match up the edges.
     edges = set()
     otus = []
     nodes = set()
     for line in horiz_lines:
-        coords = re.split(' ',line)
-        x1 = int(coords[0])
-        x2 = int(coords[2])
-        y1 = int(coords[1])
-        y2 = int(coords[3])
+        x1 = line[0]
+        x2 = line[2]
+        y1 = line[1]
+        y2 = line[3]
         # we want to make the y1 equal to the y1 of the node
         # look for the node that this x1 is in:
         if x1 in node_dict:
@@ -337,6 +299,7 @@ def make_tree(segments):
                 nodes.add('%d %d' % (x1, y1))
                 nodes.add('%d %d' % (x2, y2))
             edges.add('%d %d %d %d' % (x1, y1, x2, y2))
+
     final_nodes = []
     for node in nodes:
         coords = re.split(' ',node)
@@ -345,39 +308,16 @@ def make_tree(segments):
     for edge in edges:
         coords = re.split(' ',edge)
         final_edges.append([int(coords[0]), int(coords[1]), int(coords[2]), int(coords[3])])
-
+    
+    otus.sort(cmp=lambda x,y: cmp(y[1], x[1]))
+    
     return (final_nodes, final_edges, otus)
 
-def remove_dups(segments):
-    seg_set = set()
-    for seg in segments:
-        # clean up horizontal lines
-        if seg[1] == seg[3]:
-            if int(seg[0]) < int(seg[2]):
-                seg_set.add('%d %d %d %d' % (seg[0], seg[1], seg[2], seg[3]))
-            else:
-                seg_set.add('%d %d %d %d' % (seg[2], seg[1], seg[0], seg[3]))
-        # clean up vertical lines
-        if seg[0] == seg[2]:
-            if int(seg[1]) < int(seg[3]):
-                seg_set.add('%d %d %d %d' % (seg[0], seg[1], seg[2], seg[3]))
-            else:
-                seg_set.add('%d %d %d %d' % (seg[0], seg[3], seg[2], seg[1]))
-    
-    seg_list = []
-    for seg in seg_set:
-        coord = re.split(' ',seg)
-        if (coord[0] != coord[2]) or (coord[1] != coord[3]):
-            seg_list.append([int(coord[0]),int(coord[1]),int(coord[2]),int(coord[3])])
-    return seg_list
-    
 def segments_to_lines(segments, color, width):
     lines = []
     for seg in segments:
         lines.append({'@x1':str(seg[0]), '@y1':str(seg[1]), '@x2':str(seg[2]), '@y2':str(seg[3]), '@stroke-width':str(width), '@stroke':color})
     return lines
-
-
 
 def normalize_polygon_to_lines(polygon):    
     global max_x, min_x
@@ -462,7 +402,8 @@ def normalize_polygon_to_lines(polygon):
         
     lines = []
     for bin in vert_lines_binned:
-        lines.extend(bin)
+        for line in bin:
+            lines.append([line[0],line[3],line[2],line[1]])
     
     for line in horiz_line_set:
         coord = line.split(' ')
@@ -546,7 +487,7 @@ def lineify_path(polygon):
     return lines
        
 # remove all in-between singletons from a cleaned-up polygon
-def simplify_polygon(polygon):
+def straighten_polygon(polygon):
     # for convenience:
     x = 0
     y = 1
@@ -636,7 +577,7 @@ def simplify_polygon(polygon):
         new_polygon.append(polygon.pop(0))
     
     if changes_made:
-        new_polygon = simplify_polygon(new_polygon)
+        new_polygon = straighten_polygon(new_polygon)
 
     return new_polygon
     
