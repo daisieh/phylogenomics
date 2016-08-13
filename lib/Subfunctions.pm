@@ -834,8 +834,18 @@ sub vcf_to_depth {
 		$out_file = "$basename.depth";
 	}
 
-	system ("awk 'BEGIN {OFS=\"\\t\"} /^.*?\\t(.*?)\\t/ {print \$1,\$2,\$8}' $vcf_file | awk 'BEGIN {OFS=\"\\t\"} {sub(/DP=/,\"\",\$3);sub(/;.*/,\"\",\$3);print \$1,\$2,\$3}' - > $out_file");
-
+	open IN_FH, "<:crlf", $vcf_file;
+	open OUT_FH, ">", $out_file;
+	while (my $line = readline IN_FH) {
+		if ($line =~ /^(.+?)\t(.+?)\t(.+?)\t(.+?)\t(.+?)\t(.+?)\t(.+?)\t(.+?)\t.*$/) {
+			my $name = $1;
+			my $pos = $2;
+			$8 =~ /.*DP=(\d+).*/;
+			print OUT_FH "$name\t$pos\t$1\n";
+		}
+	}
+	close OUT_FH;
+	close IN_FH;
 	return $out_file;
 }
 
