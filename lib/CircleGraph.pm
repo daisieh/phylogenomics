@@ -217,7 +217,7 @@ sub set_color {
     	return;
     }
     my @color = @{$self->get_color($arg)};
-    $self->{ps_object}->{pspages} .= "@color[0] @color[1] @color[2] setrgbcolor\n";
+	$self->{ps_object}->setcolour(@color[0], @color[1], @color[2]);
 }
 
 sub get_color {
@@ -270,6 +270,9 @@ sub get_color {
         	return;
         }
     }
+    @color[0] *= 255;
+    @color[1] *= 255;
+    @color[2] *= 255;
     return \@color;
 }
 
@@ -328,13 +331,11 @@ sub draw_circle {
     } else {
         $self->set_color("black");
     }
-    $p->{pspages} .= "$linewidth u setlinewidth\n";
-    $p->{pspages} .= "newpath\n";
-    $p->{pspages} .= CENTER_X . " ux " . CENTER_Y . " uy $r 0 360 arc closepath\n";
+	$p->setlinewidth($linewidth);
     if ($filled) {
-        $p->{pspages} .= "fill\n";
+    	$p->circle({filled=>1}, CENTER_X, CENTER_Y, $r);
     } else {
-        $p->{pspages} .= "stroke\n";
+		$p->circle(CENTER_X, CENTER_Y, $r);
     }
 }
 
@@ -373,8 +374,8 @@ sub plot_line {
     if (defined ($color)) {
     	$self->set_color("$color");
     }
-    $p->{pspages} .= "$width u setlinewidth\n";
-    $p->{pspages} .= "$last_x $last_y newpath moveto\n";
+	$p->setlinewidth($width);
+	
     for (my $i = 0; $i < (scalar @x_vals); $i++) {
         $this_angle = (@x_vals[$i]/$circle_size) * 360;
         $this_radius = $INNER_RADIUS + (($OUTER_RADIUS-$INNER_RADIUS)*(@y_vals[$i]));
@@ -390,14 +391,13 @@ sub plot_line {
         my @new_coords = $self->coords_on_circle($this_angle,$this_radius);
         $this_x = @new_coords[0];
         $this_y = @new_coords[1];
-        $p->{pspages} .= "$this_x $this_y lineto\n";
+		$p->line($last_x, $last_y, $this_x, $this_y);
 
 
         $last_x = $this_x;
         $last_y = $this_y;
         $last_angle = $this_angle;
     }
-    $p->{pspages} .= "closepath\nstroke\n";
 
     if (@blank_sectors > 0) {
         foreach my $sector (@blank_sectors) {
@@ -453,20 +453,18 @@ sub plot_points {
     if (defined ($color)) {
     	$self->set_color("$color");
     }
-    $p->{pspages} .= "$width u setlinewidth\n";
+    $p->setlinewidth($width);
     for (my $i = 0; $i < (scalar @x_vals); $i++) {
     	if (@y_vals[$i]) {
 			$this_angle = (@x_vals[$i]/$circle_size) * 360;
 			my $increment_angle = $this_angle + $angle_size;
 			my @new_coords = $self->coords_on_circle($this_angle,$radius);
-			$this_x = @new_coords[0];
-			$this_y = @new_coords[1];
-			$p->{pspages} .= "$this_x $this_y newpath moveto\n";
+			my $start_x = @new_coords[0];
+			my $start_y = @new_coords[1];
 			@new_coords = $self->coords_on_circle($increment_angle,$radius);
 			$this_x = @new_coords[0];
 			$this_y = @new_coords[1];
-			$p->{pspages} .= "$this_x $this_y lineto\n";
-			$p->{pspages} .= "closepath\nstroke\n";
+			$p->line($start_x, $start_y, $this_x, $this_y);
 		}
     }
 }
@@ -524,11 +522,7 @@ sub draw_filled_arc {
     $self->set_color("$color");
     my $p = $self->{ps_object};
 
-    $p->{pspages} .= "newpath\n";
-    $p->{pspages} .= CENTER_X . " ux " . CENTER_Y . " uy $radius $start_angle $stop_angle arc\n";
-    $p->{pspages} .= CENTER_X . " ux " . CENTER_Y . " uy lineto\n";
-    $p->{pspages} .= "closepath fill\n";
-
+	$p->arc({filled=>1}, CENTER_X, CENTER_Y, $radius, $start_angle, $stop_angle);
 }
 
 sub draw_arc {
@@ -561,11 +555,7 @@ sub draw_arc {
     	$stop_angle = $start_angle + 0.2;
     }
 
-    $p->{pspages} .= "newpath\n";
-    $p->{pspages} .= "$width u setlinewidth\n";
-    $p->{pspages} .= CENTER_X . " ux " . CENTER_Y . " uy $radius $start_angle $stop_angle arc\n";
-    $p->{pspages} .= "stroke\n";
-
+	$p->arc(CENTER_X, CENTER_Y, $radius, $start_angle, $stop_angle);
 }
 
 =pod
