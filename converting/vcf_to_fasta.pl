@@ -106,7 +106,7 @@ foreach my $samplefile (@samplefiles) {
 				$in_header = 0;
 				print "found ".@newsamples." samples in $samplefile\n";
 				foreach my $sample (@newsamples) {
-					print "hi $sample \n";
+					print "$sample \n";
 					$sample_positions->{$sample} = ();
 					push @samples_in_file, $sample;
 					push @samples, $sample;
@@ -196,8 +196,8 @@ foreach my $samplefile (@samplefiles) {
 			$i++;
 		}
 	}
-		print "foo $i\n";
-print "sample positions is " . Dumper (keys $sample_positions) . "\n";
+# 		print "foo $i\n";
+# print "sample positions is " . Dumper (keys $sample_positions) . "\n";
 }
 my $result_str = "";
 
@@ -298,34 +298,34 @@ foreach my $sample (@samples) {
 # 					print "$depth\t$genotype = $alt\n";
 				}
 				$seq .= $alt;
-				print "$pos $alt\n";
+# 				print "$pos $alt\n";
 				$pos =~ /.*(\d)$/;
 				$posstring .= $1;
 			} elsif ($pl <= $pl_thresh) {
 				$seq .= $ref;
-				print "$pos $ref\n";
+# 				print "$pos $ref\n";
 				$pos =~ /.*(\d)$/;
 				$posstring .= $1;
 			} else {
 				$seq .= "N";
-				print "$pos >>>>N\n";
+# 				print "$pos >>>>N\n";
 				$pos =~ /.*(\d)$/;
 				$posstring .= $1;
 			}
 		} else {
 			if ($indels != 1) {
 				$seq .= "n";
-				print "$pos n\n";
+# 				print "$pos n\n";
 				$pos =~ /.*(\d)$/;
 				$posstring .= $1;
 			} else {
-				print "$pos XXX\n";
+# 				print "$pos XXX\n";
 				$pos =~ /.*(\d)$/;
 				$posstring .= $1;
 			}
 		}
 	}
-	print $fh ">$sample\n$seq\n$posstring\n";
+	print $fh ">$sample\n$seq\n";
 
 }
 
