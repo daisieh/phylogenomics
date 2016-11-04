@@ -6,8 +6,7 @@ use Bio::Align::Utilities qw(cat);
 use Bio::AlignIO;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
-use Subfunctions qw(combine_files);
-require "bioperl_subfuncs.pl";
+use Bioperl qw(convert_aln_to_nexus);
 
 my $usage  = "convert_file.pl in_file out_file\n";
 my $in_file   = shift or die $usage;
