@@ -136,9 +136,9 @@ foreach my $samplefile (@samplefiles) {
 
 			# for each position, I need to know ref allele, alt allele, read depth (DP, int), and phred score (PL, string)
 			my @AMBIGUOUS_POS = ($ref,$alt,0,"");
-			if ($i == 0) {
-				$i = $pos;
-			}
+# 			if ($i == 0) {
+# 				$i = $pos;
+# 			}
 			
 			# sometimes the depth is stored in the INFO field (for single sample files)
 			if ($info =~ /.*DP=(.*?);.*/) {
@@ -191,7 +191,7 @@ foreach my $samplefile (@samplefiles) {
 				if ($depth == undef) { $depth = 0; }
 				my @this_pos = ($ref, $alt, $depth, $pl);
 				push @{$sample_positions->{$samples_in_file[$j]}}, \@this_pos;
-# 			print "$samples[$j] $i\n";
+# 			print "$samples[$j] $i\t$ref $alt $depth $pl\n";
 			}
 			$i++;
 		}
@@ -216,7 +216,7 @@ if ($outfile eq "") {
 }
 
 foreach my $sample (@samples) {
-	print "$sample\n";
+# 	print "$sample\n";
 	my $seq = "";
 	my $posstring = "";
 	my @positions = @{$sample_positions->{$sample}};
@@ -265,10 +265,12 @@ foreach my $sample (@samples) {
 	for (my $pos=0;$pos<@positions; $pos++) {
 		my ($ref, $alt, $depth, $pl) = @{@positions[$pos]};
 		if ($depth > $cov_thresh) {
+			my $alleles = "";
 			if ($pl =~ /,/) {
 				my @pls = split(/,/, $pl);
-				my $alleles = "$ref$alt";
+				$alleles = "$ref$alt";
 				$alleles =~ s/,//g;
+				$alleles =~ s/<X>/N/;
 				my @alts = ($ref,$alt);
 				my @genotypes = @{get_ordered_genotypes($alleles)};
 				my $genotype = "";
@@ -324,6 +326,8 @@ foreach my $sample (@samples) {
 				$posstring .= $1;
 			}
 		}
+# 		$seq =~ /.*(.)$/;
+# 		print "$pos $depth $1\n";
 	}
 	print $fh ">$sample\n$seq\n";
 
