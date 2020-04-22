@@ -27,3 +27,4 @@ The subdirs contain scripts for various tasks:
 - plastome: scripts that take input about the plastome and draw circle graphs to
   represent that data.
 - reporting: scripts that take vcf or sequence files and report statistics about them.
+test
